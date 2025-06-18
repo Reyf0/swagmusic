@@ -19,10 +19,10 @@
 
     <div v-else class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
       <div v-for="track in tracks" :key="track.id" class="border rounded p-3 shadow hover:shadow-md transition-shadow">
-        <img 
-          :src="track.cover_url || 'https://via.placeholder.com/300x300?text=No+Cover'" 
-          alt="cover" 
-          class="w-full h-48 object-cover rounded mb-2" 
+        <img
+          :src="track.cover_url || 'https://via.placeholder.com/300x300?text=No+Cover'"
+          alt="cover"
+          class="w-full h-48 object-cover rounded mb-2"
         />
         <h2 class="text-lg font-semibold truncate">{{ track.title }}</h2>
         <p class="text-sm text-gray-600">
@@ -33,19 +33,34 @@
           </span>
           <span v-else>Unknown Artist</span>
         </p>
-        <audio 
-          :src="track.audio_url" 
-          controls 
-          class="w-full mt-2"
-          preload="none"
-        ></audio>
+        <div class="flex items-center justify-between mt-2">
+          <button 
+            @click="playTrack(track, tracks)"
+            class="bg-indigo-600 hover:bg-indigo-700 text-white py-2 px-4 rounded flex items-center"
+          >
+            <UIcon 
+              :name="isCurrentTrack(track) && isPlaying ? 'i-heroicons-pause' : 'i-heroicons-play'" 
+              class="w-4 h-4 mr-2" 
+            />
+            <span>{{ isCurrentTrack(track) && isPlaying ? 'Pause' : 'Play' }}</span>
+          </button>
+          <span v-if="isCurrentTrack(track)" class="text-xs text-indigo-500 font-medium">
+            CURRENTLY PLAYING
+          </span>
+        </div>
       </div>
     </div>
   </div>
 </template>
 
 <script setup>
+import { usePlayerStore } from '@/stores/player'
+import { storeToRefs } from 'pinia'
+
 const supabase = useSupabaseClient()
+const playerStore = usePlayerStore()
+const { currentTrack, isPlaying } = storeToRefs(playerStore)
+
 const tracks = ref([])
 const isLoading = ref(true)
 const error = ref(null)
@@ -75,6 +90,25 @@ const fetchTracks = async () => {
   } finally {
     isLoading.value = false
   }
+}
+
+// Player functions
+const playTrack = (track, trackList) => {
+  if (isCurrentTrack(track)) {
+    // Toggle play/pause for current track
+    if (isPlaying.value) {
+      playerStore.pause()
+    } else {
+      playerStore.resume()
+    }
+  } else {
+    // Play new track
+    playerStore.play(track, trackList)
+  }
+}
+
+const isCurrentTrack = (track) => {
+  return currentTrack.value && currentTrack.value.id === track.id
 }
 
 // Fetch tracks when component is mounted

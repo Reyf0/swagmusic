@@ -1,4 +1,7 @@
 <script setup lang="ts">
+import { usePlayerStore } from '@/stores/player'
+import { storeToRefs } from 'pinia'
+
 const user = useSupabaseUser();
 const supabase = useSupabaseClient()
 const router = useRouter()
@@ -19,6 +22,24 @@ const signOut = async () => {
     })
     await router.push('/login')
   }
+}
+
+const playerStore = usePlayerStore()
+const { 
+  currentTrack, 
+  isPlaying, 
+  currentTime, 
+  duration, 
+  volume, 
+  isRepeat, 
+  isShuffle 
+} = storeToRefs(playerStore)
+
+const formatTime = (seconds) => {
+  if (!seconds || isNaN(seconds)) return '0:00'
+  const mins = Math.floor(seconds / 60)
+  const secs = Math.floor(seconds % 60)
+  return `${mins}:${secs.toString().padStart(2, '0')}`
 }
 
 </script>
@@ -46,6 +67,108 @@ const signOut = async () => {
       </nav>
       <div class="container mx-auto mt-4">
         <NuxtPage/>
+      </div>
+      <div v-if="currentTrack" class="fixed bottom-0 w-full bg-gray-900 text-white p-4 shadow-md">
+        <div class="flex flex-col max-w-6xl mx-auto">
+          <!-- Track info and controls -->
+          <div class="flex items-center justify-between mb-2">
+            <div class="flex items-center space-x-4">
+              <img 
+                :src="currentTrack.cover_url || 'https://via.placeholder.com/300x300?text=No+Cover'" 
+                class="w-12 h-12 rounded object-cover" 
+                alt="Track cover"
+              />
+              <div>
+                <p class="font-semibold">{{ currentTrack.title }}</p>
+                <p class="text-sm text-gray-400">
+                  {{ currentTrack.track_authors?.map(a => a.author.name).join(', ') || 'Unknown Artist' }}
+                </p>
+              </div>
+            </div>
+
+            <!-- Main controls -->
+            <div class="flex items-center space-x-4">
+              <!-- Shuffle button -->
+              <button 
+                @click="playerStore.toggleShuffle()" 
+                class="p-2 rounded-full hover:bg-gray-700 transition-colors"
+                :class="{ 'text-green-500': isShuffle }"
+                title="Shuffle"
+              >
+                <UIcon name="i-heroicons-arrow-path-rounded-square" class="w-5 h-5" />
+              </button>
+
+              <!-- Previous track -->
+              <button 
+                @click="playerStore.playPrevious()" 
+                class="p-2 rounded-full hover:bg-gray-700 transition-colors"
+                title="Previous"
+              >
+                <UIcon name="i-heroicons-backward" class="w-5 h-5" />
+              </button>
+
+              <!-- Play/Pause -->
+              <button 
+                @click="isPlaying ? playerStore.pause() : playerStore.resume()" 
+                class="p-3 bg-white text-gray-900 rounded-full hover:bg-gray-200 transition-colors"
+                title="Play/Pause"
+              >
+                <UIcon 
+                  :name="isPlaying ? 'i-heroicons-pause' : 'i-heroicons-play'" 
+                  class="w-6 h-6" 
+                />
+              </button>
+
+              <!-- Next track -->
+              <button 
+                @click="playerStore.playNext()" 
+                class="p-2 rounded-full hover:bg-gray-700 transition-colors"
+                title="Next"
+              >
+                <UIcon name="i-heroicons-forward" class="w-5 h-5" />
+              </button>
+
+              <!-- Repeat button -->
+              <button 
+                @click="playerStore.toggleRepeat()" 
+                class="p-2 rounded-full hover:bg-gray-700 transition-colors"
+                :class="{ 'text-green-500': isRepeat }"
+                title="Repeat"
+              >
+                <UIcon name="i-heroicons-arrow-path" class="w-5 h-5" />
+              </button>
+            </div>
+
+            <!-- Volume control -->
+            <div class="flex items-center space-x-2">
+              <UIcon 
+                :name="volume > 0 ? 'i-heroicons-speaker-wave' : 'i-heroicons-speaker-x-mark'" 
+                class="w-5 h-5" 
+              />
+              <input 
+                type="range" 
+                min="0" 
+                max="1" 
+                step="0.01" 
+                :value="volume" 
+                @input="playerStore.setVolume($event.target.value)" 
+                class="w-24"
+              />
+            </div>
+          </div>
+
+          <!-- Progress bar -->
+          <div class="flex items-center space-x-2">
+            <span class="text-xs w-10 text-right">{{ formatTime(currentTime) }}</span>
+            <div class="relative flex-grow h-2 bg-gray-700 rounded cursor-pointer" @click="playerStore.seek($event.offsetX / $event.target.offsetWidth * duration)">
+              <div 
+                class="absolute top-0 left-0 h-full bg-green-500 rounded" 
+                :style="{ width: `${duration > 0 ? (currentTime / duration * 100) : 0}%` }"
+              ></div>
+            </div>
+            <span class="text-xs w-10">{{ formatTime(duration) }}</span>
+          </div>
+        </div>
       </div>
     </UApp>
   </div>

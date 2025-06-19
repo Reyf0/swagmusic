@@ -1,11 +1,13 @@
 <script setup lang="ts">
 import { usePlayerStore } from '@/stores/player'
 import { storeToRefs } from 'pinia'
+import FullPlayerModal from '@/components/FullPlayerModal.vue'
 
 const user = useSupabaseUser();
 const supabase = useSupabaseClient()
 const router = useRouter()
 const toast = useToast()
+
 
 const signOut = async () => {
   const { error } = await supabase.auth.signOut()
@@ -77,6 +79,7 @@ const formatTime = (seconds) => {
                 :src="currentTrack.cover_url || 'https://via.placeholder.com/300x300?text=No+Cover'" 
                 class="w-12 h-12 rounded object-cover" 
                 alt="Track cover"
+                @click="playerStore.openFullPlayer"
               />
               <div>
                 <p class="font-semibold">{{ currentTrack.title }}</p>
@@ -155,7 +158,11 @@ const formatTime = (seconds) => {
                 class="w-24"
               />
             </div>
+
+
           </div>
+
+
 
           <!-- Progress bar -->
           <div class="flex items-center space-x-2">
@@ -169,8 +176,16 @@ const formatTime = (seconds) => {
             <span class="text-xs w-10">{{ formatTime(duration) }}</span>
           </div>
         </div>
+        <button
+            class="absolute right-4 bottom-4 p-1 rounded-full bg-gray-700 hover:bg-gray-600"
+            title="Открыть плеер"
+            @click="playerStore.openFullPlayer"
+        >
+          <UIcon name="i-heroicons-chevron-up" class="w-5 h-5 text-white" />
+        </button>
       </div>
     </UApp>
+    <FullPlayerModal v-if="playerStore.showFullPlayer" />
   </div>
 </template>
 

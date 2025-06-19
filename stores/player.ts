@@ -12,6 +12,15 @@ export const usePlayerStore = defineStore('player', () => {
     const currentTrackIndex = ref(-1)
     const isRepeat = ref(false)
     const isShuffle = ref(false)
+    const showFullPlayer = ref(false)
+
+    const openFullPlayer = () => {
+        showFullPlayer.value = true
+    }
+
+    const closeFullPlayer = () => {
+        showFullPlayer.value = false
+    }
 
     // Update progress every second when playing
     let progressInterval: any = null
@@ -210,6 +219,9 @@ export const usePlayerStore = defineStore('player', () => {
         playNext,
         playPrevious,
         toggleRepeat,
-        toggleShuffle
+        toggleShuffle,
+        showFullPlayer,
+        openFullPlayer,
+        closeFullPlayer
     }
 })

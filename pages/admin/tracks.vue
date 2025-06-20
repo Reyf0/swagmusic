@@ -9,6 +9,7 @@
         <span class="i-heroicons-plus mr-2"></span>
         Add Track
       </button>
+
     </div>
 
     <!-- Search and filters -->
@@ -46,7 +47,7 @@
       <div v-else-if="tracks.length === 0" class="py-8 text-center">
         <span class="i-heroicons-musical-note h-12 w-12 mx-auto text-gray-400"></span>
         <p class="mt-2 text-gray-500">No tracks found</p>
-        <button 
+        <button
           class="mt-4 px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500"
           @click="fetchTracks"
         >
@@ -67,8 +68,8 @@
             <td class="px-6 py-4 whitespace-nowrap">
               <div class="flex items-center">
                 <div class="flex-shrink-0 h-10 w-10">
-                  <img 
-                    :src="row.cover_url || 'https://via.placeholder.com/40x40?text=No+Cover'" 
+                  <img
+                    :src="row.cover_url || 'https://via.placeholder.com/40x40?text=No+Cover'"
                     class="h-10 w-10 rounded-md object-cover"
                     alt="Track cover"
                   />
@@ -94,13 +95,13 @@
                   class="p-1 rounded-md text-blue-600 hover:bg-blue-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   @click="editTrack(row)"
                 >
-                  <span class="i-heroicons-pencil-square h-4 w-4"></span>
+                  <UIcon name="i-heroicons-pencil-square" class="text-black h-4 w-4"/>
                 </button>
                 <button
                   class="p-1 rounded-md text-red-600 hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-red-500"
                   @click="confirmDeleteTrack(row)"
                 >
-                  <span class="i-heroicons-trash h-4 w-4"></span>
+                  <UIcon name="i-heroicons-trash" class="text-black h-4 w-4"/>
                 </button>
               </div>
             </td>
@@ -134,10 +135,11 @@
     </div>
 
     <!-- Edit Track Modal -->
-    <div v-if="showEditModal" class="fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
-      <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+    <div v-if="showEditModal" class="fixed inset-0 z-50 overflow-y-auto text-black" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+      <div class="flex items-end justify-center min-h-screen z-75 pt-4 px-4 pb-20 text-center sm:block sm:p-0">
         <!-- Background overlay -->
-        <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" aria-hidden="true" @click="showEditModal = false"></div>
+        <!-- <div class="fixed inset-0 bg-opacity-75 transition-opacity z-50" aria-hidden="true" @click="showEditModal = false"></div> -->
+
 
         <!-- Modal panel -->
         <div class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
@@ -145,50 +147,50 @@
             <div class="flex justify-between items-center pb-3 border-b">
               <h3 class="text-lg font-medium text-gray-900" id="modal-title">Edit Track</h3>
               <button class="text-gray-400 hover:text-gray-500" @click="showEditModal = false">
-                <span class="i-heroicons-x-mark h-6 w-6"></span>
+                <UIcon name="i-heroicons-x-mark" class="h-6 w-6"/>
               </button>
             </div>
             <div class="space-y-4 mt-4">
               <div>
                 <label for="title" class="block text-sm font-medium text-gray-700">Title</label>
-                <input 
-                  id="title" 
-                  v-model="editingTrack.title" 
-                  type="text" 
-                  placeholder="Track title" 
+                <input
+                  id="title"
+                  v-model="editingTrack.title"
+                  type="text"
+                  placeholder="Track title"
                   class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                 />
               </div>
               <div>
                 <label for="cover_url" class="block text-sm font-medium text-gray-700">Cover URL</label>
-                <input 
-                  id="cover_url" 
-                  v-model="editingTrack.cover_url" 
-                  type="text" 
-                  placeholder="Cover image URL" 
+                <input
+                  id="cover_url"
+                  v-model="editingTrack.cover_url"
+                  type="text"
+                  placeholder="Cover image URL"
                   class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                 />
               </div>
               <div v-if="editingTrack.cover_url" class="mt-2">
-                <img 
-                  :src="editingTrack.cover_url" 
-                  alt="Cover preview" 
+                <img
+                  :src="editingTrack.cover_url"
+                  alt="Cover preview"
                   class="h-24 w-24 object-cover rounded-md"
                 />
               </div>
             </div>
           </div>
           <div class="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
-            <button 
-              type="button" 
+            <button
+              type="button"
               class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-base font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:ml-3 sm:w-auto sm:text-sm"
               @click="updateTrack"
             >
-              <span v-if="updating" class="i-heroicons-arrow-path animate-spin mr-2"></span>
+              <UIcon v-if="updating" name="i-heroicons-arrow-path" class="animate-spin mr-2"/>
               Save Changes
             </button>
-            <button 
-              type="button" 
+            <button
+              type="button"
               class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
               @click="showEditModal = false"
             >
@@ -201,9 +203,9 @@
 
     <!-- Add Track Modal -->
     <div v-if="showAddTrackModal" class="fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
-      <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+      <div class="flex items-end justify-center min-h-screen z-75 pt-4 px-4 pb-20 text-center sm:block sm:p-0">
         <!-- Background overlay -->
-        <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" aria-hidden="true" @click="showAddTrackModal = false"></div>
+        <!-- <div class="fixed inset-0 bg-opacity-75 z-50 transition-opacity" aria-hidden="true" @click="showAddTrackModal = false"></div> -->
 
         <!-- Modal panel -->
         <div class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
@@ -211,45 +213,45 @@
             <div class="flex justify-between items-center pb-3 border-b">
               <h3 class="text-lg font-medium text-gray-900" id="modal-title">Add New Track</h3>
               <button class="text-gray-400 hover:text-gray-500" @click="showAddTrackModal = false">
-                <span class="i-heroicons-x-mark h-6 w-6"></span>
+                <UIcon name="i-heroicons-x-mark" class="h-6 w-6"/>
               </button>
             </div>
             <div class="space-y-4 mt-4">
               <div>
                 <label for="new-title" class="block text-sm font-medium text-gray-700">Title <span class="text-red-500">*</span></label>
-                <input 
-                  id="new-title" 
-                  v-model="newTrack.title" 
-                  type="text" 
-                  placeholder="Track title" 
+                <input
+                  id="new-title"
+                  v-model="newTrack.title"
+                  type="text"
+                  placeholder="Track title"
                   required
                   class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                 />
               </div>
               <div>
                 <label for="new-cover-url" class="block text-sm font-medium text-gray-700">Cover URL</label>
-                <input 
-                  id="new-cover-url" 
-                  v-model="newTrack.cover_url" 
-                  type="text" 
-                  placeholder="Cover image URL" 
+                <input
+                  id="new-cover-url"
+                  v-model="newTrack.cover_url"
+                  type="text"
+                  placeholder="Cover image URL"
                   class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                 />
               </div>
               <div v-if="newTrack.cover_url" class="mt-2">
-                <img 
-                  :src="newTrack.cover_url" 
-                  alt="Cover preview" 
+                <img
+                  :src="newTrack.cover_url"
+                  alt="Cover preview"
                   class="h-24 w-24 object-cover rounded-md"
                 />
               </div>
               <div>
                 <label for="new-audio-url" class="block text-sm font-medium text-gray-700">Audio URL <span class="text-red-500">*</span></label>
-                <input 
-                  id="new-audio-url" 
-                  v-model="newTrack.audio_url" 
-                  type="text" 
-                  placeholder="Audio file URL" 
+                <input
+                  id="new-audio-url"
+                  v-model="newTrack.audio_url"
+                  type="text"
+                  placeholder="Audio file URL"
                   required
                   class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                 />
@@ -257,16 +259,16 @@
             </div>
           </div>
           <div class="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
-            <button 
-              type="button" 
+            <button
+              type="button"
               class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-base font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:ml-3 sm:w-auto sm:text-sm"
               @click="addTrack"
             >
               <span v-if="adding" class="i-heroicons-arrow-path animate-spin mr-2"></span>
               Add Track
             </button>
-            <button 
-              type="button" 
+            <button
+              type="button"
               class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
               @click="showAddTrackModal = false"
             >
@@ -279,9 +281,9 @@
 
     <!-- Delete Confirmation Modal -->
     <div v-if="showDeleteModal" class="fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
-      <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+      <div class="flex items-end justify-center min-h-screen z-75 pt-4 px-4 pb-20 text-center sm:block sm:p-0">
         <!-- Background overlay -->
-        <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" aria-hidden="true" @click="showDeleteModal = false"></div>
+        <!-- <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" aria-hidden="true" @click="showDeleteModal = false"></div> -->
 
         <!-- Modal panel -->
         <div class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
@@ -298,16 +300,16 @@
             </div>
           </div>
           <div class="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
-            <button 
-              type="button" 
+            <button
+              type="button"
               class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-red-600 text-base font-medium text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 sm:ml-3 sm:w-auto sm:text-sm"
               @click="deleteTrack"
             >
               <span v-if="deleting" class="i-heroicons-arrow-path animate-spin mr-2"></span>
               Delete Track
             </button>
-            <button 
-              type="button" 
+            <button
+              type="button"
               class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
               @click="showDeleteModal = false"
             >
@@ -390,7 +392,7 @@ const debounce = (fn, delay) => {
 const debouncedSearch = debounce(async () => {
   currentPage.value = 1;
   await searchStore.searchTracks(supabase);
-  fetchTracks();
+  await fetchTracks();
 }, 300);
 
 // Fetch tracks

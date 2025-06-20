@@ -145,16 +145,17 @@ const recentTracks = ref([]);
 
 // Table columns
 const userColumns = [
-  { key: 'username', label: 'Username' },
-  { key: 'email', label: 'Email' },
-  { key: 'created_at', label: 'Joined' }
+  { key: 'username', label: 'Username', id: 'username' },
+  { key: 'email', label: 'Email', id: 'email' },
+  { key: 'created_at', label: 'Joined', id: 'created_at' }
 ];
 
 const trackColumns = [
-  { key: 'title', label: 'Title' },
-  { key: 'artist', label: 'Artist' },
-  { key: 'created_at', label: 'Uploaded' }
+  { key: 'title', label: 'Title', id: 'title' },
+  { key: 'artist', label: 'Artist', id: 'artist' },
+  { key: 'created_at', label: 'Uploaded', id: 'created_at' }
 ];
+
 
 // Fetch dashboard data
 onMounted(async () => {
@@ -217,7 +218,7 @@ const fetchRecentUsers = async () => {
   try {
     const { data, error } = await supabase
       .from('profiles')
-      .select('id, username, created_at, auth_users:auth.users(email)')
+      .select('id, username, created_at')
       .order('created_at', { ascending: false })
       .limit(5);
 
@@ -248,7 +249,7 @@ const fetchRecentTracks = async () => {
   try {
     const { data, error } = await supabase
       .from('tracks')
-      .select('id, title, artist, created_at')
+      .select('id, title, created_at')
       .order('created_at', { ascending: false })
       .limit(5);
 

@@ -6,7 +6,7 @@
         class="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
         @click="showAddUserModal = true"
       >
-        <span class="i-heroicons-plus mr-2"></span>
+        <UIcon name="i-heroicons-plus" class="mr-2"/>
         Add User
       </button>
     </div>
@@ -16,7 +16,7 @@
       <div class="flex flex-col md:flex-row gap-4">
         <div class="relative md:w-1/3">
           <span class="absolute inset-y-0 left-0 flex items-center pl-3">
-            <span class="i-heroicons-magnifying-glass text-gray-400"></span>
+            <UIcon name="i-heroicons-magnifying-glass" class="text-gray-400"/>
           </span>
           <input
             v-model="userSearchStore.query"
@@ -24,7 +24,7 @@
             placeholder="Search users..."
             class="pl-10 pr-4 py-2 w-full border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             @input="debouncedSearch"
-          />
+          >
         </div>
         <div class="md:w-1/4">
           <select
@@ -37,12 +37,12 @@
             </option>
           </select>
         </div>
-        <div class="flex-grow"></div>
+        <div class="flex-grow"/>
         <button
           class="inline-flex items-center px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500"
           @click="fetchUsers"
         >
-          <span class="i-heroicons-arrow-path mr-2" :class="{ 'animate-spin': loading }"></span>
+          <UIcon name="i-heroicons-arrow-path" class="mr-2" :class="{ 'animate-spin': loading }"/>
           Refresh
         </button>
       </div>
@@ -51,11 +51,11 @@
     <!-- Users table -->
     <div class="bg-white rounded-lg shadow overflow-hidden">
       <div v-if="loading" class="py-8 text-center">
-        <span class="i-heroicons-arrow-path animate-spin h-8 w-8 mx-auto text-gray-400"></span>
+        <UIcon name="i-heroicons-arrow-path" class="animate-spin h-8 w-8 mx-auto text-gray-400"/>
         <p class="mt-2 text-gray-500">Loading users...</p>
       </div>
       <div v-else-if="users.length === 0" class="py-8 text-center">
-        <span class="i-heroicons-user-slash h-12 w-12 mx-auto text-gray-400"></span>
+        <UIcon name="i-heroicons-user-slash" class="h-12 w-12 mx-auto text-gray-400"/>
         <p class="mt-2 text-gray-500">No users found</p>
         <button 
           class="mt-4 px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500"
@@ -97,7 +97,7 @@
                   class="p-1 rounded-md text-blue-600 hover:bg-blue-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   @click="editUser(row)"
                 >
-                  <span class="i-heroicons-pencil-square h-4 w-4"></span>
+                  <UIcon name="i-heroicons-pencil-square" class="h-4 w-4"/>
                 </button>
                 <button
                   :class="[
@@ -108,19 +108,16 @@
                   ]"
                   @click="toggleAdminStatus(row)"
                 >
-                  <span 
-                    :class="[
-                      'h-4 w-4',
-                      row.is_admin ? 'i-heroicons-user-minus' : 'i-heroicons-user-plus'
-                    ]"
-                  ></span>
+                  <UIcon
+                    :name="row.is_admin ? 'i-heroicons-user-minus' : 'i-heroicons-user-plus'"
+                    class="h-4 w-4"/>
                 </button>
-                <button
+                <UButton
                   class="p-1 rounded-md text-red-600 hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-red-500"
                   @click="confirmDeleteUser(row)"
                 >
-                  <span class="i-heroicons-trash h-4 w-4"></span>
-                </button>
+                  <UIcon name="i-heroicons-trash" class="h-4 w-4"/>
+                </UButton>
               </div>
             </td>
           </tr>
@@ -137,13 +134,13 @@
             <button
               v-for="page in totalPages"
               :key="page"
-              @click="currentPage = page; fetchUsers()"
               :class="[
                 'px-3 py-1 text-sm rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500',
                 currentPage === page
                   ? 'bg-blue-600 text-white'
                   : 'bg-white text-gray-700 hover:bg-gray-100'
               ]"
+              @click="currentPage = page; fetchUsers()"
             >
               {{ page }}
             </button>
@@ -156,15 +153,15 @@
     <div v-if="showEditModal" class="fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
       <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
         <!-- Background overlay -->
-        <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" aria-hidden="true" @click="showEditModal = false"></div>
+        <!-- <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" aria-hidden="true" @click="showEditModal = false"></div> -->
 
         <!-- Modal panel -->
         <div class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
           <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
             <div class="flex justify-between items-center pb-3 border-b">
-              <h3 class="text-lg font-medium text-gray-900" id="modal-title">Edit User</h3>
+              <h3 id="modal-title" class="text-lg font-medium text-gray-900">Edit User</h3>
               <button class="text-gray-400 hover:text-gray-500" @click="showEditModal = false">
-                <span class="i-heroicons-x-mark h-6 w-6"></span>
+                <UIcon name="i-heroicons-x-mark" class="h-6 w-6"/>
               </button>
             </div>
             <div class="space-y-4 mt-4">
@@ -176,7 +173,7 @@
                   type="text" 
                   placeholder="Username" 
                   class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                />
+                >
               </div>
               <div>
                 <label for="email" class="block text-sm font-medium text-gray-700">Email</label>
@@ -187,7 +184,7 @@
                   placeholder="Email" 
                   disabled
                   class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 bg-gray-100 cursor-not-allowed"
-                />
+                >
               </div>
               <div>
                 <label for="full_name" class="block text-sm font-medium text-gray-700">Full Name</label>
@@ -197,7 +194,7 @@
                   type="text" 
                   placeholder="Full Name" 
                   class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                />
+                >
               </div>
               <div>
                 <div class="flex items-center">
@@ -205,18 +202,18 @@
                   <label class="inline-flex items-center cursor-pointer">
                     <input 
                       id="is_admin" 
-                      type="checkbox" 
                       v-model="editingUser.is_admin" 
+                      type="checkbox" 
                       class="sr-only"
-                    />
+                    >
                     <div class="relative">
-                      <div class="block bg-gray-300 w-10 h-6 rounded-full"></div>
+                      <div class="block bg-gray-300 w-10 h-6 rounded-full"/>
                       <div 
                         :class="[
                           'absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition-transform',
                           editingUser.is_admin ? 'transform translate-x-4 bg-blue-600' : ''
                         ]"
-                      ></div>
+                      />
                     </div>
                   </label>
                 </div>
@@ -229,7 +226,7 @@
               class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-base font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:ml-3 sm:w-auto sm:text-sm"
               @click="updateUser"
             >
-              <span v-if="updating" class="i-heroicons-arrow-path animate-spin mr-2"></span>
+              <UIcon v-if="updating" name="i-heroicons-arrow-path" class="animate-spin mr-2"/>
               Save Changes
             </button>
             <button 
@@ -248,15 +245,15 @@
     <div v-if="showAddUserModal" class="fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
       <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
         <!-- Background overlay -->
-        <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" aria-hidden="true" @click="showAddUserModal = false"></div>
+        <!-- <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" aria-hidden="true" @click="showAddUserModal = false"></div> -->
 
         <!-- Modal panel -->
         <div class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
           <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
             <div class="flex justify-between items-center pb-3 border-b">
-              <h3 class="text-lg font-medium text-gray-900" id="modal-title">Add New User</h3>
+              <h3 id="modal-title" class="text-lg font-medium text-gray-900">Add New User</h3>
               <button class="text-gray-400 hover:text-gray-500" @click="showAddUserModal = false">
-                <span class="i-heroicons-x-mark h-6 w-6"></span>
+                <UIcon name="i-heroicons-x-mark" class="h-6 w-6"/>
               </button>
             </div>
             <div class="space-y-4 mt-4">
@@ -269,7 +266,7 @@
                   placeholder="Email" 
                   required
                   class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                />
+                >
               </div>
               <div>
                 <label for="new-password" class="block text-sm font-medium text-gray-700">Password <span class="text-red-500">*</span></label>
@@ -280,7 +277,7 @@
                   placeholder="Password" 
                   required
                   class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                />
+                >
               </div>
               <div>
                 <label for="new-username" class="block text-sm font-medium text-gray-700">Username</label>
@@ -290,7 +287,7 @@
                   type="text" 
                   placeholder="Username" 
                   class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                />
+                >
               </div>
               <div>
                 <label for="new-full-name" class="block text-sm font-medium text-gray-700">Full Name</label>
@@ -300,7 +297,7 @@
                   type="text" 
                   placeholder="Full Name" 
                   class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                />
+                >
               </div>
               <div>
                 <div class="flex items-center">
@@ -308,18 +305,18 @@
                   <label class="inline-flex items-center cursor-pointer">
                     <input 
                       id="new-is-admin" 
-                      type="checkbox" 
                       v-model="newUser.is_admin" 
+                      type="checkbox" 
                       class="sr-only"
-                    />
+                    >
                     <div class="relative">
-                      <div class="block bg-gray-300 w-10 h-6 rounded-full"></div>
+                      <div class="block bg-gray-300 w-10 h-6 rounded-full"/>
                       <div 
                         :class="[
                           'absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition-transform',
                           newUser.is_admin ? 'transform translate-x-4 bg-blue-600' : ''
                         ]"
-                      ></div>
+                      />
                     </div>
                   </label>
                 </div>
@@ -332,7 +329,7 @@
               class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-base font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:ml-3 sm:w-auto sm:text-sm"
               @click="addUser"
             >
-              <span v-if="adding" class="i-heroicons-arrow-path animate-spin mr-2"></span>
+              <UIcon v-if="adding" name="i-heroicons-arrow-path" class="animate-spin mr-2"/>
               Add User
             </button>
             <button 
@@ -351,15 +348,15 @@
     <div v-if="showDeleteModal" class="fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
       <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
         <!-- Background overlay -->
-        <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" aria-hidden="true" @click="showDeleteModal = false"></div>
+        <!-- <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" aria-hidden="true" @click="showDeleteModal = false"></div> -->
 
         <!-- Modal panel -->
         <div class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
           <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
             <div class="flex justify-between items-center pb-3 border-b">
-              <h3 class="text-lg font-medium text-gray-900" id="modal-title">Confirm Delete</h3>
+              <h3 id="modal-title" class="text-lg font-medium text-gray-900">Confirm Delete</h3>
               <button class="text-gray-400 hover:text-gray-500" @click="showDeleteModal = false">
-                <span class="i-heroicons-x-mark h-6 w-6"></span>
+                <UIcon name="i-heroicons-x-mark" class="h-6 w-6"/>
               </button>
             </div>
             <div class="mt-4">
@@ -373,7 +370,7 @@
               class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-red-600 text-base font-medium text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 sm:ml-3 sm:w-auto sm:text-sm"
               @click="deleteUser"
             >
-              <span v-if="deleting" class="i-heroicons-arrow-path animate-spin mr-2"></span>
+              <UIcon v-if="deleting" name="i-heroicons-arrow-path" class="animate-spin mr-2"/>
               Delete User
             </button>
             <button 
@@ -470,7 +467,7 @@ const debounce = (fn, delay) => {
 const debouncedSearch = debounce(async () => {
   currentPage.value = 1;
   await userSearchStore.searchUsers(supabase);
-  fetchUsers();
+  await fetchUsers();
 }, 300);
 
 // Fetch users

@@ -14,11 +14,7 @@
       <div class="bg-white shadow rounded-lg p-6 mb-6">
         <div class="flex items-center space-x-6">
           <div class="shrink-0">
-            <img 
-              :src="profile.avatar_url || 'https://via.placeholder.com/150?text=No+Avatar'" 
-              alt="Avatar" 
-              class="w-24 h-24 rounded-full object-cover border-2 border-gray-200" 
-            />
+            <UAvatar :alt="profile.username" class="w-24 h-24 rounded-full object-cover border-2 border-gray-200" />
           </div>
           <div>
             <h2 class="text-xl font-bold">{{ profile.username || user.email }}</h2>

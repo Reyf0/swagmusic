@@ -69,7 +69,6 @@ const formatDuration = (seconds) => {
   return `${mins}:${secs.toString().padStart(2, '0')}`
 }
 
-// Fetch data when component is mounted
 onMounted(() => {
   if (user.value) {
     fetchFavorites();
@@ -77,7 +76,6 @@ onMounted(() => {
   }
 })
 
-// Watch for user changes
 watch(user, (newUser) => {
   if (newUser) {
     fetchFavorites()
@@ -170,7 +168,6 @@ const fetchRecentlyPlayed = async () => {
   }
 }
 
-// Add to onMounted and watch functions
 fetchRecentlyPlayed()
 
 </script>
@@ -276,7 +273,7 @@ fetchRecentlyPlayed()
           </div>
         </div>
       </div>
-      <!-- Add this to the template section -->
+
       <div class="mb-8">
         <div class="flex justify-between items-center mb-4">
           <h2 class="text-xl font-semibold">Your Playlists</h2>
@@ -344,7 +341,7 @@ fetchRecentlyPlayed()
               </div>
 
               <!-- Play button overlay -->
-              <div class="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 transition-all duration-300 flex items-center justify-center">
+              <div class="absolute inset-0 hover:bg-black bg-opacity-0 group-hover:bg-opacity-30 transition-all duration-300 flex items-center justify-center">
                 <button 
                   class="play-button opacity-0 group-hover:opacity-100 transform translate-y-2 group-hover:translate-y-0 transition-all duration-300 bg-green-500 hover:bg-green-600 text-white rounded-full w-12 h-12 flex items-center justify-center shadow-lg"
                 >

@@ -20,11 +20,24 @@
 
       <div v-else class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
         <div v-for="track in tracks" :key="track.id" class="border rounded p-3 shadow hover:shadow-md transition-shadow">
-          <img
-              :src="track.cover_url || 'https://via.placeholder.com/300x300?text=No+Cover'"
-              alt="cover"
-              class="w-full h-48 object-cover rounded mb-2"
-          />
+          <div class="relative overflow-hidden rounded-md shadow-md mb-3 group">
+            <img
+                :src="track.cover_url || 'https://via.placeholder.com/300x300?text=No+Cover'"
+                alt="cover"
+                class="w-full h-48 object-cover rounded"
+            />
+            <div class="absolute inset-0 hover:bg-black bg-opacity-0 group-hover:bg-opacity-30 transition-all duration-300 flex items-center justify-center">
+              <button
+                  class="play-button opacity-0 group-hover:opacity-100 transform translate-y-2 group-hover:translate-y-0 transition-all duration-300 bg-green-500 hover:bg-green-600 text-white rounded-full w-12 h-12 flex items-center justify-center shadow-lg"
+                  @click="playTrack(track, tracks)"
+              >
+                <UIcon :name="isCurrentTrack(track) && isPlaying ? 'i-heroicons-pause' : 'i-heroicons-play'"
+                       class="w-6 h-6" />
+              </button>
+            </div>
+          </div>
+
+
           <h2 class="text-lg font-semibold truncate">{{ track.title }}</h2>
           <p class="text-sm text-gray-600">
           <span v-if="track.track_authors && track.track_authors.length">
@@ -35,6 +48,7 @@
             <span v-else>Unknown Artist</span>
           </p>
           <div class="flex items-center justify-between mt-2">
+
             <button
                 @click="playTrack(track, tracks)"
                 class="bg-green-500 hover:bg-green-600 text-white py-2 px-4 rounded-full flex items-center"
@@ -45,10 +59,12 @@
               />
               <span>{{ isCurrentTrack(track) && isPlaying ? 'Pause' : 'Play' }}</span>
             </button>
+
             <div class="flex items-center">
-            <span v-if="isCurrentTrack(track)" class="text-xs text-green-500 font-medium mr-2">
-              PLAYING
-            </span>
+              <span v-if="isCurrentTrack(track)" class="text-xs text-green-500 font-medium mr-2">
+                PLAYING
+              </span>
+
               <button
                   @click="openAddToPlaylistModal(track)"
                   class="text-gray-500 hover:text-gray-700 p-2"
@@ -57,6 +73,7 @@
                 <UIcon name="i-heroicons-plus" class="w-5 h-5" />
               </button>
             </div>
+
           </div>
         </div>
       </div>
@@ -75,6 +92,7 @@
 <script setup>
 import { usePlayerStore } from '@/stores/player'
 import { storeToRefs } from 'pinia'
+
 
 const supabase = useSupabaseClient()
 const user = useSupabaseUser()
@@ -114,24 +132,9 @@ const fetchTracks = async () => {
   }
 }
 
-// Player functions
-const playTrack = (track, trackList) => {
-  if (isCurrentTrack(track)) {
-    // Toggle play/pause for current track
-    if (isPlaying.value) {
-      playerStore.pause()
-    } else {
-      playerStore.resume()
-    }
-  } else {
-    // Play new track
-    playerStore.play(track, trackList)
-  }
-}
+const { playTrack, isCurrentTrack } = usePlayTrack()
 
-const isCurrentTrack = (track) => {
-  return currentTrack.value && currentTrack.value.id === track.id
-}
+
 
 // Open add to playlist modal
 const openAddToPlaylistModal = (track) => {
@@ -211,6 +214,9 @@ const handleAddToPlaylist = async ({ playlistId, track, playlistName }) => {
     })
   }
 }
+
+
+
 
 // Fetch tracks when component is mounted
 onMounted(() => {

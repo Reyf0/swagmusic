@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { usePlayerStore } from '@/stores/player'
+import { useSearchStore } from '@/stores/searchStore'
 import { storeToRefs } from 'pinia'
 import FullPlayerModal from '@/components/FullPlayerModal.vue'
 
@@ -7,6 +8,7 @@ const user = useSupabaseUser();
 const supabase = useSupabaseClient()
 const router = useRouter()
 const toast = useToast()
+
 
 
 const signOut = async () => {
@@ -44,6 +46,18 @@ const formatTime = (seconds) => {
   return `${mins}:${secs.toString().padStart(2, '0')}`
 }
 
+const searchStore = useSearchStore()
+const { query } = storeToRefs(searchStore)
+const handleSearch = async () => {
+  if (query) {
+    await router.push({ path: '/search', query: { q: query } })
+  }
+}
+
+watch(query, async () => {
+  await searchStore.searchTracks(supabase)
+})
+
 </script>
 
 <template>
@@ -52,10 +66,18 @@ const formatTime = (seconds) => {
       <nav class="bg-gray-800 p-4">
         <div class="container mx-auto flex justify-between items-center">
           <UButton><NuxtLink to="/" class="text-white text-xl font-bold">SwagMusic</NuxtLink></UButton>
+          <input
+              v-model="query"
+              type="text"
+              placeholder="Search by title or artist"
+              class="w-full px-4 py-1 mx-10 border border-gray-500 rounded focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              @keydown.enter="handleSearch"
+          />
           <div class="flex space-x-4">
             <UButton><NuxtLink to="/" class="text-white hover:text-gray-300">Home</NuxtLink></UButton>
             <UButton><NuxtLink to="/tracks" class="text-white hover:text-gray-300">Tracks</NuxtLink></UButton>
             <template v-if="user">
+              <UButton><NuxtLink to="/library" class="text-white hover:text-gray-300">Library</NuxtLink></UButton>
               <UButton><NuxtLink to="/upload" class="text-white hover:text-gray-300">Upload</NuxtLink></UButton>
               <UButton><NuxtLink to="/profile" class="text-white hover:text-gray-300">Profile</NuxtLink></UButton>
               <UButton class="text-white hover:text-gray-300" @click="signOut">Sign out</UButton>

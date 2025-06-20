@@ -2,6 +2,7 @@
 const supabase = useSupabaseClient()
 const user = useSupabaseUser()
 const router = useRouter()
+const toast = useToast()
 
 // Form data
 const title = ref('')
@@ -10,6 +11,13 @@ const audioFile = ref<File | null>(null)
 const coverFile = ref<File | null>(null)
 const audioPreview = ref('')
 const coverPreview = ref('')
+const albumId = ref<string | null>(null)
+const albums = ref<any[]>([])
+const newAlbumTitle = ref('')
+const authorId = ref<string | null>(null)
+
+
+
 
 // UI states
 const isUploading = ref(false)
@@ -23,6 +31,22 @@ onMounted(() => {
     router.push('/login')
   }
 })
+
+const fetchAlbumsForAuthor = async (authorId: string) => {
+  const { data, error } = await supabase
+      .from('albums')
+      .select('*')
+      .eq('author_id', authorId)
+      .order('created_at', { ascending: false })
+
+  if (!error) {
+    albums.value = data
+  } else {
+    console.error('Error fetching albums:', error)
+  }
+}
+
+
 
 // Handle audio file selection
 const onAudioChange = (event: Event) => {
@@ -51,6 +75,52 @@ const onCoverChange = (event: Event) => {
     coverPreview.value = URL.createObjectURL(coverFile.value)
   }
 }
+
+const createAlbum = async (albumTitle: string) => {
+  if (!authorId.value) {
+    toast.add({ title: 'Сначала укажите артиста', color: 'warning' })
+    return
+  }
+
+  let coverUrl = null
+  if (coverFile.value) {
+    const coverFileName = `${Date.now()}_${coverFile.value.name}`
+    const { error: coverError } = await supabase.storage
+        .from('covers')
+        .upload(coverFileName, coverFile.value)
+
+    if (coverError) {
+      toast.add({ title: 'Ошибка при загрузке обложки', description: coverError.message, color: 'error' })
+      return
+    }
+
+    const { data: coverData } = supabase.storage
+        .from('covers')
+        .getPublicUrl(coverFileName)
+
+    coverUrl = coverData.publicUrl
+  }
+
+  const { data, error } = await supabase
+      .from('albums')
+      .insert({
+        title: albumTitle,
+        author_id: authorId.value,
+        cover_url: coverUrl
+      })
+      .select('*')
+      .single()
+
+  if (error) {
+    toast.add({ title: 'Ошибка при создании альбома', description: error.message, color: 'error' })
+    return
+  }
+
+  albums.value.unshift(data)
+  albumId.value = data.id
+  toast.add({ title: 'Альбом создан', color: 'success' })
+}
+
 
 // Upload track to Supabase
 const uploadTrack = async () => {
@@ -113,16 +183,26 @@ const uploadTrack = async () => {
 
     if (existingAuthor) {
       authorId = existingAuthor.id
+      await fetchAlbumsForAuthor(authorId)
     } else {
       const { data: newAuthor, error: authorInsertError } = await supabase
-        .from('authors')
-        .insert({ name: artist.value })
-        .select('id')
-        .single()
+          .from('authors')
+          .insert({ name: artist.value })
+          .select('id')
+          .single()
 
       if (authorInsertError) throw new Error(`Error creating author: ${authorInsertError.message}`)
       authorId = newAuthor.id
+      await fetchAlbumsForAuthor(authorId)
     }
+
+
+
+    // Создание альбома, если указан новый
+    if (newAlbumTitle.value && !albumId.value) {
+      await createAlbum(newAlbumTitle.value)
+    }
+
 
     // 4. Create track record
     const { data: track, error: trackError } = await supabase
@@ -131,7 +211,8 @@ const uploadTrack = async () => {
         title: title.value,
         audio_url: audioData.publicUrl,
         cover_url: coverUrl,
-        user_id: user.value?.id
+        user_id: user.value?.id,
+        album_id: albumId.value
       })
       .select('id')
       .single()
@@ -223,6 +304,34 @@ const uploadTrack = async () => {
           placeholder="Enter artist name"
         >
       </div>
+
+      <!-- Album selection -->
+      <div v-if="albums.length > 0">
+        <label for="album" class="block text-sm font-medium text-gray-700">Album</label>
+        <select
+            id="album"
+            v-model="albumId"
+            class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+        >
+          <option value="">No album</option>
+          <option v-for="album in albums" :key="album.id" :value="album.id">{{ album.title }}</option>
+        </select>
+
+
+      </div>
+      <!-- Новый альбом -->
+      <div v-else class="mt-2">
+        <label for="artist" class="block text-sm font-medium text-gray-700">Album</label>
+        <UInput v-model="newAlbumTitle" placeholder="Новый альбом" />
+        <UButton
+            class="ml-2 mt-2"
+            :disabled="!newAlbumTitle"
+            @click="createAlbum(newAlbumTitle)"
+        >
+          Создать альбом
+        </UButton>
+      </div>
+
 
       <!-- Audio file upload -->
       <div>

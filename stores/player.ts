@@ -14,6 +14,58 @@ export const usePlayerStore = defineStore('player', () => {
     const isShuffle = ref(false)
     const showFullPlayer = ref(false)
 
+    const lastListenedTrackId = ref<string | null>(null)
+
+    const recordListen = async () => {
+        const supabase = useSupabaseClient()
+        const user = useSupabaseUser()
+        const trackId = currentTrack.value?.id
+
+        if (!user.value || !trackId) return
+        if (lastListenedTrackId.value === trackId) return
+
+        // 1. Получаем последнее прослушивание пользователя
+        const { data: lastListen, error: lastError } = await supabase
+            .from('play_history')
+            .select('track_id, played_at')
+            .eq('user_id', user.value.id)
+            .order('played_at', { ascending: false })
+            .limit(1)
+            .maybeSingle()
+
+        if (lastError) {
+            console.error('Ошибка при проверке последнего прослушивания:', lastError.message)
+            return
+        }
+
+        const lastTrackId = lastListen?.track_id
+        const lastPlayedAt = lastListen?.played_at ? new Date(lastListen.played_at) : null
+        const now = new Date()
+
+        const timeSinceLast = lastPlayedAt ? (now.getTime() - lastPlayedAt.getTime()) / 1000 : Infinity
+
+        // 2. Проверка условий:
+        if (lastTrackId === trackId && timeSinceLast < 300) {
+            // тот же трек и прошло меньше 5 минут — не записываем
+            return
+        }
+
+        // 3. Запись прослушивания
+        const { error: insertError } = await supabase.from('play_history').insert({
+            user_id: user.value.id,
+            track_id: trackId
+        })
+
+
+
+        if (insertError) {
+            console.error('Ошибка при записи прослушивания:', insertError.message)
+        } else {
+            lastListenedTrackId.value = currentTrack.value.id
+        }
+    }
+
+
     const openFullPlayer = () => {
         showFullPlayer.value = true
     }
@@ -66,6 +118,7 @@ export const usePlayerStore = defineStore('player', () => {
             onplay: () => {
                 startProgressTracking()
                 isPlaying.value = true
+                recordListen().then(() => {}).catch(error => console.error('Error recording listen:', error))
             },
             onpause: () => {
                 stopProgressTracking()

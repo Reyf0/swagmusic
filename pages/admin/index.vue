@@ -273,3 +273,9 @@ const fetchRecentTracks = async () => {
   }
 };
 </script>
+
+<style scoped>
+
+
+
+</style>

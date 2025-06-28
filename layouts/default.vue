@@ -9,7 +9,100 @@ const supabase = useSupabaseClient()
 const router = useRouter()
 const toast = useToast()
 
+const profile = ref(null)
+const loading = ref(true)
+const error = ref(null)
 
+const progressBar = ref<HTMLElement | null>(null)
+let isDragging = false
+
+const onProgressMouseDown = (e: MouseEvent) => {
+  isDragging = true
+  updateSeek(e)
+
+  window.addEventListener('mousemove', onProgressMouseMove)
+  window.addEventListener('mouseup', onProgressMouseUp)
+}
+
+const onProgressMouseMove = (e: MouseEvent) => {
+  if (isDragging) {
+    updateSeek(e)
+  }
+}
+
+const onProgressMouseUp = (e: MouseEvent) => {
+  if (isDragging) {
+    updateSeek(e)
+    isDragging = false
+    window.removeEventListener('mousemove', onProgressMouseMove)
+    window.removeEventListener('mouseup', onProgressMouseUp)
+  }
+}
+
+const updateSeek = (e: MouseEvent) => {
+  if (!progressBar.value || !duration.value) return
+
+  const rect = progressBar.value.getBoundingClientRect()
+  const offsetX = e.clientX - rect.left
+  const width = rect.width
+
+  const percent = Math.max(0, Math.min(offsetX / width, 1))
+  const newTime = percent * duration.value
+  playerStore.seek(newTime)
+}
+
+
+// Function tp fetch user profile
+const fetchProfile = async () => {
+  if (!user.value) return
+
+  loading.value = true
+  error.value = null
+
+  try {
+    const { data, error: supabaseError } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.value.id)
+        .single()
+
+    if (supabaseError) {
+      throw supabaseError
+    }
+
+    // If profile exists, use it
+    if (data) {
+      profile.value = data
+
+      // If username is not in profile but exists in user metadata, use that
+      if (!profile.value.username && user.value.user_metadata && user.value.user_metadata.username) {
+        profile.value.username = user.value.user_metadata.username
+      }
+    } else if (user.value.user_metadata && user.value.user_metadata.username) {
+      // Create a basic profile with username from metadata
+      profile.value = {
+        id: user.value.id,
+        username: user.value.user_metadata.username
+      }
+    } else {
+      // Create a minimal profile
+      profile.value = {
+        id: user.value.id,
+        username: user.value.email?.split('@')[0] || 'User'
+      }
+    }
+  } catch (err) {
+    console.error('Error fetching profile:', err)
+    error.value = err.message || 'Failed to load profile'
+    toast.add({
+      title: 'Ошибка загрузки профиля',
+      description: error.value,
+      color: 'error',
+    })
+  } finally {
+    loading.value = false
+  }
+}
 
 const signOut = async () => {
   const { error } = await supabase.auth.signOut()
@@ -29,14 +122,14 @@ const signOut = async () => {
 }
 
 const playerStore = usePlayerStore()
-const { 
-  currentTrack, 
-  isPlaying, 
-  currentTime, 
-  duration, 
-  volume, 
-  isRepeat, 
-  isShuffle 
+const {
+  currentTrack,
+  isPlaying,
+  currentTime,
+  duration,
+  volume,
+  isRepeat,
+  isShuffle
 } = storeToRefs(playerStore)
 
 const formatTime = (seconds) => {
@@ -56,6 +149,13 @@ const handleSearch = async () => {
 
 watch(query, async () => {
   await searchStore.searchTracks(supabase)
+})
+
+// Fetch on component mount to handle page refresh
+onMounted(() => {
+  if (user.value) {
+    fetchProfile()
+  }
 })
 
 </script>
@@ -81,6 +181,7 @@ watch(query, async () => {
               <UButton><NuxtLink to="/upload" class="text-white hover:text-gray-300">Upload</NuxtLink></UButton>
               <UButton><NuxtLink to="/profile" class="text-white hover:text-gray-300">Profile</NuxtLink></UButton>
               <UButton class="text-white hover:text-gray-300" @click="signOut">Sign out</UButton>
+
             </template>
             <template v-else>
               <UButton><NuxtLink to="/login" class="text-white hover:text-gray-300">Login</NuxtLink></UButton>
@@ -97,12 +198,16 @@ watch(query, async () => {
           <!-- Track info and controls -->
           <div class="flex items-center justify-between mb-2">
             <div class="flex items-center space-x-4">
-              <img 
-                :src="currentTrack.cover_url || 'https://via.placeholder.com/300x300?text=No+Cover'" 
-                class="w-12 h-12 rounded object-cover" 
-                alt="Track cover"
-                @click="playerStore.openFullPlayer"
-              />
+              <div class="flex items-center justify-center w-12 h-12 bg-gray-800 overflow-hidden cursor-pointer" @click="playerStore.openFullPlayer">
+                <UIcon v-if="!currentTrack.cover_url" name="i-heroicons-musical-note" class="text-gray-400" />
+                <img
+                    v-else
+                    :src="currentTrack.cover_url || 'https://via.placeholder.com/300x300?text=No+Cover'"
+                    class="w-12 h-12 rounded object-cover"
+                    alt="Track cover"
+                    @click="playerStore.openFullPlayer"
+                />
+              </div>
               <div>
                 <p class="font-semibold">{{ currentTrack.title }}</p>
                 <p class="text-sm text-gray-400">
@@ -114,9 +219,9 @@ watch(query, async () => {
             <!-- Main controls -->
             <div class="flex items-center space-x-4">
               <!-- Shuffle button -->
-              <button 
-                @click="playerStore.toggleShuffle()" 
-                class="p-2 rounded-full hover:bg-gray-700 transition-colors"
+              <button
+                @click="playerStore.toggleShuffle()"
+                class="flex justify-center items-center p-2 rounded-full hover:bg-gray-700 transition-colors"
                 :class="{ 'text-green-500': isShuffle }"
                 title="Shuffle"
               >
@@ -124,41 +229,41 @@ watch(query, async () => {
               </button>
 
               <!-- Previous track -->
-              <button 
-                @click="playerStore.playPrevious()" 
-                class="p-2 rounded-full hover:bg-gray-700 transition-colors"
+              <button
+                @click="playerStore.playPrevious()"
+                class="flex justify-center items-center p-2 rounded-full hover:bg-gray-700 transition-colors"
                 title="Previous"
               >
                 <UIcon name="i-heroicons-backward" class="w-5 h-5" />
               </button>
 
               <!-- Play/Pause -->
-              <button 
-                @click="isPlaying ? playerStore.pause() : playerStore.resume()" 
-                class="p-3 bg-white text-gray-900 rounded-full hover:bg-gray-200 transition-colors"
+              <button
+                @click="isPlaying ? playerStore.pause() : playerStore.resume()"
+                class="flex justify-center items-center p-3 w-10 h-10 bg-white text-gray-900 rounded-full hover:bg-gray-200 transition-colors"
                 title="Play/Pause"
               >
-                <UIcon 
-                  :name="isPlaying ? 'i-heroicons-pause' : 'i-heroicons-play'" 
-                  class="w-6 h-6" 
+                <UIcon
+                  :name="isPlaying ? 'i-heroicons-pause' : 'i-heroicons-play'"
+                  class="w-6 h-6"
                 />
               </button>
 
               <!-- Next track -->
-              <button 
-                @click="playerStore.playNext()" 
-                class="p-2 rounded-full hover:bg-gray-700 transition-colors"
+              <button
+                class="flex justify-center items-center p-2 rounded-full hover:bg-gray-700 transition-colors"
                 title="Next"
+                @click="playerStore.playNext()"
               >
                 <UIcon name="i-heroicons-forward" class="w-5 h-5" />
               </button>
 
               <!-- Repeat button -->
-              <button 
-                @click="playerStore.toggleRepeat()" 
-                class="p-2 rounded-full hover:bg-gray-700 transition-colors"
-                :class="{ 'text-green-500': isRepeat }"
+              <button
                 title="Repeat"
+                @click="playerStore.toggleRepeat()"
+                class="flex justify-center items-center p-2 rounded-full hover:bg-gray-700 transition-colors"
+                :class="{ 'text-green-500': isRepeat }"
               >
                 <UIcon name="i-heroicons-arrow-path" class="w-5 h-5" />
               </button>
@@ -166,17 +271,17 @@ watch(query, async () => {
 
             <!-- Volume control -->
             <div class="flex items-center space-x-2">
-              <UIcon 
-                :name="volume > 0 ? 'i-heroicons-speaker-wave' : 'i-heroicons-speaker-x-mark'" 
-                class="w-5 h-5" 
+              <UIcon
+                :name="volume > 0 ? 'i-heroicons-speaker-wave' : 'i-heroicons-speaker-x-mark'"
+                class="w-5 h-5"
               />
-              <input 
-                type="range" 
-                min="0" 
-                max="1" 
-                step="0.01" 
-                :value="volume" 
-                @input="playerStore.setVolume($event.target.value)" 
+              <input
+                type="range"
+                min="0"
+                max="1"
+                step="0.01"
+                :value="volume"
+                @input="playerStore.setVolume($event.target.value)"
                 class="w-24"
               />
             </div>
@@ -189,9 +294,9 @@ watch(query, async () => {
           <!-- Progress bar -->
           <div class="flex items-center space-x-2">
             <span class="text-xs w-10 text-right">{{ formatTime(currentTime) }}</span>
-            <div class="relative flex-grow h-2 bg-gray-700 rounded cursor-pointer" @click="playerStore.seek($event.offsetX / $event.target.offsetWidth * duration)">
-              <div 
-                class="absolute top-0 left-0 h-full bg-green-500 rounded" 
+            <div ref="progressBar" class="relative flex-grow h-2 bg-gray-700 rounded cursor-pointer" @mousedown="onProgressMouseDown">
+              <div
+                class="absolute top-0 left-0 h-full bg-green-500 rounded"
                 :style="{ width: `${duration > 0 ? (currentTime / duration * 100) : 0}%` }"
               ></div>
             </div>
@@ -201,13 +306,15 @@ watch(query, async () => {
         <button
             class="absolute right-4 bottom-4 p-1 rounded-full bg-gray-700 hover:bg-gray-600"
             title="Открыть плеер"
-            @click="playerStore.openFullPlayer"
+            @click="playerStore.openView('now')"
         >
           <UIcon name="i-heroicons-chevron-up" class="w-5 h-5 text-white" />
         </button>
+
       </div>
+      <!-- Полноэкранный режим -->
+      <PlayerViews v-if="playerStore.isFullScreenMode" class="fixed inset-0 z-50" />
     </UApp>
-    <FullPlayerModal v-if="playerStore.showFullPlayer" />
   </div>
 </template>
 

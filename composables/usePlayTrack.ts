@@ -3,21 +3,36 @@ import { storeToRefs } from 'pinia'
 
 export const usePlayTrack = () => {
     const playerStore = usePlayerStore()
-    const { currentTrack, isPlaying } = storeToRefs(playerStore)
+    const { currentTrack, isPlaying, queue, currentTrackIndex } = storeToRefs(playerStore)
 
     const isCurrentTrack = (track: any) => {
-        return currentTrack.value && currentTrack.value.id === track.id
+        return currentTrack.value?.id === track.id
     }
 
-    const playTrack = (track: any, trackList: any[]) => {
+    const playTrack = (track: any, trackList: any[] = []) => {
+        // Если клик по текущему треку — ставим на паузу или продолжаем
         if (isCurrentTrack(track)) {
             if (isPlaying.value) {
                 playerStore.pause()
             } else {
                 playerStore.resume()
             }
+            return
+        }
+
+        const isSameQueue =
+            queue.value.length === trackList.length &&
+            queue.value.every((t, i) => t.id === trackList[i].id)
+
+        if (isSameQueue) {
+            // Если очередь та же, просто найди индекс и воспроизведи
+            const index = trackList.findIndex(t => t.id === track.id)
+            if (index !== -1) {
+                playerStore.play(trackList[index], trackList)
+            }
         } else {
-            playerStore.play(track, trackList)
+            // Иначе заменяем очередь
+            playerStore.replaceQueue(trackList, track)
         }
     }
 

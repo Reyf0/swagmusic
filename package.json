@@ -26,16 +26,19 @@
     "@unhead/vue": "^2.0.10",
     "better-sqlite3": "^11.10.0",
     "chart.js": "^4.5.0",
-    "eslint": "^9.29.0",
     "howler": "^2.2.4",
     "nuxt": "^3.15.0",
-    "typescript": "^5.8.3",
     "vue": "^3.5.16",
     "vue-chartjs": "^5.3.2",
     "vue-router": "^4.5.1"
   },
   "devDependencies": {
+    "@eslint/js": "^9.29.0",
     "@iconify-json/heroicons": "^1.2.2",
-    "@types/howler": "^2.2.12"
+    "@types/howler": "^2.2.12",
+    "eslint": "^9.29.0",
+    "supabase": "^2.26.9",
+    "typescript": "^5.8.3",
+    "typescript-eslint": "^8.35.0"
   }
 }

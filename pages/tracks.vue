@@ -18,17 +18,21 @@
         <p class="text-gray-500">No tracks found.</p>
       </div>
 
-      <div v-else class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-        <div v-for="track in tracks" :key="track.id" class="border rounded p-3 shadow hover:shadow-md transition-shadow">
-          <div class="relative overflow-hidden rounded-md shadow-md mb-3 group">
-            <img
-                :src="track.cover_url || 'https://via.placeholder.com/300x300?text=No+Cover'"
-                alt="cover"
-                class="w-full h-48 object-cover rounded"
-            />
+      <div v-else class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4">
+        <div v-for="track in tracks" :key="track.id" class="track-card flex flex-col border rounded p-3 shadow hover:shadow-md transition-shadow">
+          <div class="track-cover-wrapper relative grow overflow-hidden rounded-md shadow-md mb-3 group">
+            <div class="flex justify-center items-center h-full w-full">
+              <UIcon v-if="!track.cover_url" name="i-heroicons-musical-note" class="icon w-16 h-16 text-gray-400" />
+              <img
+                  v-else
+                  :src="track.cover_url || 'https://via.placeholder.com/300x300?text=No+Cover'"
+                  alt="cover"
+                  class="w-full track-info object-cover rounded"
+              />
+            </div>
             <div class="absolute inset-0 hover:bg-black bg-opacity-0 group-hover:bg-opacity-30 transition-all duration-300 flex items-center justify-center">
               <button
-                  class="play-button opacity-0 group-hover:opacity-100 transform translate-y-2 group-hover:translate-y-0 transition-all duration-300 bg-green-500 hover:bg-green-600 text-white rounded-full w-12 h-12 flex items-center justify-center shadow-lg"
+                  class="track-play-button opacity-0 group-hover:opacity-100 transform translate-y-2 group-hover:translate-y-0 transition-all duration-300 bg-green-500 hover:bg-green-600 text-white rounded-full w-12 h-12 flex items-center justify-center shadow-lg"
                   @click="playTrack(track, tracks)"
               >
                 <UIcon :name="isCurrentTrack(track) && isPlaying ? 'i-heroicons-pause' : 'i-heroicons-play'"
@@ -37,17 +41,19 @@
             </div>
           </div>
 
-
-          <h2 class="text-lg font-semibold truncate">{{ track.title }}</h2>
-          <p class="text-sm text-gray-600">
+          <div class="track-label justify-self-start">
+            <h2 class="text-lg font-semibold truncate">{{ track.title }}</h2>
+            <p class="text-sm text-gray-600">
           <span v-if="track.track_authors && track.track_authors.length">
             <span v-for="(rel, index) in track.track_authors" :key="rel.author.id">
               {{ rel.author.name }}<span v-if="index < track.track_authors.length - 1">, </span>
             </span>
           </span>
-            <span v-else>Unknown Artist</span>
-          </p>
-          <div class="flex items-center justify-between mt-2">
+              <span v-else>Unknown Artist</span>
+            </p>
+          </div>
+
+          <div class="track-controls flex items-center justify-between mt-2">
 
             <button
                 @click="playTrack(track, tracks)"
@@ -61,7 +67,7 @@
             </button>
 
             <div class="flex items-center">
-              <span v-if="isCurrentTrack(track)" class="text-xs text-green-500 font-medium mr-2">
+              <span v-if="isCurrentTrack(track) && !isMobile" class="track-playing-label text-xs text-green-500 font-medium mr-2">
                 PLAYING
               </span>
 
@@ -92,12 +98,15 @@
 <script setup>
 import { usePlayerStore } from '@/stores/player'
 import { storeToRefs } from 'pinia'
+import { useWindowSize } from '@vueuse/core'
 
 
 const supabase = useSupabaseClient()
 const user = useSupabaseUser()
 const playerStore = usePlayerStore()
 const { currentTrack, isPlaying } = storeToRefs(playerStore)
+const { width } = useWindowSize({initialWidth: 0 })
+const isMobile = computed(() => width.value < 500)
 
 const tracks = ref([])
 const isLoading = ref(true)
@@ -223,3 +232,33 @@ onMounted(() => {
   fetchTracks()
 })
 </script>
+
+<style scoped>
+@import "tailwindcss";
+
+@media (max-width: 500px) {
+  .track-card {
+    @apply flex flex-row justify-between;
+  }
+  .track-cover-wrapper {
+    @apply grow-0;
+  }
+  .track-label {
+    @apply ml-3 grow;
+  }
+  .track-controls {
+    @apply m-0;
+  }
+  .track-playing-label {
+    @apply hidden;
+  }
+  .track-info{
+    @apply w-16 h-16;
+  }
+}
+
+.track-cover-wrapper .icon {
+  @apply absolute;
+}
+
+</style>

@@ -2,7 +2,6 @@
 export default defineNuxtConfig({
   compatibilityDate: '2025-05-15',
   devtools: { enabled: true },
-
   modules: [
     '@nuxt/content',
     '@nuxt/eslint',
@@ -28,7 +27,17 @@ export default defineNuxtConfig({
       fallback: 'en'
     }
   },
-
+  app: {
+    head: {
+      title: 'SwagMusic',
+      htmlAttrs: {
+        lang: 'en',
+      }
+    }
+  },
+  imports: {
+    dirs: ['./stores', './composables', './types']
+  },
   supabase: {
     redirect: false,
     url: 'https://ofdlecccivsirfsaghac.supabase.co',

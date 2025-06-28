@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import { Howl } from 'howler'
+import { ref, watch, onUnmounted } from 'vue'
 
 export const usePlayerStore = defineStore('player', () => {
     const currentTrack = ref<any>(null)
@@ -14,17 +15,68 @@ export const usePlayerStore = defineStore('player', () => {
     const isShuffle = ref(false)
     const showFullPlayer = ref(false)
 
+    const activeTab = ref<'now' | 'lyrics' | 'queue'>('now')
+
+
     const lastListenedTrackId = ref<string | null>(null)
 
-    const recordListen = async () => {
-        const supabase = useSupabaseClient()
-        const user = useSupabaseUser()
-        const trackId = currentTrack.value?.id
+    const supabase = useSupabaseClient()
+    const user = useSupabaseUser()
 
+    const activeViews = ref<Array<'now' | 'queue' | 'lyrics'>>([])
+
+    const viewModes = {
+        now: { sidebar: true, fullscreen: true },
+        queue: { sidebar: true, fullscreen: false },
+        lyrics: { sidebar: false, fullscreen: true }
+    }
+
+    const openView = (view: 'now' | 'queue' | 'lyrics') => {
+        const mode = viewModes[view]
+
+        // Если нужно открыть fullscreen — закрой все sidebar
+        if (mode.fullscreen) {
+            activeViews.value = activeViews.value.filter(v => !viewModes[v]?.sidebar)
+        }
+
+        // Если нужно открыть sidebar, а уже открыт fullscreen — не открываем
+        if (mode.sidebar) {
+            const fullscreenOpen = activeViews.value.find(v => viewModes[v]?.fullscreen)
+            if (fullscreenOpen && fullscreenOpen !== view) return
+        }
+
+        if (!activeViews.value.includes(view)) {
+            activeViews.value.push(view)
+        }
+    }
+
+    const closeView = (view: 'now' | 'queue' | 'lyrics') => {
+        activeViews.value = activeViews.value.filter(v => v !== view)
+    }
+
+    const isViewOpen = (view: 'now' | 'queue' | 'lyrics') => {
+        return activeViews.value.includes(view)
+    }
+
+    const isFullScreenMode = ref(false)
+
+    const enterFullScreenMode = () => {
+        isFullScreenMode.value = true
+    }
+
+    const exitFullScreenMode = () => {
+        isFullScreenMode.value = false
+    }
+
+
+
+
+
+    const recordListen = async () => {
+        const trackId = currentTrack.value?.id
         if (!user.value || !trackId) return
         if (lastListenedTrackId.value === trackId) return
 
-        // 1. Получаем последнее прослушивание пользователя
         const { data: lastListen, error: lastError } = await supabase
             .from('play_history')
             .select('track_id, played_at')
@@ -41,30 +93,21 @@ export const usePlayerStore = defineStore('player', () => {
         const lastTrackId = lastListen?.track_id
         const lastPlayedAt = lastListen?.played_at ? new Date(lastListen.played_at) : null
         const now = new Date()
-
         const timeSinceLast = lastPlayedAt ? (now.getTime() - lastPlayedAt.getTime()) / 1000 : Infinity
 
-        // 2. Проверка условий:
-        if (lastTrackId === trackId && timeSinceLast < 300) {
-            // тот же трек и прошло меньше 5 минут — не записываем
-            return
-        }
+        if (lastTrackId === trackId && timeSinceLast < 300) return
 
-        // 3. Запись прослушивания
         const { error: insertError } = await supabase.from('play_history').insert({
             user_id: user.value.id,
             track_id: trackId
         })
 
-
-
-        if (insertError) {
-            console.error('Ошибка при записи прослушивания:', insertError.message)
+        if (!insertError) {
+            lastListenedTrackId.value = trackId
         } else {
-            lastListenedTrackId.value = currentTrack.value.id
+            console.error('Ошибка при записи прослушивания:', insertError.message)
         }
     }
-
 
     const openFullPlayer = () => {
         showFullPlayer.value = true
@@ -74,9 +117,7 @@ export const usePlayerStore = defineStore('player', () => {
         showFullPlayer.value = false
     }
 
-    // Update progress every second when playing
     let progressInterval: any = null
-
     const startProgressTracking = () => {
         stopProgressTracking()
         progressInterval = setInterval(() => {
@@ -98,17 +139,21 @@ export const usePlayerStore = defineStore('player', () => {
             sound.value.stop()
         }
 
+        if (trackList.length > 0) {
+            queue.value = [...trackList]
+            currentTrackIndex.value = queue.value.findIndex(t => t.id === track.id)
+        }
+
         currentTrack.value = track
+
         sound.value = new Howl({
             src: [track.audio_url],
             html5: true,
             volume: volume.value,
             onend: () => {
                 if (isRepeat.value) {
-                    // Replay the same track
                     sound.value?.play()
                 } else {
-                    // Play next track if available
                     playNext()
                 }
             },
@@ -118,7 +163,6 @@ export const usePlayerStore = defineStore('player', () => {
             onplay: () => {
                 startProgressTracking()
                 isPlaying.value = true
-                recordListen().then(() => {}).catch(error => console.error('Error recording listen:', error))
             },
             onpause: () => {
                 stopProgressTracking()
@@ -131,15 +175,13 @@ export const usePlayerStore = defineStore('player', () => {
             }
         })
 
-        // Set up queue if provided
-        if (trackList.length > 0) {
-            queue.value = [...trackList]
-            currentTrackIndex.value = queue.value.findIndex(t => t.id === track.id)
-        }
-
         sound.value.play()
         isPlaying.value = true
     }
+
+    watch(currentTrack, () => {
+        if (currentTrack.value) recordListen()
+    })
 
     const pause = () => {
         sound.value?.pause()
@@ -180,26 +222,13 @@ export const usePlayerStore = defineStore('player', () => {
     }
 
     const playNext = () => {
-        if (queue.value.length === 0 || currentTrackIndex.value === -1) {
-            stop()
-            return
-        }
+        if (queue.value.length === 0 || currentTrackIndex.value === -1) return stop()
 
         let nextIndex = -1
-
         if (isShuffle.value) {
-            // Random track excluding current one
-            const availableIndices = Array.from(
-                { length: queue.value.length }, 
-                (_, i) => i
-            ).filter(i => i !== currentTrackIndex.value)
-
-            if (availableIndices.length > 0) {
-                const randomIndex = Math.floor(Math.random() * availableIndices.length)
-                nextIndex = availableIndices[randomIndex]
-            }
+            const indices = queue.value.map((_, i) => i).filter(i => i !== currentTrackIndex.value)
+            nextIndex = indices.length > 0 ? indices[Math.floor(Math.random() * indices.length)] : -1
         } else {
-            // Next track in sequence
             nextIndex = (currentTrackIndex.value + 1) % queue.value.length
         }
 
@@ -212,32 +241,18 @@ export const usePlayerStore = defineStore('player', () => {
     }
 
     const playPrevious = () => {
-        if (queue.value.length === 0 || currentTrackIndex.value === -1) {
-            stop()
-            return
-        }
+        if (queue.value.length === 0 || currentTrackIndex.value === -1) return stop()
 
-        // If current time > 3 seconds, restart current track instead of previous
         if (currentTime.value > 3) {
             seek(0)
             return
         }
 
         let prevIndex = -1
-
         if (isShuffle.value) {
-            // Random track excluding current one
-            const availableIndices = Array.from(
-                { length: queue.value.length }, 
-                (_, i) => i
-            ).filter(i => i !== currentTrackIndex.value)
-
-            if (availableIndices.length > 0) {
-                const randomIndex = Math.floor(Math.random() * availableIndices.length)
-                prevIndex = availableIndices[randomIndex]
-            }
+            const indices = queue.value.map((_, i) => i).filter(i => i !== currentTrackIndex.value)
+            prevIndex = indices.length > 0 ? indices[Math.floor(Math.random() * indices.length)] : -1
         } else {
-            // Previous track in sequence
             prevIndex = (currentTrackIndex.value - 1 + queue.value.length) % queue.value.length
         }
 
@@ -249,20 +264,34 @@ export const usePlayerStore = defineStore('player', () => {
         }
     }
 
-    // Clean up on component unmount
-    onUnmounted(() => {
-        stopProgressTracking()
-    })
+    const replaceQueue = (newQueue: any[], startTrack?: any) => {
+        queue.value = [...newQueue]
+        const index = startTrack
+            ? newQueue.findIndex(t => t.id === startTrack.id)
+            : 0
+        currentTrackIndex.value = index
+        play(newQueue[index], newQueue)
+    }
+
+    onUnmounted(() => stopProgressTracking())
 
     return {
+        // state
         currentTrack,
         isPlaying,
         currentTime,
         duration,
         volume,
         queue,
+        currentTrackIndex,
         isRepeat,
         isShuffle,
+        showFullPlayer,
+        activeTab,
+        activeViews,
+
+
+        // actions
         play,
         pause,
         resume,
@@ -273,8 +302,13 @@ export const usePlayerStore = defineStore('player', () => {
         playPrevious,
         toggleRepeat,
         toggleShuffle,
-        showFullPlayer,
         openFullPlayer,
-        closeFullPlayer
+        closeFullPlayer,
+        replaceQueue,
+        openView,
+        closeView,
+        isViewOpen,
+        enterFullScreenMode,
+        exitFullScreenMode
     }
 })

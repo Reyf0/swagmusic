@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { ref } from 'vue'
 const supabase = useSupabaseClient()
 const user = useSupabaseUser()
 const router = useRouter()
@@ -15,8 +16,6 @@ const albumId = ref<string | null>(null)
 const albums = ref<any[]>([])
 const newAlbumTitle = ref('')
 const authorId = ref<string | null>(null)
-
-
 
 
 // UI states
@@ -304,7 +303,7 @@ const uploadTrack = async () => {
           placeholder="Enter artist name"
         >
       </div>
-
+      <!-- TODO Fix upload modal: albums -->
       <!-- Album selection -->
       <div v-if="albums.length > 0">
         <label for="album" class="block text-sm font-medium text-gray-700">Album</label>

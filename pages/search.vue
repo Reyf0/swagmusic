@@ -4,11 +4,11 @@
     <div v-if="!searchStore.isLoading && searchStore.results.length === 0 && searchStore.query" class="mt-4 text-center text-gray-500">
       No results found.
     </div>
-    <div class="mt-6 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+    <div class="mt-6 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4">
       <div v-for="track in searchStore.results" :key="track.id" class="border rounded p-3 shadow hover:shadow-md transition-shadow">
         <img
             :src="track.cover_url || 'https://via.placeholder.com/300x300?text=No+Cover'"
-            class="w-full h-48 object-cover rounded mb-2"
+            class="w-full cover object-cover rounded mb-2"
         />
         <h2 class="text-lg font-semibold truncate">{{ track.title }}</h2>
         <p class="text-sm text-gray-600">

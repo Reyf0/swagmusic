@@ -1,104 +1,101 @@
 <template>
-  <div class="fixed inset-0 bg-neutral-900 text-white z-50 flex flex-col">
-    <!-- Верх: кнопка закрытия -->
-    <div class="flex justify-end p-4">
-      <button @click="closeFullPlayer" class="text-white hover:text-gray-300">
-        <UIcon name="i-heroicons-x-mark" class="w-6 h-6" />
-      </button>
-    </div>
-
-    <!-- Центр: обложка и трек -->
-    <div class="flex-1 flex flex-col items-center justify-center gap-6 text-center px-4">
-      <img
-          :src="currentTrack.cover_url || 'https://via.placeholder.com/500x500?text=No+Cover'"
-          class="w-60 h-60 md:w-96 md:h-96 rounded-xl object-cover shadow-xl"
-      />
-      <div>
-        <h2 class="text-2xl font-bold">{{ currentTrack.title }}</h2>
-        <p class="text-gray-400">
-          {{ currentTrack.track_authors?.map(a => a.author.name).join(', ') || 'Unknown Artist' }}
-        </p>
-      </div>
-    </div>
-
-    <!-- Низ: управление и прогресс -->
-    <div class="p-6 flex flex-col gap-4">
-      <!-- Прогресс -->
-      <div class="flex items-center gap-2 text-sm">
-        <span class="w-12 text-right">{{ formatTime(currentTime) }}</span>
-        <input
-            type="range"
-            min="0"
-            :max="duration"
-            v-model.number="currentTimeProxy"
-            @change="() => seek(currentTimeProxy)"
-            class="w-full accent-green-500"
-        />
-        <span class="w-12">{{ formatTime(duration) }}</span>
-      </div>
-
-      <!-- Управление -->
-      <div class="flex justify-center gap-6 mt-2">
-        <button @click="toggleShuffle" :class="{ 'text-green-500': isShuffle }" title="Shuffle">
-          <UIcon name="i-heroicons-arrow-path-rounded-square" class="w-6 h-6" />
-        </button>
-        <button @click="playPrevious" title="Previous">
-          <UIcon name="i-heroicons-backward" class="w-6 h-6" />
+  <transition name="slide-up">
+    <div
+        v-if="playerStore.showFullPlayer"
+        class="fixed inset-0 z-50 bg-black text-white flex flex-col transition-transform duration-500"
+    >
+      <!-- Tabs -->
+      <div class="flex justify-around py-4 border-b border-white/10 text-sm font-semibold uppercase tracking-wider">
+        <button
+            @click="activeTab = 'now'"
+            :class="tabClass('now')"
+        >
+          Now Playing
         </button>
         <button
-            @click="isPlaying ? pause() : resume()"
-            class="p-3 bg-white text-gray-900 rounded-full hover:bg-gray-300"
-            title="Play/Pause"
+            @click="activeTab = 'lyrics'"
+            :class="tabClass('lyrics')"
         >
-          <UIcon :name="isPlaying ? 'i-heroicons-pause' : 'i-heroicons-play'" class="w-7 h-7" />
+          Lyrics
         </button>
-        <button @click="playNext" title="Next">
-          <UIcon name="i-heroicons-forward" class="w-6 h-6" />
-        </button>
-        <button @click="toggleRepeat" :class="{ 'text-green-500': isRepeat }" title="Repeat">
-          <UIcon name="i-heroicons-arrow-path" class="w-6 h-6" />
+        <button
+            @click="activeTab = 'queue'"
+            :class="tabClass('queue')"
+        >
+          Queue
         </button>
       </div>
+
+      <!-- Content -->
+      <div class="flex-1 overflow-y-auto p-6">
+        <Transition name="fade" mode="out-in">
+          <component :is="tabComponent" :key="activeTab" />
+        </Transition>
+      </div>
+
+      <!-- Close button -->
+      <button
+          @click="playerStore.closeFullPlayer"
+          class="absolute top-4 right-4 bg-white/10 hover:bg-white/20 rounded-full p-2 transition"
+      >
+        <UIcon name="i-heroicons-chevron-down" class="w-5 h-5" />
+      </button>
     </div>
-  </div>
+  </transition>
 </template>
 
 <script setup lang="ts">
+import { ref, computed } from 'vue'
 import { usePlayerStore } from '@/stores/player'
-import { storeToRefs } from 'pinia'
-import { computed } from 'vue'
+import NowPlaying from '@/components/player/NowPlaying.vue'
+// следующие подключим позже:
+import LyricsView from '@/components/player/LyricsView.vue'
+import QueueView from '@/components/player/QueueView.vue'
 
-const store = usePlayerStore()
-const {
-  currentTrack,
-  isPlaying,
-  currentTime,
-  duration,
-  isRepeat,
-  isShuffle,
-} = storeToRefs(store)
+const playerStore = usePlayerStore()
 
-const {
-  pause,
-  resume,
-  playNext,
-  playPrevious,
-  toggleRepeat,
-  toggleShuffle,
-  seek,
-  closeFullPlayer,
-} = store
+const activeTab = ref<'now' | 'lyrics' | 'queue'>('now')
 
-const currentTimeProxy = computed({
-  get: () => currentTime.value,
-  set: (value) => {
-    currentTime.value = value
-  },
+const tabComponent = computed(() => {
+  switch (activeTab.value) {
+    case 'lyrics': return LyricsView
+    case 'queue': return QueueView
+    default: return NowPlaying
+  }
 })
 
-const formatTime = (seconds: number) => {
-  const min = Math.floor(seconds / 60)
-  const sec = Math.floor(seconds % 60)
-  return `${min}:${sec < 10 ? '0' : ''}${sec}`
-}
+const tabClass = (tab: string) =>
+    activeTab.value === tab
+        ? 'text-green-500 border-b-2 border-green-500 pb-1'
+        : 'text-gray-400 hover:text-white pb-1'
 </script>
+
+<style scoped>
+.slide-up-enter-active {
+  transform: translateY(100%);
+  animation: slideIn 0.3s forwards ease-out;
+}
+.slide-up-leave-active {
+  animation: slideOut 0.3s forwards ease-in;
+}
+@keyframes slideIn {
+  to {
+    transform: translateY(0);
+  }
+}
+@keyframes slideOut {
+  to {
+    transform: translateY(100%);
+  }
+}
+
+.fade-enter-active, .fade-leave-active {
+  transition: opacity 0.3s ease;
+}
+.fade-enter-from, .fade-leave-to {
+  opacity: 0;
+}
+.fade-enter-to, .fade-leave-from {
+  opacity: 1;
+}
+</style>

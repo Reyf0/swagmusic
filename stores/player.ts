@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { Howl } from 'howler'
-import { ref, watch, onUnmounted } from 'vue'
+import { ref, computed, watch, onUnmounted } from 'vue'
 
 export const usePlayerStore = defineStore('player', () => {
     const currentTrack = ref<any>(null)
@@ -13,64 +13,66 @@ export const usePlayerStore = defineStore('player', () => {
     const currentTrackIndex = ref(-1)
     const isRepeat = ref(false)
     const isShuffle = ref(false)
-    const showFullPlayer = ref(false)
 
-    const activeTab = ref<'now' | 'lyrics' | 'queue'>('now')
-
-
-    const lastListenedTrackId = ref<string | null>(null)
-
-    const supabase = useSupabaseClient()
-    const user = useSupabaseUser()
-
-    const activeViews = ref<Array<'now' | 'queue' | 'lyrics'>>([])
-
-    const viewModes = {
+    const viewModes: Record<ViewName, { sidebar: boolean; fullscreen: boolean }> = {
         now: { sidebar: true, fullscreen: true },
         queue: { sidebar: true, fullscreen: false },
         lyrics: { sidebar: false, fullscreen: true }
     }
+    // Храним режим каждого активного view
+    const activeViews = ref<Record<ViewName, ViewMode | null>>({
+        now: null,
+        queue: null,
+        lyrics: null
+    })
+    // Получить текущие active views
+    const getSidebarView = computed<ViewName | null>(() =>
+        (Object.entries(activeViews.value) as [ViewName, ViewMode | null][])
+            .find(([, mode]) => mode === 'sidebar')?.[0] || null
+    )
+    const getFullscreenView = computed<ViewName | null>(() =>
+        (Object.entries(activeViews.value) as [ViewName, ViewMode | null][])
+            .find(([, mode]) => mode === 'fullscreen')?.[0] || null
+    )
+    const isFullScreenMode = computed(() => getFullscreenView.value !== null)
+    const isViewOpen = (view: ViewName) => activeViews.value[view] !== null
 
-    const openView = (view: 'now' | 'queue' | 'lyrics') => {
-        const mode = viewModes[view]
+    const openView = (view: ViewName) => {
+        const supports = viewModes[view]
+        const sidebar = getSidebarView.value
+        const fullscreen = getFullscreenView.value
 
-        // Если нужно открыть fullscreen — закрой все sidebar
-        if (mode.fullscreen) {
-            activeViews.value = activeViews.value.filter(v => !viewModes[v]?.sidebar)
+        // Если уже открыт — ничего не делаем
+        if (activeViews.value[view]) return
+
+        // 1. Если поддерживается sidebar — открываем в sidebar
+        if (supports.sidebar) {
+            // Заменяем предыдущий sidebar view, если есть
+            if (sidebar) activeViews.value[sidebar] = null
+            activeViews.value[view] = 'sidebar'
+            return
         }
 
-        // Если нужно открыть sidebar, а уже открыт fullscreen — не открываем
-        if (mode.sidebar) {
-            const fullscreenOpen = activeViews.value.find(v => viewModes[v]?.fullscreen)
-            if (fullscreenOpen && fullscreenOpen !== view) return
+        // 2. Если поддерживается fullscreen — открываем туда
+        if (supports.fullscreen) {
+            if (fullscreen) activeViews.value[fullscreen] = null
+            activeViews.value[view] = 'fullscreen'
+            return
         }
 
-        if (!activeViews.value.includes(view)) {
-            activeViews.value.push(view)
-        }
+        // 3. Невозможно открыть (должно быть исключением)
+        console.warn(`View "${view}" не поддерживает ни sidebar, ни fullscreen`)
     }
 
-    const closeView = (view: 'now' | 'queue' | 'lyrics') => {
-        activeViews.value = activeViews.value.filter(v => v !== view)
+    const closeView = (view: ViewName) => {
+        activeViews.value[view] = null
     }
 
-    const isViewOpen = (view: 'now' | 'queue' | 'lyrics') => {
-        return activeViews.value.includes(view)
-    }
+    // ───────────── Player Logic ─────────────
 
-    const isFullScreenMode = ref(false)
-
-    const enterFullScreenMode = () => {
-        isFullScreenMode.value = true
-    }
-
-    const exitFullScreenMode = () => {
-        isFullScreenMode.value = false
-    }
-
-
-
-
+    const supabase = useSupabaseClient()
+    const user = useSupabaseUser()
+    const lastListenedTrackId = ref<string | null>(null)
 
     const recordListen = async () => {
         const trackId = currentTrack.value?.id
@@ -85,10 +87,7 @@ export const usePlayerStore = defineStore('player', () => {
             .limit(1)
             .maybeSingle()
 
-        if (lastError) {
-            console.error('Ошибка при проверке последнего прослушивания:', lastError.message)
-            return
-        }
+        if (lastError) return
 
         const lastTrackId = lastListen?.track_id
         const lastPlayedAt = lastListen?.played_at ? new Date(lastListen.played_at) : null
@@ -102,19 +101,7 @@ export const usePlayerStore = defineStore('player', () => {
             track_id: trackId
         })
 
-        if (!insertError) {
-            lastListenedTrackId.value = trackId
-        } else {
-            console.error('Ошибка при записи прослушивания:', insertError.message)
-        }
-    }
-
-    const openFullPlayer = () => {
-        showFullPlayer.value = true
-    }
-
-    const closeFullPlayer = () => {
-        showFullPlayer.value = false
+        if (!insertError) lastListenedTrackId.value = trackId
     }
 
     let progressInterval: any = null
@@ -135,9 +122,7 @@ export const usePlayerStore = defineStore('player', () => {
     }
 
     const play = (track: any, trackList: any[] = []) => {
-        if (sound.value) {
-            sound.value.stop()
-        }
+        if (sound.value) sound.value.stop()
 
         if (trackList.length > 0) {
             queue.value = [...trackList]
@@ -151,11 +136,8 @@ export const usePlayerStore = defineStore('player', () => {
             html5: true,
             volume: volume.value,
             onend: () => {
-                if (isRepeat.value) {
-                    sound.value?.play()
-                } else {
-                    playNext()
-                }
+                if (isRepeat.value) sound.value?.play()
+                else playNext()
             },
             onload: () => {
                 duration.value = sound.value?.duration() || 0
@@ -276,7 +258,6 @@ export const usePlayerStore = defineStore('player', () => {
     onUnmounted(() => stopProgressTracking())
 
     return {
-        // state
         currentTrack,
         isPlaying,
         currentTime,
@@ -286,12 +267,14 @@ export const usePlayerStore = defineStore('player', () => {
         currentTrackIndex,
         isRepeat,
         isShuffle,
-        showFullPlayer,
-        activeTab,
+        viewModes,
         activeViews,
+        isFullScreenMode,
+        getSidebarView,
+        getFullscreenView,
 
 
-        // actions
+        // Playback
         play,
         pause,
         resume,
@@ -302,13 +285,11 @@ export const usePlayerStore = defineStore('player', () => {
         playPrevious,
         toggleRepeat,
         toggleShuffle,
-        openFullPlayer,
-        closeFullPlayer,
         replaceQueue,
+
+        // View logic
         openView,
         closeView,
-        isViewOpen,
-        enterFullScreenMode,
-        exitFullScreenMode
+        isViewOpen
     }
 })

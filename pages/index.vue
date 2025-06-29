@@ -75,7 +75,13 @@ const fetchRecentPlays = async () => {
   recentTracks.value = data || []
 }
 
-
+const scrollCarousel = (refName: string, direction: 'left' | 'right') => {
+  const container = document.querySelector(refName) as HTMLElement
+  if (container) {
+    const scrollAmount = direction === 'left' ? -300 : 300
+    container.scrollBy({ left: scrollAmount, behavior: 'smooth' })
+  }
+}
 
 onMounted(() => {
   fetchTopTracks()
@@ -94,65 +100,105 @@ onMounted(() => {
     <!-- Top Tracks -->
     <section>
       <h2 class="text-2xl font-bold mb-4">🔥 Top 10 Tracks</h2>
-      <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-        <div
-            v-for="track in topTracks"
-            :key="track.id"
-            class="flex flex-col bg-gray-100 rounded shadow p-3 hover:shadow-md transition"
+      <div class="relative carousel-container">
+        <button
+            class="carousel-button left-0"
+            @click="scrollCarousel('.top-tracks-carousel', 'left')"
         >
-          <div class="relative flex justify-center items-center grow overflow-hidden rounded-md shadow-md mb-3 group">
-            <UIcon v-if="!track.cover_url" name="i-heroicons-musical-note" class="icon text-gray-400" />
-            <img
-                v-else
-                :src="track.cover_url || 'https://via.placeholder.com/300x300?text=No+Cover'"
-                alt="cover"
-                class="w-full object-cover rounded"
-            />
-            <div class="absolute inset-0 hover:bg-black bg-opacity-0 group-hover:bg-opacity-30 transition-all duration-300 flex items-center justify-center">
-              <button
-                  class="play-button opacity-0 group-hover:opacity-100 transform translate-y-2 group-hover:translate-y-0 transition-all duration-300 bg-green-500 hover:bg-green-600 text-white rounded-full w-12 h-12 flex items-center justify-center shadow-lg"
-                  @click="playTrack(track, topTracks)"
-              >
-                <UIcon :name="isCurrentTrack(track) && isPlaying ? 'i-heroicons-pause' : 'i-heroicons-play'"
-                       class="w-6 h-6" />
-              </button>
+          <UIcon name="i-heroicons-chevron-left" class="w-6 h-6" />
+        </button>
+        <div class="flex gap-4 overflow-x-scroll scrollbar-hide top-tracks-carousel">
+          <div
+              v-for="track in topTracks"
+              :key="track.id"
+              class="flex-shrink-0 w-48 flex flex-col bg-gray-100 rounded shadow p-3 hover:shadow-md transition track-card"
+          >
+            <div class="relative flex justify-center items-center grow overflow-hidden rounded-md shadow-md mb-3">
+              <UIcon v-if="!track.cover_url" name="i-heroicons-musical-note" class="icon text-gray-400" />
+              <img
+                  v-else
+                  :src="track.cover_url || 'https://via.placeholder.com/300x300?text=No+Cover'"
+                  alt="cover"
+                  class="w-full object-cover rounded"
+              />
+              <div class="absolute inset-0 hover:bg-black bg-opacity-0 group-hover:bg-opacity-30 transition-all duration-300 flex items-center justify-center">
+                <button
+                    class="play-button opacity-0 group-hover:opacity-100 transform translate-y-2 group-hover:translate-y-0 transition-all duration-300 bg-green-500 hover:bg-green-600 text-white rounded-full w-12 h-12 flex items-center justify-center shadow-lg"
+                    @click="playTrack(track, topTracks)"
+                >
+                  <UIcon :name="isCurrentTrack(track) && isPlaying ? 'i-heroicons-pause' : 'i-heroicons-play'"
+                         class="w-6 h-6" />
+                </button>
+              </div>
             </div>
-          </div>
-          <div class="track-label">
-            <p class="font-semibold">{{ track.title }}</p>
-            <span v-if="track.track_authors && track.track_authors.length">
+            <div class="track-label">
+              <p class="font-semibold">{{ track.title }}</p>
+              <span v-if="track.track_authors && track.track_authors.length">
             <span v-for="(rel, index) in track.track_authors" :key="rel.author.id" class="text-sm text-gray-500">
               {{ rel.author.name }}<span v-if="index < track.track_authors.length - 1">, </span>
             </span>
           </span>
-            <p class="text-sm text-gray-500">Plays: {{ track.count }}</p>
+              <p class="text-sm text-gray-500">Plays: {{ track.count }}</p>
+            </div>
           </div>
         </div>
+        <button
+            class="carousel-button right-0"
+            @click="scrollCarousel('.top-tracks-carousel', 'right')"
+        >
+          <UIcon name="i-heroicons-chevron-right" class="w-6 h-6" />
+        </button>
       </div>
     </section>
 
     <!-- Recent Listens -->
     <section>
       <h2 class="text-2xl font-bold mb-4">🎧 Recently Listened</h2>
-      <ul class="space-y-3">
-        <li
-            v-for="track in recentTracks"
-            :key="track.tracks.id + track.played_at"
-            class="flex items-center space-x-4"
+      <div class="relative carousel-container">
+        <button
+            class="carousel-button left-0"
+            @click="scrollCarousel('.recent-tracks-carousel', 'left')"
         >
-          <div class="flex justify-center items-center w-12 h-12">
-            <UIcon v-if="!track.tracks.cover_url" name="i-heroicons-musical-note" class="text-gray-400" />
-            <img v-else :src="track.tracks.cover_url" class="w-12 h-12 object-cover rounded" />
+          <UIcon name="i-heroicons-chevron-left" class="w-6 h-6" />
+        </button>
+        <div class="flex gap-4 overflow-x-scroll scrollbar-hide recent-tracks-carousel">
+          <div
+              v-for="track in recentTracks"
+              :key="track.tracks.id + track.played_at"
+              class="flex-shrink-0 w-48 flex flex-col bg-gray-100 rounded shadow p-3 hover:shadow-md transition group track-card"
+          >
+            <div class="relative flex justify-center items-center grow overflow-hidden rounded-md shadow-md mb-3 group">
+              <UIcon v-if="!track.tracks.cover_url" name="i-heroicons-musical-note" class="icon text-gray-400" />
+              <img
+                  v-else
+                  :src="track.tracks.cover_url || '  https://via.placeholder.com/300x300?text=No+Cover'"
+                  alt="cover"
+                  class="w-full object-cover rounded"
+              />
+              <div class="absolute inset-0 hover:bg-black bg-opacity-0 group-hover:bg-opacity-30 transition-all duration-300 flex items-center justify-center">
+                <button
+                    class="play-button opacity-0 group-hover:opacity-100 transform translate-y-2 group-hover:translate-y-0 transition-all duration-300 bg-green-500 hover:bg-green-600 text-white rounded-full w-12 h-12 flex items-center justify-center shadow-lg"
+                    @click="playTrack(track.tracks, recentTracks)"
+                >
+                  <UIcon :name="isCurrentTrack(track.tracks) && isPlaying ? 'i-heroicons-pause' : 'i-heroicons-play'"
+                         class="w-6 h-6" />
+                </button>
+              </div>
+            </div>
+            <div>
+              <p class="font-semibold">{{ track.tracks.title }}</p>
+              <p class="text-sm text-gray-400">{{ new Date(track.played_at).toLocaleString() }}</p>
+            </div>
           </div>
-          <div>
-            <p class="font-semibold">{{ track.tracks.title }}</p>
-            <p class="text-sm text-gray-400">{{ new Date(track.played_at).toLocaleString() }}</p>
-          </div>
-        </li>
-      </ul>
+        </div>
+        <button
+            class="carousel-button right-0"
+            @click="scrollCarousel('.recent-tracks-carousel', 'right')"
+        >
+          <UIcon name="i-heroicons-chevron-right" class="w-6 h-6" />
+        </button>
+      </div>
     </section>
-
-
   </div>
 </template>
 
@@ -162,4 +208,77 @@ onMounted(() => {
 .icon {
   @apply w-5 h-5 text-gray-400;
 }
+
+.scrollbar-hide {
+  -ms-overflow-style: none; /* IE and Edge */
+  scrollbar-width: none; /* Firefox */
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none; /* Chrome, Safari, and Opera */
+}
+
+
+.group:hover > .carousel-button {
+  opacity: 1;
+}
+
+.carousel-button {
+  @apply bg-gray-200 hover:bg-gray-300 rounded-full shadow flex items-center justify-center opacity-0 transition-opacity duration-300;
+  width: 40px;
+  height: 40px;
+  z-index: 10;
+}
+
+.carousel-button.left-0 {
+  left: -20px;
+}
+
+.carousel-button.right-0 {
+  right: -20px;
+}
+
+.track-card .play-button {
+  @apply absolute bg-green-500 hover:bg-green-600 text-white rounded-full w-12 h-12 flex items-center justify-center shadow-lg opacity-0 group-hover:opacity-100;
+}
+
+.track-card:hover .play-button {
+  opacity: 1;
+}
+
+.carousel-container {
+  position: relative;
+  padding: 0 40px; /* чтобы кнопки не перекрывали контент */
+}
+
+.carousel-button {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  background: rgba(255, 255, 255, 0.7);
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+.carousel-button.left-0 {
+  left: 0;
+}
+.carousel-button.right-0 {
+  right: 0;
+}
+
+.carousel-container:hover .carousel-button {
+  opacity: 1;
+}
+
+
+
 </style>
+  

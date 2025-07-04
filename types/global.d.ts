@@ -1,4 +1,4 @@
-import type { Database } from './database.types'
+import type { Database } from './database-extended.types'
 
 type Album = Database['public']['Tables']['albums']['Row']
 type Track = Database['public']['Tables']['tracks']['Row']

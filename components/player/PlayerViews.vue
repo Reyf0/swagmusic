@@ -25,7 +25,8 @@ const viewComponents = {
   <Transition name="fade" mode="out-in">
     <component
         :is="viewComponents[view]"
-        :key="`${mode}-${view}`"
+        :key="mode"
+        :mode="mode"
     />
   </Transition>
 </template>

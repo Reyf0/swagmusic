@@ -4,6 +4,7 @@ import { useSearchStore } from '@/stores/searchStore'
 import { storeToRefs } from 'pinia'
 import MiniPlayer from '@/components/MiniPlayer.vue'
 import PlayerViews from '@/components/player/PlayerViews.vue'
+import { ref, onMounted, watch } from 'vue'
 
 const user = useSupabaseUser()
 const supabase = useSupabaseClient()
@@ -21,7 +22,7 @@ const { currentTrack } = storeToRefs(playerStore)
 
 const fetchProfile = async () => {
   if (!user.value) return
-
+  console.log("Fetching profile for user:", user.value.id)
   loading.value = true
   error.value = null
 
@@ -92,6 +93,7 @@ onMounted(() => {
                 <UButton><NuxtLink to="/upload" class="text-white hover:text-gray-300">Upload</NuxtLink></UButton>
                 <UButton><NuxtLink to="/profile" class="text-white hover:text-gray-300">Profile</NuxtLink></UButton>
                 <UButton class="text-white hover:text-gray-300" @click="signOut">Sign out</UButton>
+                <UButton v-if="profile?.is_admin" class="text-white hover:text-gray-300"><NuxtLink to="/admin">Admin</NuxtLink></UButton>
               </template>
               <template v-else>
                 <UButton><NuxtLink to="/login" class="text-white hover:text-gray-300">Login</NuxtLink></UButton>

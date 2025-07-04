@@ -69,6 +69,16 @@
             </UButton>
             <UButton
                 block
+                to="/admin/albums"
+                variant="ghost"
+                color="gray"
+                icon="i-heroicons-rectangle-stack"
+                class="justify-start"
+            >
+              Albums
+            </UButton>
+            <UButton
+                block
                 to="/admin/playlists"
                 variant="ghost"
                 color="gray"
@@ -98,13 +108,13 @@ const logout = async () => {
   try {
     const { error } = await supabase.auth.signOut();
     if (error) throw error;
-    
+
     toast.add({
       title: 'Logged out',
       description: 'You have been successfully logged out',
       color: 'green',
     });
-    
+
     await router.push('/login');
   } catch (err) {
     console.error('Error logging out:', err);

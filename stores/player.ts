@@ -68,6 +68,39 @@ export const usePlayerStore = defineStore('player', () => {
         activeViews.value[view] = null
     }
 
+    const switchViewMode = (view: ViewName) => {
+        const currentMode = activeViews.value[view]
+        const supported = viewModes[view]
+
+        if (!currentMode) return // View не открыт
+
+        // Переключаем режим
+        const newMode: ViewMode | null =
+            currentMode === 'sidebar' && supported.fullscreen ? 'fullscreen'
+                : currentMode === 'fullscreen' && supported.sidebar ? 'sidebar'
+                    : null
+
+        if (!newMode) return // Нельзя переключить
+
+        // Закрываем старый режим
+        activeViews.value[view] = null
+
+        // Закрываем другой View, если новый режим занят
+        if (newMode === 'sidebar') {
+            const currentSidebar = getSidebarView.value
+            if (currentSidebar) activeViews.value[currentSidebar] = null
+        }
+
+        if (newMode === 'fullscreen') {
+            const currentFullscreen = getFullscreenView.value
+            if (currentFullscreen) activeViews.value[currentFullscreen] = null
+        }
+
+        // Включаем новый режим
+        activeViews.value[view] = newMode
+    }
+
+
     // ───────────── Player Logic ─────────────
 
     const supabase = useSupabaseClient()
@@ -290,6 +323,7 @@ export const usePlayerStore = defineStore('player', () => {
         // View logic
         openView,
         closeView,
-        isViewOpen
+        isViewOpen,
+        switchViewMode
     }
 })

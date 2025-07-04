@@ -1,107 +1,238 @@
 <script setup lang="ts">
+import { computed, onMounted } from 'vue'
 defineProps<{ mode: 'sidebar' | 'fullscreen' }>()
-
 const player = usePlayerStore()
+const track = computed(() => player.currentTrack)
+
 </script>
 
 <template>
-  <div :class="mode === 'fullscreen' ? 'h-full flex flex-col' : 'h-full flex flex-col'">
-    <!-- 🧭 ВЕРХНЯЯ ПАНЕЛЬ (фиксирована, не скроллится) -->
-    <div class="sticky top-0 z-10 bg-neutral-900 px-4 py-3 border-b border-neutral-700 flex items-center justify-between group">
-      <div class="flex items-center gap-3">
-        <!-- Название автора -->
-        <span class="text-white font-medium">Имя автора</span>
-      </div>
-
-      <div class="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition">
-        <!-- Контекстное меню -->
-        <UDropdownMenu
-          :items="[
-          { label: 'Добавить в плейлист', click: () => {} },
-          { label: 'Добавить в любимые треки', click: () => {} },
-          { label: 'Добавить в очередь', click: () => {} },
-          { label: 'К исполнителю', click: () => {} },
-          { label: 'К альбому', click: () => {} },
-          { label: 'Сведения о треке', click: () => {} },
-          { label: 'Поделиться', click: () => {} }
-        ]">
-          <UButton icon="i-heroicons-ellipsis-horizontal" variant="ghost" size="sm" color="white" />
-        </UDropdownMenu>
-
+  <div
+      v-if="mode === 'fullscreen'"
+  >
+    <!-- Верхняя панель -->
+    <div
+        class="sticky top-0 z-10 bg-neutral-900 px-4 py-3 flex items-center justify-between group"
+    >
+      <div class="flex items-center space-x-2">
         <!-- Кнопка закрытия -->
-        <UButton icon="i-heroicons-x-mark" variant="ghost" size="sm" color="white" @click="player.closeView('now')" />
+        <UButton
+            icon="i-heroicons-x-mark"
+            variant="ghost"
+            color="white"
+            size="sm"
+            class="transition-transform duration-200 hover:scale-110 hover:bg-white/10"
+            @click="player.closeView('now')"
+        />
+        <!-- Автор -->
+        <span class="font-medium text-sm hover:underline cursor-pointer">
+          {{ track?.author?.name || 'Unknown Artist' }}
+        </span>
+      </div>
+      <!-- Контекстное меню -->
+      <div class="flex items-center space-x-2 opacity-0 group-hover:opacity-100 transition">
+        <!-- TODO: Dropdown меню -->
+        <UButton
+            icon="i-heroicons-ellipsis-vertical" size="sm" variant="ghost" color="white"
+            class="transition-transform duration-200 hover:scale-110 hover:bg-white/10"/>
+        <!-- Кнопка разворота -->
+        <UButton
+            icon="i-heroicons-arrows-pointing-in"
+            size="sm"
+            variant="ghost"
+            color="white"
+            class="transition-transform duration-200 hover:scale-110 hover:bg-white/10"
+            @click="player.switchViewMode('now')"
+        />
       </div>
     </div>
-
-    <!-- 🧱 ОСНОВНОЙ КОНТЕНТ -->
-    <div class="flex-1 overflow-y-auto px-4 py-6">
-      <!-- Sidebar режим -->
-      <div v-if="mode === 'sidebar'" class="space-y-6">
-        <!-- Обложка, Название, Автор + hover действия -->
-        <div class="flex items-start gap-4 group">
-          <img src="https://via.placeholder.com/100" class="w-24 h-24 rounded shadow" />
-          <div class="flex flex-col">
-            <p class="text-lg font-semibold">Название трека</p>
-            <p class="text-sm text-gray-400">Имя исполнителя</p>
-            <div class="flex gap-2 mt-2 opacity-0 group-hover:opacity-100 transition">
-              <UButton icon="i-heroicons-link" size="sm" color="white" variant="ghost" />
-              <UButton icon="i-heroicons-heart" size="sm" color="white" variant="ghost" />
+    <main class="grid grid-cols-2 gap-4">
+      <div
+          class="flex-1 overflow-y-auto px-4"
+          :class="mode === 'fullscreen' ? 'py-6' : 'py-4 space-y-6'"
+      >
+        <!-- Обложка и инфо -->
+        <div class="flex items-center space-x-4">
+          <img
+              :src="track?.cover_url || 'https://via.placeholder.com/300x300?text=No+Cover'"
+              class="w-24 h-24 object-cover rounded shadow"
+          >
+          <div>
+            <h2 class="text-xl font-bold hover:underline cursor-pointer">
+              {{ track?.title || 'Untitled' }}
+            </h2>
+            <p class="text-sm text-gray-400 hover:underline cursor-pointer">
+              {{ track?.author?.name || 'Unknown Artist' }}
+            </p>
+            <!-- Hover-действия -->
+            <div class="mt-2 flex space-x-3">
+              <UButton
+                  icon="i-heroicons-link" size="xs" variant="ghost" color="white"
+                  class="transition-transform duration-200 hover:scale-110 hover:bg-white/10"/>
+              <UButton
+                  icon="i-heroicons-heart" size="xs" variant="ghost" color="white"
+                  class="transition-transform duration-200 hover:scale-110 hover:bg-white/10"/>
             </div>
           </div>
         </div>
 
-        <!-- Карточка: Об исполнителе -->
-        <UCard>
-          <template #header>Об исполнителе</template>
-          <p class="text-sm text-gray-300">Краткая биография, жанр, альбомы и т.д.</p>
-        </UCard>
-
-        <!-- Карточка: Сведения о треке -->
-        <UCard>
-          <template #header>Сведения о треке</template>
-          <p class="text-sm text-gray-300">Дата релиза, длительность, жанр и т.д.</p>
-        </UCard>
-
-        <!-- Карточка: Далее в очереди -->
-        <UCard>
-          <template #header>Следующий трек</template>
-          <div class="flex items-center justify-between">
-            <div>
-              <p class="text-white">Следующий трек</p>
-              <p class="text-sm text-gray-400">Исполнитель</p>
-            </div>
-            <UButton size="sm" label="Очередь" @click="player.openView('queue')" />
+        <!-- Карточки (grid в fullscreen, stack в sidebar) -->
+        <div
+            :class="mode === 'fullscreen'
+          ? 'grid grid-cols-2 gap-4'
+          : 'flex flex-col space-y-4'"
+        >
+          <!-- Карточка: Об исполнителе -->
+          <div class="bg-neutral-800 p-4 rounded shadow hover:shadow-lg transition hover:scale-[1.02]">
+            <h3 class="font-semibold mb-1">Об исполнителе</h3>
+            <p class="text-sm text-gray-400">Тут краткая биография, ссылки, жанры и т.п.</p>
           </div>
-        </UCard>
-      </div>
 
-      <!-- Fullscreen режим -->
-      <div v-else class="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <!-- Левая колонка: об исполнителе -->
-        <UCard>
-          <template #header>Об исполнителе</template>
-          <p class="text-sm text-gray-300">Биография, жанр, релизы...</p>
-        </UCard>
+          <!-- Карточка: Сведения о треке -->
+          <div class="bg-neutral-800 p-4 rounded shadow hover:shadow-lg transition hover:scale-[1.02]">
+            <h3 class="font-semibold mb-1">Сведения</h3>
+            <ul class="text-sm text-gray-400 space-y-1">
+              <li>Альбом: {{ track?.album?.title || 'Без альбома' }}</li>
+              <li>Загружено: {{ track?.created_at?.slice(0, 10) }}</li>
+              <!-- и т.п. -->
+            </ul>
+          </div>
 
-        <!-- Правая колонка: две карточки -->
-        <div class="space-y-6">
-          <UCard>
-            <template #header>Сведения о треке</template>
-            <p class="text-sm text-gray-300">Дата, длительность, лейбл...</p>
-          </UCard>
-
-          <UCard>
-            <template #header>Следующий трек</template>
+          <!-- Карточка: Далее в очереди -->
+          <div class="bg-neutral-800 p-4 rounded shadow hover:shadow-lg transition hover:scale-[1.02] col-span-2">
+            <h3 class="font-semibold mb-2">Далее в очереди</h3>
             <div class="flex items-center justify-between">
               <div>
-                <p class="text-white">Следующий трек</p>
-                <p class="text-sm text-gray-400">Исполнитель</p>
+                <p class="text-sm">Следующий трек: <span class="font-semibold">Track title</span></p>
               </div>
-              <UButton size="sm" label="Очередь" @click="player.openView('queue')" />
+              <UButton
+                  size="sm"
+                  color="white"
+                  variant="ghost"
+                  class="hover:underline"
+                  @click="player.openView('queue')"
+              >
+                Показать очередь
+              </UButton>
             </div>
-          </UCard>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <div v-else class="h-full w-full flex flex-col text-white">
+    <!-- Верхняя панель -->
+    <div
+        class="sticky top-0 z-10 bg-neutral-900 px-4 py-3 flex items-center justify-between group"
+    >
+      <div class="flex items-center space-x-2">
+        <!-- Кнопка закрытия -->
+        <UButton
+            icon="i-heroicons-x-mark"
+            variant="ghost"
+            color="white"
+            size="sm"
+            class="transition-transform duration-200 hover:scale-110 hover:bg-white/10"
+            @click="player.closeView('now')"
+        />
+
+        <!-- Автор -->
+        <span class="font-medium text-sm hover:underline cursor-pointer">
+          {{ track?.author?.name || 'Unknown Artist' }}
+        </span>
+      </div>
+
+      <!-- Контекстное меню -->
+      <div class="flex items-center space-x-2 opacity-0 group-hover:opacity-100 transition">
+        <!-- TODO: Dropdown меню -->
+        <UButton
+            icon="i-heroicons-ellipsis-vertical" size="sm" variant="ghost" color="white"
+            class="transition-transform duration-200 hover:scale-110 hover:bg-white/10"/>
+        <!-- Кнопка разворота -->
+        <UButton
+            icon="i-heroicons-arrows-pointing-out"
+            size="sm"
+            variant="ghost"
+            color="white"
+            class="transition-transform duration-200 hover:scale-110 hover:bg-white/10"
+            @click="player.switchViewMode('now')"
+        />
+      </div>
+    </div>
+
+    <!-- Основная часть (scrollable) -->
+    <div
+        class="flex-1 overflow-y-auto px-4"
+        :class="mode === 'fullscreen' ? 'py-6' : 'py-4 space-y-6'"
+    >
+      <!-- Обложка и инфо -->
+      <div class="flex items-center space-x-4">
+        <img
+            :src="track?.cover_url || 'https://via.placeholder.com/300x300?text=No+Cover'"
+            class="w-24 h-24 object-cover rounded shadow"
+        >
+        <div>
+          <h2 class="text-xl font-bold hover:underline cursor-pointer">
+            {{ track?.title || 'Untitled' }}
+          </h2>
+          <p class="text-sm text-gray-400 hover:underline cursor-pointer">
+            {{ track?.author?.name || 'Unknown Artist' }}
+          </p>
+          <!-- Hover-действия -->
+          <div class="mt-2 flex space-x-3">
+            <UButton
+                icon="i-heroicons-link" size="xs" variant="ghost" color="white"
+                class="transition-transform duration-200 hover:scale-110 hover:bg-white/10"/>
+            <UButton
+                icon="i-heroicons-heart" size="xs" variant="ghost" color="white"
+                class="transition-transform duration-200 hover:scale-110 hover:bg-white/10"/>
+          </div>
+        </div>
+      </div>
+
+      <!-- Карточки (grid в fullscreen, stack в sidebar) -->
+      <div
+          :class="mode === 'fullscreen'
+          ? 'grid grid-cols-2 gap-4'
+          : 'flex flex-col space-y-4'"
+      >
+        <!-- Карточка: Об исполнителе -->
+        <div class="bg-neutral-800 p-4 rounded shadow hover:shadow-lg transition hover:scale-[1.02]">
+          <h3 class="font-semibold mb-1">Об исполнителе</h3>
+          <p class="text-sm text-gray-400">Тут краткая биография, ссылки, жанры и т.п.</p>
+        </div>
+
+        <!-- Карточка: Сведения о треке -->
+        <div class="bg-neutral-800 p-4 rounded shadow hover:shadow-lg transition hover:scale-[1.02]">
+          <h3 class="font-semibold mb-1">Сведения</h3>
+          <ul class="text-sm text-gray-400 space-y-1">
+            <li>Альбом: {{ track?.album?.title || 'Без альбома' }}</li>
+            <li>Загружено: {{ track?.created_at?.slice(0, 10) }}</li>
+            <!-- и т.п. -->
+          </ul>
+        </div>
+
+        <!-- Карточка: Далее в очереди -->
+        <div class="bg-neutral-800 p-4 rounded shadow hover:shadow-lg transition hover:scale-[1.02] col-span-2">
+          <h3 class="font-semibold mb-2">Далее в очереди</h3>
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-sm">Следующий трек: <span class="font-semibold">Track title</span></p>
+            </div>
+            <UButton
+                size="sm"
+                color="white"
+                variant="ghost"
+                class="hover:underline"
+                @click="player.openView('queue')"
+            >
+              Показать очередь
+            </UButton>
+          </div>
         </div>
       </div>
     </div>
   </div>
+
 </template>

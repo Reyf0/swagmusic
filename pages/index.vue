@@ -1,8 +1,6 @@
 <script setup lang="ts">
-import {useSupabaseClient, useSupabaseUser} from '#imports'
 import { usePlayerStore } from '@/stores/player'
 import { ref, onMounted } from 'vue'
-import { Line } from 'vue-chartjs'
 import {
   Chart as ChartJS, Title, Tooltip, Legend, LineElement, PointElement, CategoryScale, LinearScale
 } from 'chart.js'

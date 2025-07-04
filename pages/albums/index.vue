@@ -30,6 +30,8 @@
 </template>
 
 <script setup lang="ts">
+import { ref, onMounted } from 'vue'
+
 const supabase = useSupabaseClient()
 const router = useRouter()
 
@@ -43,7 +45,7 @@ const fetchAlbums = async () => {
 
   const { data, error: err } = await supabase
       .from('albums')
-      .select('*, user:users(username)')
+      .select('*, user:profiles(username)')
       .order('created_at', { ascending: false })
 
   if (err) {

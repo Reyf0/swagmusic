@@ -36,6 +36,7 @@
     "@eslint/js": "^9.29.0",
     "@iconify-json/heroicons": "^1.2.2",
     "@types/howler": "^2.2.12",
+    "@vue/language-server": "^2.2.10",
     "eslint": "^9.29.0",
     "supabase": "^2.26.9",
     "typescript": "^5.8.3",

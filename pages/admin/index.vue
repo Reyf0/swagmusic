@@ -58,16 +58,16 @@
       <UCard>
         <template #header>
           <div class="flex items-center">
-            <div class="p-2 rounded-full bg-amber-100 mr-3">
-              <UIcon name="i-heroicons-arrow-path" class="text-amber-500 w-6 h-6" />
+            <div class="p-2 rounded-full bg-orange-100 mr-3">
+              <UIcon name="i-heroicons-rectangle-stack" class="text-orange-500 w-6 h-6" />
             </div>
-            <h3 class="text-lg font-medium">Activity</h3>
+            <h3 class="text-lg font-medium">Albums</h3>
           </div>
         </template>
-        <div class="text-3xl font-bold">{{ stats.activity }}</div>
+        <div class="text-3xl font-bold">{{ stats.albums }}</div>
         <template #footer>
-          <UButton size="sm" color="amber" variant="ghost" class="w-full">
-            View Activity
+          <UButton to="/admin/albums" size="sm" color="orange" variant="ghost" class="w-full">
+            Manage Albums
           </UButton>
         </template>
       </UCard>
@@ -129,7 +129,7 @@ const stats = ref({
   users: 0,
   tracks: 0,
   playlists: 0,
-  activity: 0
+  albums: 0
 });
 
 // Loading states
@@ -192,12 +192,19 @@ const fetchStats = async () => {
 
     if (playlistsError) throw playlistsError;
 
+    // Get albums count
+    const { count: albumsCount, error: albumsError } = await supabase
+      .from('albums')
+      .select('*', { count: 'exact', head: true });
+
+    if (albumsError) throw albumsError;
+
     // Update stats
     stats.value = {
       users: usersCount || 0,
       tracks: tracksCount || 0,
       playlists: playlistsCount || 0,
-      activity: Math.floor(Math.random() * 100) // Placeholder for activity
+      albums: albumsCount || 0
     };
   } catch (err) {
     console.error('Error fetching stats:', err);

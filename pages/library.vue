@@ -13,6 +13,7 @@ const error = ref(null)
 
 // Fetch user's favorite tracks
 const fetchFavorites = async () => {
+  // TODO Adapt this to use the new database structure
   if (!user.value) return
 
   isLoading.value = true

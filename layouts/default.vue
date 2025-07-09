@@ -4,6 +4,8 @@ import { useSearchStore } from '@/stores/searchStore'
 import { storeToRefs } from 'pinia'
 import MiniPlayer from '@/components/MiniPlayer.vue'
 import PlayerViews from '@/components/player/PlayerViews.vue'
+import ResizablePanel from '@/components/ResizablePanel.vue'
+import PlaylistSidebar from '@/components/PlaylistSidebar.vue'
 import { ref, onMounted, watch } from 'vue'
 
 const user = useSupabaseUser()
@@ -14,6 +16,11 @@ const toast = useToast()
 const profile = ref(null)
 const loading = ref(true)
 const error = ref(null)
+
+// Sidebar state
+const sidebarCollapsed = ref(false)
+const sidebarWidth = ref(240)
+const rightSidebarWidth = ref(360)
 
 const playerStore = usePlayerStore()
 const searchStore = useSearchStore()
@@ -61,6 +68,37 @@ const handleSearch = async () => {
   if (query.value) await router.push({ path: '/search', query: { q: query.value } })
 }
 
+// Sidebar handlers
+const toggleSidebarCollapse = () => {
+  sidebarCollapsed.value = !sidebarCollapsed.value
+  // When collapsing, set width to collapsed width (60px)
+  // When expanding, set width to default expanded width (240px)
+  if (sidebarCollapsed.value) {
+    sidebarWidth.value = 60
+  } else {
+    sidebarWidth.value = 240
+  }
+}
+
+const handleSidebarResize = (width: number) => {
+  sidebarWidth.value = width
+
+  // Auto-collapse when dragging to very small width (around 80px threshold)
+  // Only auto-collapse if not already collapsed
+  if (!sidebarCollapsed.value && width <= 80) {
+    sidebarCollapsed.value = true
+    sidebarWidth.value = 60
+  }
+  // Auto-expand when dragging from collapsed state to larger width
+  else if (sidebarCollapsed.value && width > 120) {
+    sidebarCollapsed.value = false
+  }
+}
+
+const handleRightSidebarResize = (width: number) => {
+  rightSidebarWidth.value = width
+}
+
 watch(query, async () => {
   await searchStore.searchTracks(supabase)
 })
@@ -106,10 +144,22 @@ onMounted(() => {
         <!-- MAIN CONTENT -->
         <!-- Main content + sidebar + views -->
         <div class="flex flex-1 overflow-hidden">
-          <!-- Sidebar (navigation) -->
-          <aside class="w-60 bg-black text-white shrink-0">
-            Sidebar
-          </aside>
+          <!-- Playlist Sidebar -->
+          <ResizablePanel
+            :default-width="sidebarWidth"
+            :min-width="sidebarCollapsed ? 60 : 200"
+            :max-width="400"
+            position="left"
+            :resizable="!sidebarCollapsed"
+            @resize="handleSidebarResize"
+            class="shrink-0"
+          >
+            <PlaylistSidebar
+              :is-collapsed="sidebarCollapsed"
+              @toggle-collapse="toggleSidebarCollapse"
+              @resize="handleSidebarResize"
+            />
+          </ResizablePanel>
 
           <!-- Page Content -->
           <main class="flex-1 overflow-y-auto p-4">
@@ -125,15 +175,23 @@ onMounted(() => {
 
 
           <!-- Sidebar View -->
-          <aside
+          <ResizablePanel
               v-if="playerStore.getSidebarView"
-              class="w-[360px] shrink-0 border-l border-neutral-700 bg-neutral-800 text-white overflow-y-auto"
+              :default-width="rightSidebarWidth"
+              :min-width="300"
+              :max-width="600"
+              position="right"
+              :resizable="true"
+              @resize="handleRightSidebarResize"
+              class="shrink-0"
           >
-            <PlayerViews
-                :view="playerStore.getSidebarView!"
-                mode="sidebar"
-            />
-          </aside>
+            <aside class="w-full h-full border-l border-neutral-700 bg-neutral-800 text-white overflow-y-auto">
+              <PlayerViews
+                  :view="playerStore.getSidebarView!"
+                  mode="sidebar"
+              />
+            </aside>
+          </ResizablePanel>
 
 
         </div>

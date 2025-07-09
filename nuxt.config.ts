@@ -40,7 +40,7 @@ export default defineNuxtConfig({
   },
   supabase: {
     redirect: false,
-    url: 'https://ofdlecccivsirfsaghac.supabase.co',
-    key: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9mZGxlY2NjaXZzaXJmc2FnaGFjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDkyMTI4MzAsImV4cCI6MjA2NDc4ODgzMH0.Z4BtazZgccVyssHiJhir8gdug92ZgpukeHVtJ22OECs'
+    url: process.env.SUPABASE_URL,
+    key: process.env.SUPABASE_KEY,
   }
 })

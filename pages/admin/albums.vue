@@ -3,8 +3,8 @@
     <div class="flex justify-between items-center mb-6">
       <h1 class="text-2xl font-bold">Album Management</h1>
       <button
-        class="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-        @click="showAddAlbumModal = true"
+          class="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+          @click="showAddAlbumModal = true"
       >
         <UIcon name="i-heroicons-plus" class="mr-2"/>
         Add Album
@@ -157,21 +157,16 @@
     </div>
 
     <!-- Add Album Modal -->
-    <UModal title="Add new album" description="Create a new album and assign it to a user">
-      <button
-          class="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-          @click="showAddAlbumModal = true"
-      >
-        <UIcon name="i-heroicons-plus" class="mr-2"/>
-        Add Album
-      </button>
-      <template #header class="p-8">
-        <h3 class="text-lg font-medium">Add New Album</h3>
-      </template>
+    <div v-if="showAddAlbumModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
+      <div class="bg-white rounded-lg shadow-xl w-full max-w-lg p-6 space-y-6 animate-fade-in">
+        <!-- Заголовок -->
+        <header>
+          <h3 class="text-xl font-semibold text-gray-900">Add New Album</h3>
+        </header>
 
-      <template #content>
-        <form @submit.prevent="addAlbum">
-          <div class="space-y-4">
+        <!-- Форма -->
+        <main>
+          <form @submit.prevent="addAlbum" class="space-y-4">
             <div>
               <label class="block text-sm font-medium text-gray-700 mb-1">Title</label>
               <input
@@ -182,6 +177,7 @@
                   placeholder="Album title"
               >
             </div>
+
             <div>
               <label class="block text-sm font-medium text-gray-700 mb-1">Description</label>
               <textarea
@@ -191,137 +187,182 @@
                   placeholder="Album description (optional)"
               ></textarea>
             </div>
+
+            <!-- Cover image upload -->
             <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">Cover URL</label>
+              <label for="cover" class="block text-sm font-medium text-gray-700">Cover Image (Optional)</label>
               <input
-                  v-model="newAlbum.cover_url"
-                  type="url"
-                  class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  placeholder="https://example.com/cover.jpg"
+                  id="cover"
+                  type="file"
+                  accept="image/jpeg,image/png,image/gif"
+                  @change="onCoverChange"
+                  class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
               >
+
+              <!-- Image preview -->
+              <div v-if="coverPreview" class="mt-2">
+                <p class="text-sm text-gray-500 mb-1">Preview:</p>
+                <img :src="coverPreview" alt="Cover preview" class="h-40 w-40 object-cover rounded">
+              </div>
             </div>
+
             <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">User</label>
+              <input
+                  v-model="userSearch"
+                  type="text"
+                  placeholder="Search user..."
+                  class="w-full border border-gray-300 rounded-md px-3 py-2 mb-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+
               <select
                   v-model="newAlbum.user_id"
                   required
-                  class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
                 <option value="">Select user</option>
-                <option v-for="user in users" :key="user.id" :value="user.id">
+                <option
+                    v-for="user in filteredUsers"
+                    :key="user.id"
+                    :value="user.id"
+                >
                   {{ user.username }} ({{ user.email }})
                 </option>
               </select>
-            </div>
-          </div>
-        </form>
-      </template>
 
-      <template #footer>
-        <div class="flex justify-end space-x-3">
+            </div>
+          </form>
+        </main>
+
+        <!-- Кнопки -->
+        <footer class="flex justify-end space-x-3 pt-2">
           <UButton color="gray" variant="ghost" @click="showAddAlbumModal = false">
             Cancel
           </UButton>
-          <UButton
-              color="primary"
-              :loading="adding"
-              @click="addAlbum"
-          >
+          <UButton color="gray" :loading="adding" @click="addAlbum">
             Add Album
           </UButton>
-        </div>
-      </template>
-    </UModal>
+        </footer>
+      </div>
+    </div>
 
     <!-- Edit Album Modal -->
-    <UModal v-model="showEditModal">
-      <UCard>
-        <template #header>
-          <h3 class="text-lg font-medium">Edit Album</h3>
-        </template>
-
-        <form @submit.prevent="updateAlbum">
-          <div class="space-y-4">
+    <div v-if="showEditModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
+      <div class="bg-white rounded-lg shadow-xl w-full max-w-lg p-6 space-y-6 animate-fade-in">
+        <header>
+          <h3 class="text-xl font-semibold text-gray-900">Edit Album</h3>
+        </header>
+        <main>
+          <form @submit.prevent="updateAlbum" class="space-y-4">
             <div>
               <label class="block text-sm font-medium text-gray-700 mb-1">Title</label>
               <input
-                v-model="editingAlbum.title"
-                type="text"
-                required
-                class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                placeholder="Album title"
+                  v-model="editingAlbum.title"
+                  type="text"
+                  required
+                  class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="Album title"
               >
             </div>
             <div>
               <label class="block text-sm font-medium text-gray-700 mb-1">Description</label>
               <textarea
-                v-model="editingAlbum.description"
-                rows="3"
-                class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                placeholder="Album description (optional)"
+                  v-model="editingAlbum.description"
+                  rows="3"
+                  class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="Album description (optional)"
               ></textarea>
+            </div>
+            <div>
+              <input
+                  v-model="userSearch"
+                  type="text"
+                  placeholder="Search user..."
+                  class="w-full border border-gray-300 rounded-md px-3 py-2 mb-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+
+              <select
+                  v-model="editingAlbum.user_id"
+                  required
+                  class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="">Select user</option>
+                <option
+                    v-for="user in filteredUsers"
+                    :key="user.id"
+                    :value="user.id"
+                >
+                  {{ user.username }} ({{ user.email }})
+                </option>
+              </select>
+
             </div>
             <div>
               <label class="block text-sm font-medium text-gray-700 mb-1">Cover URL</label>
               <input
-                v-model="editingAlbum.cover_url"
-                type="url"
-                class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                placeholder="https://example.com/cover.jpg"
+                  v-model="editingAlbum.cover_url"
+                  type="url"
+                  class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="https://example.com/cover.jpg"
               >
             </div>
-          </div>
-        </form>
+          </form>
+        </main>
 
-        <template #footer="{ close }">
-          <div class="flex justify-end space-x-3">
-            <UButton color="gray" variant="ghost" @click="showEditModal = false">
-              Cancel
-            </UButton>
-            <UButton
-              color="primary"
+        <!-- Кнопки -->
+        <footer class="flex justify-end space-x-3 pt-2">
+          <UButton color="gray" variant="ghost" @click="showEditModal = false">
+            Cancel
+          </UButton>
+          <UButton
+              color="gray"
+              variant="solid"
               :loading="updating"
               @click="updateAlbum"
-            >
-              Update Album
-            </UButton>
-          </div>
-        </template>
-      </UCard>
-    </UModal>
+          >
+            Update Album
+          </UButton>
+        </footer>
+      </div>
+    </div>
 
     <!-- Delete Confirmation Modal -->
-    <UModal v-model="showDeleteModal">
-      <UCard>
-        <template #header>
-          <h3 class="text-lg font-medium">Delete Album</h3>
-        </template>
+    <div v-if="showDeleteModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
+      <div class="bg-white rounded-lg shadow-xl w-full max-w-md p-6 space-y-6 animate-fade-in">
+        <!-- Заголовок -->
+        <header>
+          <h3 class="text-xl font-semibold text-gray-900">Delete Album</h3>
+        </header>
 
-        <p class="text-gray-600">
-          Are you sure you want to delete the album "{{ deletingAlbum?.title }}"?
-          This action cannot be undone and will also remove all tracks associated with this album.
-        </p>
+        <!-- Текст -->
+        <main>
+          <p class="text-gray-700">
+            Are you sure you want to delete the album
+            <strong>"{{ deletingAlbum?.title }}"</strong>?<br />
+            This action cannot be undone and will also remove all tracks associated with this album.
+          </p>
+        </main>
 
-        <template #footer>
-          <div class="flex justify-end space-x-3">
-            <UButton color="gray" variant="ghost" @click="showDeleteModal = false">
-              Cancel
-            </UButton>
-            <UButton
+        <!-- Кнопки -->
+        <footer class="flex justify-end space-x-3 pt-2">
+          <UButton color="gray" variant="ghost" @click="showDeleteModal = false">
+            Cancel
+          </UButton>
+          <UButton
               color="red"
               :loading="deleting"
               @click="deleteAlbum"
-            >
-              Delete Album
-            </UButton>
-          </div>
-        </template>
-      </UCard>
-    </UModal>
+          >
+            Delete Album
+          </UButton>
+        </footer>
+      </div>
+    </div>
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
+import { ref, computed, onMounted } from 'vue';
+
 definePageMeta({
   layout: 'admin',
   middleware: ['admin']
@@ -330,28 +371,25 @@ definePageMeta({
 const supabase = useSupabaseClient();
 const toast = useToast();
 
-// Albums data
+// Состояния
 const albums = ref([]);
 const users = ref([]);
 const loading = ref(true);
 const searchQuery = ref('');
-
-// Pagination
 const currentPage = ref(1);
 const pageSize = 10;
 const totalAlbums = ref(0);
 const totalPages = computed(() => Math.ceil(totalAlbums.value / pageSize));
 
-// Modals
+// Модалки
 const showAddAlbumModal = ref(false);
 const showEditModal = ref(false);
 const showDeleteModal = ref(false);
 
-// Album editing
-const editingAlbum = ref({});
-const updating = ref(false);
+// Новая обложка
+const coverPreview = ref<string | null>(null);
+const coverFile = ref<File | null>(null);
 
-// Album adding
 const newAlbum = ref({
   title: '',
   description: '',
@@ -360,287 +398,241 @@ const newAlbum = ref({
 });
 const adding = ref(false);
 
-// Album deletion
+// Редактирование
+const editingAlbum = ref({});
+const updating = ref(false);
+
+// Удаление
 const deletingAlbum = ref(null);
 const deleting = ref(false);
 
-// Computed properties
+// Форматирование
+const formatDate = (dateString: string) => new Date(dateString).toLocaleDateString();
 const visiblePages = computed(() => {
   const pages = [];
   const start = Math.max(1, currentPage.value - 2);
   const end = Math.min(totalPages.value, start + 4);
-
-  for (let i = start; i <= end; i++) {
-    pages.push(i);
-  }
-
+  for (let i = start; i <= end; i++) pages.push(i);
   return pages;
 });
-
-// Formatting dates
-const formatDate = (dateString) => {
-  return new Date(dateString).toLocaleDateString();
-};
-
-// Custom debounce function
-const debounce = (fn, delay) => {
-  let timeout;
-  return (...args) => {
+const debounce = (fn: Function, delay: number) => {
+  let timeout: any;
+  return (...args: any[]) => {
     clearTimeout(timeout);
     timeout = setTimeout(() => fn(...args), delay);
   };
 };
-
 const debouncedSearch = debounce(() => {
   currentPage.value = 1;
   fetchAlbums();
 }, 300);
 
-// Fetch albums
+// === Загрузка обложки ===
+const onCoverChange = (event: Event) => {
+  const file = (event.target as HTMLInputElement)?.files?.[0];
+  if (!file) return;
+
+  coverFile.value = file;
+  const reader = new FileReader();
+  reader.onload = () => {
+    coverPreview.value = reader.result as string;
+  };
+  reader.readAsDataURL(file);
+};
+
+const userSearch = ref('')
+
+const filteredUsers = computed(() =>
+    users.value.filter((user) => {
+      const query = userSearch.value.toLowerCase()
+      return (
+          user.username?.toLowerCase().includes(query) ||
+          user.email?.toLowerCase().includes(query)
+      )
+    })
+)
+
+
+const uploadCover = async (): Promise<string | null> => {
+  if (!coverFile.value) return null;
+
+  const fileExt = coverFile.value.name.split('.').pop();
+  const fileName = `${Date.now()}.${fileExt}`;
+  const { error: uploadError } = await supabase
+      .storage
+      .from('covers')
+      .upload(fileName, coverFile.value);
+
+  if (uploadError) {
+    console.error('Upload error:', uploadError.message);
+    toast.add({
+      title: 'Error',
+      description: 'Failed to upload cover image',
+      color: 'error'
+    });
+    return null;
+  }
+
+  const { data } = supabase
+      .storage
+      .from('covers')
+      .getPublicUrl(fileName);
+
+  return data.publicUrl;
+};
+
+// === CRUD ===
 const fetchAlbums = async () => {
   loading.value = true;
-
   try {
     let query = supabase
-      .from('albums')
-      .select(
-          `
-        *,
-        ...profiles!inner(
-          user_id:id,
-          username
-        )
-        `,
-      )
-      .select()
-      .order('created_at', {
-        ascending: false,
-      })
+        .from('albums')
+        .select(`*, profiles!inner(username, email, id)`)
+        .order('created_at', { ascending: false });
 
-    // Apply search filter
-    if (searchQuery.value) {
-      query = query.ilike('title', `%${searchQuery.value}%`);
-    }
+    if (searchQuery.value) query = query.ilike('title', `%${searchQuery.value}%`);
 
-    // Apply pagination
     const from = (currentPage.value - 1) * pageSize;
     const to = from + pageSize - 1;
     query = query.range(from, to);
 
-    const { data, error, count } = await query;
-
+    const { data, error } = await query;
     if (error) throw error;
 
-    // Get track counts for each album
-    const albumsWithTrackCount = await Promise.all(
-      (data || []).map(async (album) => {
-        const { count: trackCount } = await supabase
+    const withCounts = await Promise.all((data || []).map(async (album) => {
+      const { count } = await supabase
           .from('tracks')
           .select('*', { count: 'exact', head: true })
           .eq('album_id', album.id);
+      return { ...album, track_count: count || 0 };
+    }));
 
-        return {
-          ...album,
-          track_count: trackCount || 0
-        };
-      })
-    );
-
-    albums.value = albumsWithTrackCount;
-    totalAlbums.value = count || 0;
+    albums.value = withCounts;
+    totalAlbums.value = withCounts.length; // можно заменить count при необходимости
   } catch (err) {
-    console.error('Error fetching albums:', err);
-    toast.add({
-      title: 'Error',
-      description: 'Failed to load albums',
-      color: 'error'
-    });
+    console.error(err);
+    toast.add({ title: 'Error', description: 'Failed to load albums', color: 'error' });
   } finally {
     loading.value = false;
   }
 };
 
-// Fetch users for album creation
 const fetchUsers = async () => {
-  try {
-    const { data, error } = await supabase
-      .from('profiles')
-      .select('id, username, email')
-      .order('email');
-
-    if (error) throw error;
-
-    users.value = data || [];
-  } catch (err) {
-    console.error('Error fetching users:', err);
-  }
+  const { data, error } = await supabase.from('profiles').select('id, username, email').order('email');
+  if (error) return console.error(error);
+  users.value = data || [];
 };
 
-// Add album
 const addAlbum = async () => {
   if (!newAlbum.value.title || !newAlbum.value.user_id) {
-    toast.add({
-      title: 'Error',
-      description: 'Please fill in all required fields',
-      color: 'error'
-    });
-    return;
+    return toast.add({ title: 'Error', description: 'Please fill in all required fields', color: 'error' });
   }
 
   adding.value = true;
-
   try {
-    const { data, error } = await supabase
-      .from('albums')
-      .insert([{
-        title: newAlbum.value.title,
-        description: newAlbum.value.description,
-        cover_url: newAlbum.value.cover_url,
-        user_id: newAlbum.value.user_id
-      }])
-      .select();
+    let coverUrl = '';
+    if (coverFile.value) {
+      const uploaded = await uploadCover();
+      if (uploaded) coverUrl = uploaded;
+    }
+
+    const { error } = await supabase
+        .from('albums')
+        .insert([{
+          title: newAlbum.value.title,
+          description: newAlbum.value.description,
+          cover_url: coverUrl,
+          user_id: newAlbum.value.user_id
+        }]);
 
     if (error) throw error;
 
-    toast.add({
-      title: 'Success',
-      description: 'Album added successfully',
-      color: 'success'
-    });
+    toast.add({ title: 'Success', description: 'Album added successfully', color: 'success' });
 
     showAddAlbumModal.value = false;
-    newAlbum.value = {
-      title: '',
-      description: '',
-      cover_url: '',
-      user_id: ''
-    };
+    newAlbum.value = { title: '', description: '', cover_url: '', user_id: '' };
+    coverFile.value = null;
+    coverPreview.value = null;
 
     await fetchAlbums();
   } catch (err) {
-    console.error('Error adding album:', err);
-    toast.add({
-      title: 'Error',
-      description: 'Failed to add album',
-      color: 'error'
-    });
+    console.error(err);
+    toast.add({ title: 'Error', description: 'Failed to add album', color: 'error' });
   } finally {
     adding.value = false;
   }
 };
 
-// Edit album
-const editAlbum = (album) => {
+const editAlbum = (album: any) => {
   editingAlbum.value = { ...album };
   showEditModal.value = true;
 };
 
-// Update album
 const updateAlbum = async () => {
   if (!editingAlbum.value.title) {
-    toast.add({
-      title: 'Error',
-      description: 'Title is required',
-      color: 'error'
-    });
+    toast.add({ title: 'Error', description: 'Title is required', color: 'error' });
     return;
   }
 
   updating.value = true;
-
   try {
     const { error } = await supabase
-      .from('albums')
-      .update({
-        title: editingAlbum.value.title,
-        description: editingAlbum.value.description,
-        cover_url: editingAlbum.value.cover_url
-      })
-      .eq('id', editingAlbum.value.id);
+        .from('albums')
+        .update({
+          title: editingAlbum.value.title,
+          description: editingAlbum.value.description,
+          cover_url: editingAlbum.value.cover_url
+        })
+        .eq('id', editingAlbum.value.id);
 
     if (error) throw error;
 
-    toast.add({
-      title: 'Success',
-      description: 'Album updated successfully',
-      color: 'success'
-    });
-
+    toast.add({ title: 'Success', description: 'Album updated', color: 'success' });
     showEditModal.value = false;
     await fetchAlbums();
   } catch (err) {
-    console.error('Error updating album:', err);
-    toast.add({
-      title: 'Error',
-      description: 'Failed to update album',
-      color: 'error'
-    });
+    console.error(err);
+    toast.add({ title: 'Error', description: 'Update failed', color: 'error' });
   } finally {
     updating.value = false;
   }
 };
 
-// Confirm delete album
-const confirmDeleteAlbum = (album) => {
+const confirmDeleteAlbum = (album: any) => {
   deletingAlbum.value = album;
   showDeleteModal.value = true;
 };
 
-// Delete album
 const deleteAlbum = async () => {
   deleting.value = true;
-
   try {
-    // First, update tracks to remove album association
-    const { error: tracksError } = await supabase
-      .from('tracks')
-      .update({ album_id: null })
-      .eq('album_id', deletingAlbum.value.id);
+    const { error: trackError } = await supabase.from('tracks').update({ album_id: null }).eq('album_id', deletingAlbum.value.id);
+    if (trackError) throw trackError;
 
-    if (tracksError) throw tracksError;
-
-    // Then delete the album
-    const { error } = await supabase
-      .from('albums')
-      .delete()
-      .eq('id', deletingAlbum.value.id);
-
+    const { error } = await supabase.from('albums').delete().eq('id', deletingAlbum.value.id);
     if (error) throw error;
 
-    toast.add({
-      title: 'Success',
-      description: 'Album deleted successfully',
-      color: 'success'
-    });
-
+    toast.add({ title: 'Success', description: 'Album deleted', color: 'success' });
     showDeleteModal.value = false;
     deletingAlbum.value = null;
     await fetchAlbums();
   } catch (err) {
-    console.error('Error deleting album:', err);
-    toast.add({
-      title: 'Error',
-      description: 'Failed to delete album',
-      color: 'error'
-    });
+    console.error(err);
+    toast.add({ title: 'Error', description: 'Deletion failed', color: 'error' });
   } finally {
     deleting.value = false;
   }
 };
 
-// Change page
-const changePage = (page) => {
+const changePage = (page: number) => {
   if (page >= 1 && page <= totalPages.value) {
     currentPage.value = page;
     fetchAlbums();
   }
 };
 
-// Initialize
 onMounted(async () => {
-  await Promise.all([
-    fetchAlbums(),
-    fetchUsers()
-  ]);
+  await Promise.all([fetchAlbums(), fetchUsers()]);
 });
 </script>
+

@@ -15,6 +15,9 @@ export default defineNuxtConfig({
     '@nuxtjs/tailwindcss',
     '@pinia/nuxt'
   ],
+  typescript: {
+    typeCheck: false
+  },
   css: ['~/assets/css/main.css'],
   ui: {
     colorMode: false,

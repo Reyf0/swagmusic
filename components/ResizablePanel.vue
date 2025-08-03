@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, watch } from 'vue'
+import { ref, watch, onMounted, onUnmounted, watchEffect } from 'vue'
 
 const props = defineProps<{
+  width: number
   minWidth?: number
   maxWidth?: number
   defaultWidth?: number
@@ -10,30 +11,37 @@ const props = defineProps<{
 }>()
 
 const emit = defineEmits<{
-  'resize': [width: number]
+  (e: 'resize', width: number): void
 }>()
 
 const panelRef = ref<HTMLElement>()
-const resizerRef = ref<HTMLElement>()
 const isResizing = ref(false)
-const currentWidth = ref(props.defaultWidth || 240)
+const width = ref(props.width || 240)
 
 let startX = 0
 let startWidth = 0
+let resizeFrame: number | null = null
 
-// Watch for changes to defaultWidth prop and update currentWidth accordingly
+// Обновляем текущую ширину, если проп defaultWidth изменился
 watch(() => props.defaultWidth, (newWidth) => {
   if (newWidth !== undefined) {
-    currentWidth.value = newWidth
+    width.value = newWidth
   }
 })
+
+// emit с requestAnimationFrame
+const emitResize = (width: number) => {
+  if (resizeFrame !== null) cancelAnimationFrame(resizeFrame)
+  if (typeof window === 'undefined') return // SSR-safe
+  resizeFrame = requestAnimationFrame(() => emit('resize', width))
+}
 
 const startResize = (e: MouseEvent) => {
   if (!props.resizable) return
 
   isResizing.value = true
   startX = e.clientX
-  startWidth = currentWidth.value
+  startWidth = width.value
 
   document.addEventListener('mousemove', handleResize)
   document.addEventListener('mouseup', stopResize)
@@ -53,14 +61,12 @@ const handleResize = (e: MouseEvent) => {
     newWidth = startWidth + deltaX
   }
 
-  // Apply constraints
   const minWidth = props.minWidth || 200
   const maxWidth = props.maxWidth || 600
 
   newWidth = Math.max(minWidth, Math.min(maxWidth, newWidth))
-
-  currentWidth.value = newWidth
-  emit('resize', newWidth)
+  width.value = newWidth
+  emitResize(newWidth)
 }
 
 const stopResize = () => {
@@ -71,8 +77,15 @@ const stopResize = () => {
   document.body.style.userSelect = ''
 }
 
+// Восстанавливаем ширину если не ресайзим
+watchEffect(() => {
+  if (!isResizing.value && props.defaultWidth !== undefined) {
+    width.value = props.defaultWidth
+  }
+})
+
 onMounted(() => {
-  emit('resize', currentWidth.value)
+  emit('resize', width.value)
 })
 
 onUnmounted(() => {
@@ -82,30 +95,25 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div 
-    ref="panelRef"
-    class="resizable-panel relative"
-    :style="{ width: `${currentWidth}px` }"
+  <div
+      ref="panelRef"
+      class="resizable-panel relative"
+      :style="{ width: `${width}px` }"
   >
     <slot />
 
     <!-- Resizer Handle -->
     <div
-      v-if="resizable"
-      ref="resizerRef"
-      @mousedown="startResize"
-      class="resizer absolute top-0 w-1 h-full cursor-col-resize hover:bg-blue-500 transition-colors z-10"
-      :class="{
-        'right-0': position === 'left',
-        'left-0': position === 'right',
-        'bg-blue-500': isResizing,
-        'bg-transparent hover:bg-gray-400': !isResizing
+        @mousedown="startResize"
+        class="resizer absolute top-0 h-full w-2 z-50 cursor-col-resize"
+        :class="{
+        'right-[-1px]': position === 'left',
+        'left-[-1px]': position === 'right',
       }"
     >
-      <!-- Visual indicator -->
-      <div 
-        class="absolute inset-y-0 w-1 transition-all duration-200"
-        :class="{
+      <div
+          class="w-[2px] h-full transition-all"
+          :class="{
           'bg-blue-500 opacity-100': isResizing,
           'bg-gray-400 opacity-0 hover:opacity-50': !isResizing
         }"
@@ -117,22 +125,8 @@ onUnmounted(() => {
 <style scoped>
 .resizable-panel {
   flex-shrink: 0;
-}
-
-.resizer {
-  background: transparent;
-}
-
-.resizer:hover {
-  background: rgba(59, 130, 246, 0.3);
-}
-
-.resizer.active {
-  background: rgba(59, 130, 246, 0.6);
-}
-
-/* Prevent text selection during resize */
-.resizer:active {
-  user-select: none;
+  position: relative;
+  transition: width 0.2s ease;
 }
 </style>
+

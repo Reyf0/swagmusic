@@ -1,13 +1,14 @@
 // stores/searchStore.ts
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
+import type { SupabaseClient } from '@supabase/supabase-js'
 
 export const useSearchStore = defineStore('searchStore', () => {
   const query = ref('')
   const results = ref<any[]>([])
   const isLoading = ref(false)
 
-  const searchTracks = async (supabase: any) => {
+  const searchTracks = async (supabase: SupabaseClient<Database>) => {
     if (!query.value.trim()) {
       results.value = []
       return

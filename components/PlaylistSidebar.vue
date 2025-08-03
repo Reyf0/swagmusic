@@ -137,7 +137,7 @@ const navigateToPlaylist = (playlistId: string) => {
             v-for="playlist in playlists.slice(0, 10)"
             :key="playlist.id"
             @click="navigateToPlaylist(playlist.id)"
-            class="w-full p-3 hover:bg-gray-800 rounded-lg cursor-pointer transition-colors"
+            class="flex justify-center items-center w-full p-3 hover:bg-gray-800 rounded-lg cursor-pointer transition-colors"
             :title="playlist.name"
           >
             <div class="w-6 h-6 bg-gray-700 rounded flex items-center justify-center mx-auto">
@@ -161,6 +161,9 @@ const navigateToPlaylist = (playlistId: string) => {
   /* Width is controlled by ResizablePanel parent */
   width: 100%;
   height: 100%;
+}
+.playlist-sidebar:not(.collapsed) {
+  min-width: 200px;
 }
 
 .playlist-sidebar.collapsed h2,

@@ -21,6 +21,9 @@ const error = ref(null)
 const sidebarCollapsed = ref(false)
 const sidebarWidth = ref(240)
 const rightSidebarWidth = ref(360)
+const collapseThreshold = 240
+const collapseWidth = 60
+const expandedDefaultWidth = 240
 
 const playerStore = usePlayerStore()
 const searchStore = useSearchStore()
@@ -80,24 +83,30 @@ const toggleSidebarCollapse = () => {
   }
 }
 
+
 const handleSidebarResize = (width: number) => {
+  if (sidebarCollapsed.value) {
+    if (width > collapseThreshold) {
+      sidebarCollapsed.value = false
+      sidebarWidth.value = Math.max(width, expandedDefaultWidth) // Set to new width when expanding
+    }
+    return
+  }
+  // If not collapsed, just update the width
   sidebarWidth.value = width
 
-  // Auto-collapse when dragging to very small width (around 80px threshold)
-  // Only auto-collapse if not already collapsed
-  if (!sidebarCollapsed.value && width <= 80) {
-    sidebarCollapsed.value = true
-    sidebarWidth.value = 60
-  }
+
   // Auto-expand when dragging from collapsed state to larger width
-  else if (sidebarCollapsed.value && width > 120) {
-    sidebarCollapsed.value = false
+  if (width <= collapseThreshold) {
+    sidebarCollapsed.value = true
+    sidebarWidth.value = collapseWidth
   }
 }
 
 const handleRightSidebarResize = (width: number) => {
   rightSidebarWidth.value = width
 }
+
 
 watch(query, async () => {
   await searchStore.searchTracks(supabase)
@@ -146,11 +155,12 @@ onMounted(() => {
         <div class="flex flex-1 overflow-hidden">
           <!-- Playlist Sidebar -->
           <ResizablePanel
+            :width="sidebarWidth"
             :default-width="sidebarWidth"
-            :min-width="sidebarCollapsed ? 60 : 200"
+            :min-width="60"
             :max-width="400"
             position="left"
-            :resizable="!sidebarCollapsed"
+            :resizable="true"
             @resize="handleSidebarResize"
             class="shrink-0"
           >
@@ -177,6 +187,7 @@ onMounted(() => {
           <!-- Sidebar View -->
           <ResizablePanel
               v-if="playerStore.getSidebarView"
+              :width="rightSidebarWidth"
               :default-width="rightSidebarWidth"
               :min-width="300"
               :max-width="600"

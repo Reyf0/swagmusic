@@ -25,10 +25,7 @@ const fetchTopTracks = async () => {
       .select(`
       track_id,
       tracks (
-        id,
-        title,
-        audio_url,
-        cover_url,
+        *,
         track_authors(
           *,
           author:authors(*)

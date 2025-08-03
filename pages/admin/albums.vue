@@ -362,6 +362,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue';
+import type {Album} from "@/types/global";
 
 definePageMeta({
   layout: 'admin',
@@ -372,7 +373,7 @@ const supabase = useSupabaseClient();
 const toast = useToast();
 
 // Состояния
-const albums = ref([]);
+const albums = ref<Album>([]);
 const users = ref([]);
 const loading = ref(true);
 const searchQuery = ref('');
@@ -563,7 +564,7 @@ const addAlbum = async () => {
   }
 };
 
-const editAlbum = (album: any) => {
+const editAlbum = (album: Album) => {
   editingAlbum.value = { ...album };
   showEditModal.value = true;
 };
@@ -598,7 +599,7 @@ const updateAlbum = async () => {
   }
 };
 
-const confirmDeleteAlbum = (album: any) => {
+const confirmDeleteAlbum = (album: Album) => {
   deletingAlbum.value = album;
   showDeleteModal.value = true;
 };

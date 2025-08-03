@@ -182,8 +182,7 @@
                   v-model="editingUser.email" 
                   type="email" 
                   placeholder="Email" 
-                  disabled
-                  class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 bg-gray-100 cursor-not-allowed"
+                  class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                 >
               </div>
               <div>
@@ -396,6 +395,8 @@ definePageMeta({
 });
 
 const supabase = useSupabaseClient();
+const session = await supabase.auth.getSession()
+const access_token = session.data.session?.access_token
 const toast = useToast();
 const userSearchStore = useUserSearchStore();
 
@@ -611,14 +612,31 @@ const addUser = async () => {
   adding.value = true;
 
   try {
-    // Create user in Supabase Auth
-    const { data: authData, error: authError } = await supabase.auth.admin.createUser({
-      email: newUser.value.email,
-      password: newUser.value.password,
-      email_confirm: true
-    });
+    const response = await $fetch('/api/v1/users/create', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${access_token}`
+      },
+      body: {
+        email: newUser.value.email,
+        password: newUser.value.password,
+        username: newUser.value.username
+      }
+    })
 
-    if (authError) throw authError;
+    if (response.error) {
+      console.error('Registration error:', response.error)
+    } else if (!response.user) {
+      toast.add({
+        title: 'Error',
+        description: response.body?.error || 'User creation failed',
+        color: 'error'
+      });
+      adding.value = false;
+      return;
+    } else {
+      console.log('User created:', response.user)
+    }
 
     // Create profile in profiles table
     const { error: profileError } = await supabase
@@ -628,7 +646,7 @@ const addUser = async () => {
         full_name: newUser.value.full_name,
         is_admin: newUser.value.is_admin
       })
-      .eq('id', authData.user.id);
+      .eq('id', response.user.id);
 
     if (profileError) throw profileError;
 

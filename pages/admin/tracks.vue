@@ -229,6 +229,11 @@
                 />
               </div>
               <div>
+                <AuthorPicker
+                  v-model="newTrack.track_authors"
+                />
+              </div>
+              <div>
                 <label for="new-cover-url" class="block text-sm font-medium text-gray-700">Cover URL</label>
                 <input
                   id="new-cover-url"
@@ -262,7 +267,7 @@
             <button
               type="button"
               class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-base font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:ml-3 sm:w-auto sm:text-sm"
-              @click="addTrack"
+              @click="saveTrack"
             >
               <span v-if="adding" class="i-heroicons-arrow-path animate-spin mr-2"></span>
               Add Track
@@ -322,15 +327,18 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { useSearchStore } from '~/stores/searchStore';
+import type {Track} from "@/types/global";
+import AuthorPicker from "@/components/AuthorPicker.vue";
+import type { SupabaseClient } from '@supabase/supabase-js';
 
 definePageMeta({
   layout: 'admin',
   middleware: ['admin']
 });
 
-const supabase = useSupabaseClient();
+const supabase:SupabaseClient<Database> = useSupabaseClient();
 const toast = useToast();
 const searchStore = useSearchStore();
 
@@ -350,7 +358,7 @@ const totalTracks = ref(0);
 const totalPages = computed(() => Math.ceil(totalTracks.value / pageSize));
 
 // Tracks data
-const tracks = ref([]);
+const tracks = ref<Track[]>([]);
 const loading = ref(true);
 
 // Modals
@@ -359,14 +367,16 @@ const showAddTrackModal = ref(false);
 const showDeleteModal = ref(false);
 
 // Track editing
-const editingTrack = ref({});
+const editingTrack = ref<Track>({});
 const updating = ref(false);
 
 // Track adding
-const newTrack = ref({
+const newTrack = ref<Track>({
   title: '',
+  audio_url: '',
   cover_url: '',
-  audio_url: ''
+  user_id: '',
+  track_authors: [] as { id: string; name: string }[]
 });
 const adding = ref(false);
 
@@ -494,7 +504,7 @@ const updateTrack = async () => {
 };
 
 // Add track
-const addTrack = async () => {
+const saveTrack = async () => {
   if (!newTrack.value.title || !newTrack.value.audio_url) {
     toast.add({
       title: 'Error',
@@ -507,17 +517,32 @@ const addTrack = async () => {
   adding.value = true;
 
   try {
-    const { data, error } = await supabase
-      .from('tracks')
-      .insert({
-        title: newTrack.value.title,
-        cover_url: newTrack.value.cover_url,
-        audio_url: newTrack.value.audio_url,
-        created_at: new Date().toISOString()
-      })
-      .select();
+    const { data: trackData, error } = await supabase
+        .from('tracks')
+        .insert({
+          title: newTrack.value.title,
+          cover_url: newTrack.value.cover_url,
+          audio_url: newTrack.value.audio_url,
+          created_at: new Date().toISOString()
+        })
+        .select('id')
+        .single();
 
     if (error) throw error;
+
+    const trackId = trackData.id;
+
+    const relations = newTrack.value.track_authors.map((author, idx) => ({
+      track_id: trackId,
+      author_id: author.id,
+      order_index: idx
+    }))
+
+    const { error: relError } = await supabase
+        .from('track_authors')
+        .insert(relations)
+
+    if (relError) throw relError;
 
     toast.add({
       title: 'Success',

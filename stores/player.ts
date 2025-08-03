@@ -1,15 +1,18 @@
 import { defineStore } from 'pinia'
 import { Howl } from 'howler'
 import { ref, computed, watch, onUnmounted } from 'vue'
+import type { Track } from '@/types/global'
+import type { SupabaseClient } from "@supabase/supabase-js";
+import type { Database } from '@/types/database.types'
 
 export const usePlayerStore = defineStore('player', () => {
-    const currentTrack = ref<any>(null)
+    const currentTrack = ref<Track>(null)
     const sound = ref<Howl | null>(null)
     const isPlaying = ref(false)
     const currentTime = ref(0)
     const duration = ref(0)
     const volume = ref(1)
-    const queue = ref<any[]>([])
+    const queue = ref<Track[]>([])
     const currentTrackIndex = ref(-1)
     const isRepeat = ref(false)
     const isShuffle = ref(false)
@@ -103,7 +106,7 @@ export const usePlayerStore = defineStore('player', () => {
 
     // ───────────── Player Logic ─────────────
 
-    const supabase = useSupabaseClient()
+    const supabase:SupabaseClient<Database> = useSupabaseClient()
     const user = useSupabaseUser()
     const lastListenedTrackId = ref<string | null>(null)
 
@@ -137,7 +140,7 @@ export const usePlayerStore = defineStore('player', () => {
         if (!insertError) lastListenedTrackId.value = trackId
     }
 
-    let progressInterval: any = null
+    let progressInterval: number = null
     const startProgressTracking = () => {
         stopProgressTracking()
         progressInterval = setInterval(() => {
@@ -154,7 +157,7 @@ export const usePlayerStore = defineStore('player', () => {
         }
     }
 
-    const play = (track: any, trackList: any[] = []) => {
+    const play = (track: Track, trackList: Track[] = []) => {
         if (sound.value) sound.value.stop()
 
         if (trackList.length > 0) {
@@ -279,7 +282,7 @@ export const usePlayerStore = defineStore('player', () => {
         }
     }
 
-    const replaceQueue = (newQueue: any[], startTrack?: any) => {
+    const replaceQueue = (newQueue: Track[], startTrack?: Track) => {
         queue.value = [...newQueue]
         const index = startTrack
             ? newQueue.findIndex(t => t.id === startTrack.id)

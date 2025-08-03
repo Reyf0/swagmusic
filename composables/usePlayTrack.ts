@@ -1,15 +1,16 @@
 import { usePlayerStore } from '@/stores/player'
 import { storeToRefs } from 'pinia'
+import type {Track} from "@/types/global";
 
 export const usePlayTrack = () => {
     const playerStore = usePlayerStore()
     const { currentTrack, isPlaying, queue, currentTrackIndex } = storeToRefs(playerStore)
 
-    const isCurrentTrack = (track: any) => {
+    const isCurrentTrack = (track: Track): boolean => {
         return currentTrack.value?.id === track.id
     }
 
-    const playTrack = (track: any, trackList: any[] = []) => {
+    const playTrack = (track: Track, trackList: Track[] = []) => {
         // Если клик по текущему треку — ставим на паузу или продолжаем
         if (isCurrentTrack(track)) {
             if (isPlaying.value) {

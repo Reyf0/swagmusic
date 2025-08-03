@@ -1,12 +1,15 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
+import type { SupabaseClient } from '@supabase/supabase-js'
+import type { Database } from '@/types/database.types'
+import type {Profile} from "@/types/global";
 
 export const useUserSearchStore = defineStore('userSearchStore', () => {
   const query = ref('')
-  const results = ref<any[]>([])
+  const results = ref<Profile[]>([])
   const isLoading = ref(false)
 
-  const searchUsers = async (supabase: any) => {
+  const searchUsers = async (supabase: SupabaseClient<Database>) => {
     if (!query.value.trim()) {
       results.value = []
       return
@@ -24,7 +27,7 @@ export const useUserSearchStore = defineStore('userSearchStore', () => {
     } else {
       const lowerQuery = query.value.toLowerCase()
 
-      results.value = (data || []).filter(user => {
+      results.value = (data || []).filter(user  => {
         return (
           user.username?.toLowerCase().includes(lowerQuery) ||
           user.full_name?.toLowerCase().includes(lowerQuery) ||

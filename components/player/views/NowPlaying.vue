@@ -1,8 +1,17 @@
 <script setup lang="ts">
-import { computed, onMounted } from 'vue'
+import { computed } from 'vue'
+import type {Track} from "@/types/global";
 defineProps<{ mode: 'sidebar' | 'fullscreen' }>()
 const player = usePlayerStore()
+const { queue, currentTrackIndex } = storeToRefs(player)
 const track = computed(() => player.currentTrack)
+
+const nextTrack:Track = computed(() => {
+  if (!queue.value.length) return null
+  const nextIndex = (currentTrackIndex.value + 1) % queue.value.length
+  return queue.value[nextIndex]
+})
+
 
 </script>
 
@@ -26,7 +35,7 @@ const track = computed(() => player.currentTrack)
         />
         <!-- Автор -->
         <span class="font-medium text-sm hover:underline cursor-pointer">
-          {{ track?.author?.name || 'Unknown Artist' }}
+          {{ track?.track_authors?.map(a => a.author.name).join(', ') || 'Unknown Artist' }}
         </span>
       </div>
       <!-- Контекстное меню -->
@@ -62,7 +71,7 @@ const track = computed(() => player.currentTrack)
               {{ track?.title || 'Untitled' }}
             </h2>
             <p class="text-sm text-gray-400 hover:underline cursor-pointer">
-              {{ track?.author?.name || 'Unknown Artist' }}
+              {{ track?.track_authors?.map(a => a.author.name).join(', ') || 'Unknown Artist' }}
             </p>
             <!-- Hover-действия -->
             <div class="mt-2 flex space-x-3">
@@ -100,11 +109,8 @@ const track = computed(() => player.currentTrack)
 
           <!-- Карточка: Далее в очереди -->
           <div class="bg-neutral-800 p-4 rounded shadow hover:shadow-lg transition hover:scale-[1.02] col-span-2">
-            <h3 class="font-semibold mb-2">Далее в очереди</h3>
-            <div class="flex items-center justify-between">
-              <div>
-                <p class="text-sm">Следующий трек: <span class="font-semibold">Track title</span></p>
-              </div>
+            <div>
+              <h3 class="font-semibold mb-2">Далее в очереди</h3>
               <UButton
                   size="sm"
                   color="white"
@@ -114,6 +120,13 @@ const track = computed(() => player.currentTrack)
               >
                 Показать очередь
               </UButton>
+            </div>
+            <div class="flex items-center justify-between">
+              <div>
+                <!-- TODO Make it a button -->
+                <p class="text-sm">Следующий трек: <span class="font-semibold">{{ nextTrack.title }}</span></p>
+              </div>
+
             </div>
           </div>
         </div>
@@ -139,7 +152,7 @@ const track = computed(() => player.currentTrack)
 
         <!-- Автор -->
         <span class="font-medium text-sm hover:underline cursor-pointer">
-          {{ track?.author?.name || 'Unknown Artist' }}
+          {{ track?.track_authors?.map(a => a.author.name).join(', ') || 'Unknown Artist' }}
         </span>
       </div>
 
@@ -177,7 +190,7 @@ const track = computed(() => player.currentTrack)
             {{ track?.title || 'Untitled' }}
           </h2>
           <p class="text-sm text-gray-400 hover:underline cursor-pointer">
-            {{ track?.author?.name || 'Unknown Artist' }}
+            {{ track?.track_authors?.map(a => a.author.name).join(', ') || 'Unknown Artist' }}
           </p>
           <!-- Hover-действия -->
           <div class="mt-2 flex space-x-3">
@@ -215,20 +228,43 @@ const track = computed(() => player.currentTrack)
 
         <!-- Карточка: Далее в очереди -->
         <div class="bg-neutral-800 p-4 rounded shadow hover:shadow-lg transition hover:scale-[1.02] col-span-2">
-          <h3 class="font-semibold mb-2">Далее в очереди</h3>
-          <div class="flex items-center justify-between">
-            <div>
-              <p class="text-sm">Следующий трек: <span class="font-semibold">Track title</span></p>
-            </div>
+          <div class="flex items-center justify-between mb-2">
+            <h3 class="font-semibold mb-2 truncate whitespace-nowrap overflow-hidden text-ellipsis">Далее в очереди</h3>
             <UButton
                 size="sm"
                 color="white"
                 variant="ghost"
-                class="hover:underline"
+                class="hover:underline whitespace-nowrap"
                 @click="player.openView('queue')"
             >
               Показать очередь
             </UButton>
+          </div>
+          <div class="flex items-center justify-between">
+            <button class="flex flex-row w-full h-12">
+              <img
+                  v-if="nextTrack.cover_url"
+                  :src="nextTrack.cover_url"
+                  alt="cover"
+                  class="w-12 h-12 rounded shadow"
+              >
+              <div class="flex flex-col justify-start ml-3">
+                <span class="font-semibold text-left">{{ nextTrack.title }}</span>
+                <span
+                    v-for="author in nextTrack.track_authors"
+                    :key="author.author_id"
+                    class="flex flex-row">
+                  <NuxtLink
+                      :to="`/authors/${author.author_id}`"
+                      class="text-sm text-gray-400 hover:underline cursor-pointer">
+                    {{ author.author.name || 'Unknown Artist' }}
+                </NuxtLink>
+                </span>
+
+              </div>
+
+            </button>
+
           </div>
         </div>
       </div>

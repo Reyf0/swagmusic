@@ -24,8 +24,12 @@ export const useTracks = () => {
             // TODO Finish this function to support filtering, searching, pagination
             const { data, error } = await supabase
                 .from('tracks')
-                .select('*, ' +
-                    'track_authors(*, author:authors(*))')
+                .select(`
+                    *,  
+                    track_authors(
+                        *, 
+                        author:authors(*)
+                    )`)
                 .limit(1000)
 
             if (error) throw error;

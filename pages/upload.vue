@@ -334,7 +334,7 @@ const uploadTrack = async () => {
 
       <!-- Audio file upload -->
       <div>
-        <label for="audio" class="block text-sm font-medium text-gray-700">Audio File (MP3, WAV) *</label>
+        <label for="audio" class="block text-sm font-medium text-gray-700">Audio File (MP3, WAV) <span class="text-red-500">*</span></label>
         <input 
           id="audio"
           type="file" 

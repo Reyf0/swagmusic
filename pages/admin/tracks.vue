@@ -6,7 +6,7 @@
         class="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
         @click="showAddTrackModal = true"
       >
-        <span class="i-heroicons-plus mr-2"></span>
+        <span class="i-heroicons-plus mr-2"/>
         Add Track
       </button>
 
@@ -17,7 +17,7 @@
       <div class="flex flex-col md:flex-row gap-4">
         <div class="relative md:w-1/3">
           <span class="absolute inset-y-0 left-0 flex items-center pl-3">
-            <span class="i-heroicons-magnifying-glass text-gray-400"></span>
+            <span class="i-heroicons-magnifying-glass text-gray-400"/>
           </span>
           <input
             v-model="searchStore.query"
@@ -25,14 +25,14 @@
             placeholder="Search tracks..."
             class="pl-10 pr-4 py-2 w-full border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             @input="debouncedSearch"
-          />
+          >
         </div>
-        <div class="flex-grow"></div>
+        <div class="flex-grow"/>
         <button
           class="inline-flex items-center px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500"
           @click="fetchTracks"
         >
-          <span class="i-heroicons-arrow-path mr-2" :class="{ 'animate-spin': loading }"></span>
+          <span class="i-heroicons-arrow-path mr-2" :class="{ 'animate-spin': loading }"/>
           Refresh
         </button>
       </div>
@@ -41,11 +41,11 @@
     <!-- Tracks table -->
     <div class="bg-white rounded-lg shadow overflow-hidden">
       <div v-if="loading" class="py-8 text-center">
-        <span class="i-heroicons-arrow-path animate-spin h-8 w-8 mx-auto text-gray-400"></span>
+        <span class="i-heroicons-arrow-path animate-spin h-8 w-8 mx-auto text-gray-400"/>
         <p class="mt-2 text-gray-500">Loading tracks...</p>
       </div>
       <div v-else-if="tracks.length === 0" class="py-8 text-center">
-        <span class="i-heroicons-musical-note h-12 w-12 mx-auto text-gray-400"></span>
+        <span class="i-heroicons-musical-note h-12 w-12 mx-auto text-gray-400"/>
         <p class="mt-2 text-gray-500">No tracks found</p>
         <button
           class="mt-4 px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500"
@@ -69,10 +69,10 @@
               <div class="flex items-center">
                 <div class="flex-shrink-0 h-10 w-10">
                   <img
-                    :src="row.cover_url || 'https://via.placeholder.com/40x40?text=No+Cover'"
+                    :src="row.cover_url"
                     class="h-10 w-10 rounded-md object-cover"
                     alt="Track cover"
-                  />
+                  >
                 </div>
                 <div class="ml-4">
                   <div class="text-sm font-medium text-gray-900">{{ row.title }}</div>
@@ -119,13 +119,13 @@
             <button
               v-for="page in totalPages"
               :key="page"
-              @click="currentPage = page; fetchTracks()"
               :class="[
                 'px-3 py-1 text-sm rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500',
                 currentPage === page
                   ? 'bg-blue-600 text-white'
                   : 'bg-white text-gray-700 hover:bg-gray-100'
               ]"
+              @click="currentPage = page; fetchTracks()"
             >
               {{ page }}
             </button>
@@ -145,7 +145,7 @@
         <div class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
           <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
             <div class="flex justify-between items-center pb-3 border-b">
-              <h3 class="text-lg font-medium text-gray-900" id="modal-title">Edit Track</h3>
+              <h3 id="modal-title" class="text-lg font-medium text-gray-900">Edit Track</h3>
               <button class="text-gray-400 hover:text-gray-500" @click="showEditModal = false">
                 <UIcon name="i-heroicons-x-mark" class="h-6 w-6"/>
               </button>
@@ -159,7 +159,10 @@
                   type="text"
                   placeholder="Track title"
                   class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                />
+                >
+              </div>
+              <div class="mt-4">
+                <AuthorPicker :model-value="editingAuthors"/>
               </div>
               <div>
                 <label for="cover_url" class="block text-sm font-medium text-gray-700">Cover URL</label>
@@ -169,14 +172,14 @@
                   type="text"
                   placeholder="Cover image URL"
                   class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                />
+                >
               </div>
               <div v-if="editingTrack.cover_url" class="mt-2">
                 <img
                   :src="editingTrack.cover_url"
                   alt="Cover preview"
                   class="h-24 w-24 object-cover rounded-md"
-                />
+                >
               </div>
             </div>
           </div>
@@ -186,7 +189,7 @@
               class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-base font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:ml-3 sm:w-auto sm:text-sm"
               @click="updateTrack"
             >
-              <UIcon v-if="updating" name="i-heroicons-arrow-path" class="animate-spin mr-2"/>
+              <UIcon v-if="editing" name="i-heroicons-arrow-path" class="animate-spin mr-2"/>
               Save Changes
             </button>
             <button
@@ -211,7 +214,7 @@
         <div class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
           <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
             <div class="flex justify-between items-center pb-3 border-b">
-              <h3 class="text-lg font-medium text-gray-900" id="modal-title">Add New Track</h3>
+              <h3 id="modal-title" class="text-lg font-medium text-gray-900">Add New Track</h3>
               <button class="text-gray-400 hover:text-gray-500" @click="showAddTrackModal = false">
                 <UIcon name="i-heroicons-x-mark" class="h-6 w-6"/>
               </button>
@@ -226,7 +229,7 @@
                   placeholder="Track title"
                   required
                   class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                />
+                >
               </div>
               <div>
                 <AuthorPicker
@@ -241,35 +244,38 @@
                   type="text"
                   placeholder="Cover image URL"
                   class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                />
+                >
               </div>
               <div v-if="newTrack.cover_url" class="mt-2">
                 <img
                   :src="newTrack.cover_url"
                   alt="Cover preview"
                   class="h-24 w-24 object-cover rounded-md"
-                />
+                >
               </div>
               <div>
-                <label for="new-audio-url" class="block text-sm font-medium text-gray-700">Audio URL <span class="text-red-500">*</span></label>
-                <input
-                  id="new-audio-url"
-                  v-model="newTrack.audio_url"
-                  type="text"
-                  placeholder="Audio file URL"
-                  required
-                  class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                <label class="block text-sm font-medium text-gray-700">Audio File <span class="text-red-500">*</span></label>
+                <UFileUpload
+                    v-model="audioFile"
+                    icon="i-lucide-file-audio"
+                    accept="audio/mp3,audio/wav"
+                    class="cursor-pointer"
+                    size="xs"
+                    label="Drop your audio file here"
+                    description="MP3, WAV"
+                    @update:model-value="console.log(audioFile)"
                 />
               </div>
             </div>
           </div>
+          <UProgress v-model="uploadProgress" color="primary"/>
           <div class="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
             <button
               type="button"
               class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-base font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:ml-3 sm:w-auto sm:text-sm"
-              @click="saveTrack"
+              @click="uploadTrack"
             >
-              <span v-if="adding" class="i-heroicons-arrow-path animate-spin mr-2"></span>
+              <span v-if="adding" class="animate-spin mr-2"><UIcon name="i-heroicons-arrow-path"/></span>
               Add Track
             </button>
             <button
@@ -294,9 +300,9 @@
         <div class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
           <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
             <div class="flex justify-between items-center pb-3 border-b">
-              <h3 class="text-lg font-medium text-gray-900" id="modal-title">Confirm Delete</h3>
+              <h3 id="modal-title" class="text-lg font-medium text-gray-900">Confirm Delete</h3>
               <button class="text-gray-400 hover:text-gray-500" @click="showDeleteModal = false">
-                <span class="i-heroicons-x-mark h-6 w-6"></span>
+                <span class="i-heroicons-x-mark h-6 w-6"/>
               </button>
             </div>
             <div class="mt-4">
@@ -310,7 +316,7 @@
               class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-red-600 text-base font-medium text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 sm:ml-3 sm:w-auto sm:text-sm"
               @click="deleteTrack"
             >
-              <span v-if="deleting" class="i-heroicons-arrow-path animate-spin mr-2"></span>
+              <span v-if="deleting" class="i-heroicons-arrow-path animate-spin mr-2"/>
               Delete Track
             </button>
             <button
@@ -367,8 +373,9 @@ const showAddTrackModal = ref(false);
 const showDeleteModal = ref(false);
 
 // Track editing
-const editingTrack = ref<Track>({});
-const updating = ref(false);
+const editingTrack = ref<Track>();
+const editingAuthors = computed(() => editingTrack.value?.track_authors?.map(rel => rel.author) || [])
+const editing = ref(false);
 
 // Track adding
 const newTrack = ref<Track>({
@@ -378,10 +385,12 @@ const newTrack = ref<Track>({
   user_id: '',
   track_authors: [] as { id: string; name: string }[]
 });
+const audioFile = ref<File | null>(null)
 const adding = ref(false);
+const uploadProgress = ref(0)
 
 // Track deleting
-const deletingTrack = ref(null);
+const deletingTrack = ref<Track | null>(null);
 const deleting = ref(false);
 
 // Format date
@@ -470,7 +479,7 @@ const editTrack = (track) => {
 
 // Update track
 const updateTrack = async () => {
-  updating.value = true;
+  editing.value = true;
 
   try {
     const { error } = await supabase
@@ -499,13 +508,12 @@ const updateTrack = async () => {
       color: 'error'
     });
   } finally {
-    updating.value = false;
+    editing.value = false;
   }
 };
 
-// Add track
-const saveTrack = async () => {
-  if (!newTrack.value.title || !newTrack.value.audio_url) {
+const uploadTrack = async () => {
+  if (!newTrack.value.title || !audioFile.value) {
     toast.add({
       title: 'Error',
       description: 'Title and audio URL are required',
@@ -515,20 +523,37 @@ const saveTrack = async () => {
   }
 
   adding.value = true;
+  uploadProgress.value = 0;
 
   try {
+    const fileName = `${Date.now()}_${audioFile.value.name}`
+    const { error: fileUploadError } = await supabase.storage
+        .from('tracks')
+        .upload(fileName, audioFile.value)
+
+    if (fileUploadError) throw new Error(fileUploadError.message);
+
+    uploadProgress.value = 50;
+    console.log("Creating record in database..")
+
+    const { data: fileData } = supabase.storage
+        .from('tracks')
+        .getPublicUrl(fileName)
+
     const { data: trackData, error } = await supabase
         .from('tracks')
         .insert({
           title: newTrack.value.title,
           cover_url: newTrack.value.cover_url,
-          audio_url: newTrack.value.audio_url,
+          audio_url: fileData?.publicUrl,
           created_at: new Date().toISOString()
         })
         .select('id')
         .single();
 
-    if (error) throw error;
+    if (error) throw new Error(error.message);
+
+    uploadProgress.value = 75;
 
     const trackId = trackData.id;
 
@@ -542,7 +567,9 @@ const saveTrack = async () => {
         .from('track_authors')
         .insert(relations)
 
-    if (relError) throw relError;
+    if (relError) throw new Error(relError.message);
+
+    uploadProgress.value = 100;
 
     toast.add({
       title: 'Success',
@@ -554,8 +581,11 @@ const saveTrack = async () => {
     newTrack.value = {
       title: '',
       cover_url: '',
-      audio_url: ''
+      audio_url: '',
+      user_id: '',
+      track_authors: []
     };
+    audioFile.value = null;
 
     showAddTrackModal.value = false;
     await fetchTracks();
@@ -583,7 +613,9 @@ const deleteTrack = async () => {
 
   deleting.value = true;
 
+
   try {
+
     // Delete track
     const { error } = await supabase
       .from('tracks')
@@ -591,6 +623,15 @@ const deleteTrack = async () => {
       .eq('id', deletingTrack.value.id);
 
     if (error) throw error;
+
+    const fileName = deletingTrack.value.audio_url.split('/').pop();
+    console.log(fileName)
+    const { error: fileDeletionError } = await supabase
+        .storage
+        .from('tracks')
+        .remove([fileName])
+
+    if (fileDeletionError) throw fileDeletionError
 
     toast.add({
       title: 'Success',

@@ -32,7 +32,6 @@ const { currentTrack } = storeToRefs(playerStore)
 
 const fetchProfile = async () => {
   if (!user.value) return
-  console.log("Fetching profile for user:", user.value.id)
   loading.value = true
   error.value = null
 

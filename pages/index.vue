@@ -67,6 +67,7 @@ const fetchRecentPlays = async () => {
       .order('played_at', { ascending: false })
       .limit(10)
 
+  console.log("Recent Plays Data:", data)
   recentTracks.value = data || []
 }
 
@@ -173,7 +174,7 @@ onMounted(() => {
               <div class="absolute inset-0 hover:bg-black bg-opacity-0 group-hover:bg-opacity-30 transition-all duration-300 flex items-center justify-center">
                 <button
                     class="play-button opacity-0 group-hover:opacity-100 transform translate-y-2 group-hover:translate-y-0 transition-all duration-300 bg-green-500 hover:bg-green-600 text-white rounded-full w-12 h-12 flex items-center justify-center shadow-lg"
-                    @click="playTrack(track.tracks, recentTracks)"
+                    @click="playTrack(track.tracks, recentTracks.map(t => t.tracks))"
                 >
                   <UIcon :name="isCurrentTrack(track.tracks) && isPlaying ? 'i-heroicons-pause' : 'i-heroicons-play'"
                          class="w-6 h-6" />

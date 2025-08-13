@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { Howl } from 'howler'
-import { ref, computed, watch, onUnmounted } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import type { Track } from '@/types/global'
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from '@/types/database.types'
@@ -16,6 +16,7 @@ export const usePlayerStore = defineStore('player', () => {
     const currentTrackIndex = ref(-1)
     const isRepeat = ref(false)
     const isShuffle = ref(false)
+    const firstPlay = ref(false)
 
     const viewModes: Record<ViewName, { sidebar: boolean; fullscreen: boolean }> = {
         now: { sidebar: true, fullscreen: true },
@@ -130,7 +131,7 @@ export const usePlayerStore = defineStore('player', () => {
         const now = new Date()
         const timeSinceLast = lastPlayedAt ? (now.getTime() - lastPlayedAt.getTime()) / 1000 : Infinity
 
-        if (lastTrackId === trackId && timeSinceLast < 300) return
+        if (lastTrackId === trackId && timeSinceLast < 1000) return
 
         const { error: insertError } = await supabase.from('play_history').insert({
             user_id: user.value.id,
@@ -158,7 +159,22 @@ export const usePlayerStore = defineStore('player', () => {
     }
 
     const play = (track: Track, trackList: Track[] = []) => {
-        if (sound.value) sound.value.stop()
+        if (sound.value && currentTrack.value?.id === track.id) {
+            sound.value?.play()
+            isPlaying.value = true
+            return
+        }
+
+        if (sound.value) {
+            try {
+                sound.value.stop()
+                sound.value.unload()
+            } catch (e) {
+                console.warn('Error unloading previous sound', e)
+            } finally {
+                sound.value = null
+            }
+        }
 
         if (trackList.length > 0) {
             queue.value = [...trackList]
@@ -177,6 +193,7 @@ export const usePlayerStore = defineStore('player', () => {
             },
             onload: () => {
                 duration.value = sound.value?.duration() || 0
+                localStorage.setItem('lastListenedTrackId', currentTrack.value.id)
             },
             onplay: () => {
                 startProgressTracking()
@@ -192,13 +209,17 @@ export const usePlayerStore = defineStore('player', () => {
                 currentTime.value = 0
             }
         })
+        if (firstPlay.value) {
+            firstPlay.value = false
+            return;
+        }
 
         sound.value.play()
         isPlaying.value = true
     }
 
-    watch(currentTrack, () => {
-        if (currentTrack.value) recordListen()
+    watch(currentTrack, async () => {
+        if (currentTrack.value) await recordListen()
     })
 
     const pause = () => {
@@ -290,6 +311,75 @@ export const usePlayerStore = defineStore('player', () => {
         currentTrackIndex.value = index
         play(newQueue[index], newQueue)
     }
+    // TODO Сделать так что, обновляет MediaMetadata только при смене трека и не падает, если трек пустой
+    const initMediaSession = () => {
+        if ('mediaSession' in navigator) {
+            navigator.mediaSession.metadata = new MediaMetadata({
+                title: currentTrack.value?.title,
+                artist: currentTrack.value?.track_authors[0]
+            })
+
+            navigator.mediaSession.setActionHandler('play', () => {
+                resume();
+            })
+            navigator.mediaSession.setActionHandler('pause', () => {
+                pause();
+            })
+            navigator.mediaSession.setActionHandler('previoustrack', () => {
+                playPrevious();
+            })
+            navigator.mediaSession.setActionHandler('nexttrack', () => {
+                playNext();
+            })
+        }
+    }
+
+    const getLastListenedTrack = async () => {
+        lastListenedTrackId.value = localStorage.getItem('lastListenedTrackId')
+        if (lastListenedTrackId.value) {
+            const { data, error } = await supabase
+                .from('tracks')
+                .select(
+                    `
+                    *,
+                    track_authors(
+                      *,
+                      author:authors(*)
+                    )`
+                )
+                .eq('id', lastListenedTrackId.value)
+                .single()
+            if (error) throw error
+
+            currentTrack.value = data;
+            const tracks = [currentTrack.value, ...await useTracks().getTracks()]
+            currentTrackIndex.value = 0
+            firstPlay.value = true
+            play(currentTrack.value, tracks)
+        }
+    }
+
+    watch(currentTrack, (track) => {
+        if (!('mediaSession' in navigator)) return
+        if (!track) {
+            navigator.mediaSession.metadata = null
+            return;
+        }
+
+        navigator.mediaSession.metadata = new MediaMetadata({
+            title: track?.title || 'Unknown Track',
+            artist: track.track_authors?.[0].author?.name || 'Unknown Artist',
+            artwork: [{ src: track?.cover_url, sizes: '512x512', type: 'image/jpeg' }]
+        })
+
+    })
+
+    onMounted(() => {
+        setTimeout(async () => {
+            await getLastListenedTrack()
+            initMediaSession()
+        }, 100)
+    })
 
     onUnmounted(() => stopProgressTracking())
 

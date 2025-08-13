@@ -42,7 +42,7 @@
           </div>
 
           <div class="track-label justify-self-start">
-            <h2 class="text-lg font-semibold truncate">{{ track.title }}</h2>
+            <h2 class="text-lg font-semibold truncate">{{ track?.title || 'No title'}}</h2>
             <p class="text-sm text-gray-600">
           <span v-if="track.track_authors && track.track_authors.length">
             <span v-for="(rel, index) in track.track_authors" :key="rel.author.id">
@@ -95,10 +95,11 @@
   </div>
 </template>
 
-<script setup>
-import { usePlayerStore } from '@/stores/player'
-import { storeToRefs } from 'pinia'
-import { useWindowSize } from '@vueuse/core'
+<script setup lang="ts">
+import { usePlayerStore } from '@/stores/player';
+import { storeToRefs } from 'pinia';
+import { useWindowSize } from '@vueuse/core';
+import type {Track} from "@/types/global";
 
 
 const supabase = useSupabaseClient()
@@ -108,7 +109,7 @@ const { currentTrack, isPlaying } = storeToRefs(playerStore)
 const { width } = useWindowSize({initialWidth: 0 })
 const isMobile = computed(() => width.value < 500)
 
-const tracks = ref([])
+const tracks = ref<Track[]>([])
 const isLoading = ref(true)
 const error = ref(null)
 const showAddToPlaylistModal = ref(false)

@@ -46,28 +46,38 @@ const onSeek = (e: MouseEvent) => {
 
 <template>
   <div class="fixed flex flex-row justify-between bottom-0 left-0 right-0 z-30 bg-black text-white p-3 shadow-lg backdrop-blur">
-    <div>
-      <!-- Track Info -->
-      <div class="flex items-center gap-3">
-        <div class="w-12 h-12 bg-gray-800 flex items-center justify-center overflow-hidden rounded">
-          <img
-              v-if="currentTrack?.cover_url"
-              :src="currentTrack.cover_url"
-              class="w-12 h-12 object-cover"
-              alt="Cover"
-          />
-          <UIcon v-else name="i-heroicons-musical-note" class="text-gray-400" />
-        </div>
-        <div>
-          <div class="font-semibold truncate max-w-[160px]">{{ currentTrack?.title }}</div>
-          <div class="text-sm text-gray-400 truncate max-w-[160px]">
-            {{ currentTrack?.track_authors?.map(a => a.author.name).join(', ') || 'Unknown Artist' }}
+    <!-- Track Info -->
+    <div class="flex justify-self-start items-center gap-3">
+      <div class="w-12 h-12 bg-gray-800 flex items-center justify-center overflow-hidden rounded">
+        <img
+            v-if="currentTrack?.cover_url"
+            :src="currentTrack.cover_url"
+            class="w-12 h-12 object-cover"
+            alt="Cover"
+        />
+        <UIcon v-else name="i-heroicons-musical-note" class="text-gray-400" />
+      </div>
+      <div class="flex flex-col">
+        <div class="font-semibold truncate max-w-[360px]">{{ currentTrack?.title }}</div>
+        <div v-if="currentTrack?.track_authors" class="flex flex-row text-sm text-gray-400 truncate max-w-[360px] overflow-hidden">
+          <div class="truncate whitespace-nowrap overflow-hidden">
+              <span
+                  v-for="(author, index) in currentTrack.track_authors"
+                  :key="author.author.id"
+              >
+              <NuxtLink
+                  :to="`/authors/${author.author.id}`"
+                  class="text-sm text-gray-400 hover:underline"
+              >
+                {{ author.author.name || 'Unknown Artist' }}
+              </NuxtLink>
+              <span v-if="index < currentTrack.track_authors.length - 1" >,&nbsp;</span>
+            </span>
           </div>
         </div>
       </div>
     </div>
-    <div class="max-w-6xl flex flex-col gap-2">
-
+    <div class="max-w-6xl flex flex-col justify-self-center gap-2">
       <!-- Top Row: Controls -->
       <div class="flex justify-center items-center">
         <!-- Controls -->
@@ -109,7 +119,7 @@ const onSeek = (e: MouseEvent) => {
     </div>
 
 
-    <div class="flex items-center">
+    <div class="flex items-center justify-self-end">
       <!-- Buttons -->
       <UButton
           icon="i-heroicons-chevron-up"

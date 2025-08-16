@@ -122,7 +122,7 @@ watch(() => props.isOpen, (newVal) => {
 <template>
   <div v-if="isOpen" class="fixed inset-0 z-50 overflow-y-auto">
     <!-- Backdrop -->
-    <div class="fixed inset-0 bg-black bg-opacity-50 transition-opacity" @click="closeModal"></div>
+    <div class="fixed inset-0 bg-black bg-opacity-50 transition-opacity" @click="closeModal"/>
     
     <!-- Modal -->
     <div class="flex items-center justify-center min-h-screen p-4">
@@ -131,7 +131,7 @@ watch(() => props.isOpen, (newVal) => {
         <div class="px-6 py-4 border-b">
           <div class="flex justify-between items-center">
             <h3 class="text-lg font-semibold">Add to playlist</h3>
-            <button @click="closeModal" class="text-gray-400 hover:text-gray-500">
+            <button class="text-gray-400 hover:text-gray-500" @click="closeModal">
               <UIcon name="i-heroicons-x-mark" class="w-5 h-5" />
             </button>
           </div>
@@ -142,8 +142,8 @@ watch(() => props.isOpen, (newVal) => {
           <!-- Create new playlist section -->
           <div class="mb-4">
             <button 
-              @click="isCreatingPlaylist = !isCreatingPlaylist"
               class="w-full flex items-center justify-between p-3 rounded-md hover:bg-gray-50 border border-dashed border-gray-300"
+              @click="isCreatingPlaylist = !isCreatingPlaylist"
             >
               <div class="flex items-center">
                 <div class="w-10 h-10 bg-green-500 rounded-full flex items-center justify-center mr-3">
@@ -165,19 +165,19 @@ watch(() => props.isOpen, (newVal) => {
                   placeholder="Playlist name"
                   class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
                   @keyup.enter="createPlaylist"
-                />
+                >
               </div>
               <div class="flex justify-end gap-2">
                 <button
-                  @click="isCreatingPlaylist = false"
                   class="px-3 py-1 text-sm text-gray-600 hover:text-gray-800"
+                  @click="isCreatingPlaylist = false"
                 >
                   Cancel
                 </button>
                 <button
-                  @click="createPlaylist"
                   class="px-3 py-1 text-sm bg-green-500 hover:bg-green-600 text-white rounded-md"
                   :disabled="!newPlaylistName.trim()"
+                  @click="createPlaylist"
                 >
                   Create
                 </button>
@@ -191,7 +191,7 @@ watch(() => props.isOpen, (newVal) => {
           
           <!-- Loading state -->
           <div v-if="isLoading" class="flex justify-center items-center py-6">
-            <div class="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-indigo-500"></div>
+            <div class="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-indigo-500"/>
           </div>
           
           <!-- Playlists list -->
@@ -220,8 +220,8 @@ watch(() => props.isOpen, (newVal) => {
         <!-- Footer -->
         <div class="px-6 py-4 border-t bg-gray-50 rounded-b-lg">
           <button 
-            @click="closeModal" 
-            class="w-full py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded-md"
+            class="w-full py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded-md" 
+            @click="closeModal"
           >
             Cancel
           </button>

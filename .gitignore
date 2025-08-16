@@ -26,3 +26,11 @@ qodana.yaml
 
 # Coverage reports
 .ai
+
+# Tests
+tests
+/pages/admin/test.vue
+/vitest-example/
+
+# Documentation
+/docs/

@@ -19,7 +19,7 @@
             :src="album.cover_url || 'https://via.placeholder.com/300x300?text=No+Cover'"
             class="w-full h-48 object-cover"
             alt="Album Cover"
-        />
+        >
         <div class="p-4">
           <h2 class="font-semibold truncate">{{ album.title }}</h2>
           <p class="text-sm text-gray-500 truncate">{{ album.author?.username || 'Неизвестный автор' }}</p>
@@ -31,11 +31,12 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
+import type {Album} from "@/types/global";
 
 const supabase = useSupabaseClient()
 const router = useRouter()
 
-const albums = ref<any[]>([])
+const albums = ref<Album[]>([])
 const loading = ref(true)
 const error = ref<string | null>(null)
 

@@ -166,7 +166,7 @@
 
         <!-- Форма -->
         <main>
-          <form @submit.prevent="addAlbum" class="space-y-4">
+          <form class="space-y-4" @submit.prevent="addAlbum">
             <div>
               <label class="block text-sm font-medium text-gray-700 mb-1">Title</label>
               <input
@@ -185,7 +185,7 @@
                   rows="3"
                   class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   placeholder="Album description (optional)"
-              ></textarea>
+              />
             </div>
 
             <!-- Cover image upload -->
@@ -195,8 +195,8 @@
                   id="cover"
                   type="file"
                   accept="image/jpeg,image/png,image/gif"
-                  @change="onCoverChange"
                   class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                  @change="onCoverChange"
               >
 
               <!-- Image preview -->
@@ -212,7 +212,7 @@
                   type="text"
                   placeholder="Search user..."
                   class="w-full border border-gray-300 rounded-md px-3 py-2 mb-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
+              >
 
               <select
                   v-model="newAlbum.user_id"
@@ -252,7 +252,7 @@
           <h3 class="text-xl font-semibold text-gray-900">Edit Album</h3>
         </header>
         <main>
-          <form @submit.prevent="updateAlbum" class="space-y-4">
+          <form class="space-y-4" @submit.prevent="updateAlbum">
             <div>
               <label class="block text-sm font-medium text-gray-700 mb-1">Title</label>
               <input
@@ -270,7 +270,7 @@
                   rows="3"
                   class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   placeholder="Album description (optional)"
-              ></textarea>
+              />
             </div>
             <div>
               <input
@@ -278,7 +278,7 @@
                   type="text"
                   placeholder="Search user..."
                   class="w-full border border-gray-300 rounded-md px-3 py-2 mb-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
+              >
 
               <select
                   v-model="editingAlbum.user_id"
@@ -337,7 +337,7 @@
         <main>
           <p class="text-gray-700">
             Are you sure you want to delete the album
-            <strong>"{{ deletingAlbum?.title }}"</strong>?<br />
+            <strong>"{{ deletingAlbum?.title }}"</strong>?<br >
             This action cannot be undone and will also remove all tracks associated with this album.
           </p>
         </main>
@@ -416,9 +416,9 @@ const visiblePages = computed(() => {
   for (let i = start; i <= end; i++) pages.push(i);
   return pages;
 });
-const debounce = (fn: Function, delay: number) => {
-  let timeout: any;
-  return (...args: any[]) => {
+const debounce = (fn: any, delay: number) => {
+  let timeout;
+  return (...args: []) => {
     clearTimeout(timeout);
     timeout = setTimeout(() => fn(...args), delay);
   };

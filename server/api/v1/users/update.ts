@@ -1,5 +1,5 @@
 import { createClient } from '@supabase/supabase-js'
-import type { H3Event} from 'h3';
+import type { H3Event } from 'h3';
 import { readBody } from 'h3'
 import type { Database } from '~/types/database.types'
 

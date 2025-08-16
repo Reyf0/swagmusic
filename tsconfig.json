@@ -3,7 +3,11 @@
   "extends": "./.nuxt/tsconfig.json",
 
   "compilerOptions": {
-    "types": [],
+    "types": [
+      "vitest",
+      "@vitest/browser/matchers",
+      "@vitest/browser/providers/playwright",
+    ],
     "baseUrl": ".",
     "paths": {
       "@/*": ["./*"]
@@ -16,6 +20,7 @@
     "composables",
     "pages",
     "stores",
+    "utils",
     "app.vue",
     "**/*.ts",
     "**/*.vue"

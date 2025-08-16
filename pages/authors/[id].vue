@@ -41,6 +41,7 @@ const fetchAuthor = async () => {
         .eq('id', authorId)
         .single()
     author.value = data
+    if (error) throw error
   }
   catch (err) {
     console.error(err)

@@ -386,8 +386,9 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { useUserSearchStore } from '~/stores/userSearchStore';
+import type {Profile} from "@/types/global";
 
 definePageMeta({
   layout: 'admin',
@@ -418,7 +419,7 @@ const totalUsers = ref(0);
 const totalPages = computed(() => Math.ceil(totalUsers.value / pageSize));
 
 // Users data
-const users = ref([]);
+const users = ref<Profile[]>([]);
 const loading = ref(true);
 
 // Filters

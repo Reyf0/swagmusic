@@ -4,7 +4,6 @@ import { storeToRefs } from 'pinia'
 
 const route = useRoute()
 const supabase = useSupabaseClient()
-const user = useSupabaseUser()
 const playerStore = usePlayerStore()
 const { currentTrack, isPlaying } = storeToRefs(playerStore)
 
@@ -29,7 +28,7 @@ const fetchPlaylist = async () => {
       .eq('id', playlistId)
       .single()
     
-    if (playlistError) throw playlistError
+    if (playlistError) throw new Error(playlistError)
     
     if (!playlistData) {
       error.value = 'Playlist not found'
@@ -98,7 +97,7 @@ watch(() => route.params.id, (newId) => {
 <template>
   <div class="p-6">
     <div v-if="isLoading && !playlist" class="flex justify-center items-center py-20">
-      <div class="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-500"></div>
+      <div class="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-500"><!-- TODO Add icon --></div>
     </div>
     
     <div v-else-if="error" class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
@@ -107,7 +106,7 @@ watch(() => route.params.id, (newId) => {
     </div>
     
     <div v-else-if="playlist">
-      <Playlist 
+      <Playlist
         :playlist="playlist" 
         :tracks="tracks" 
         :isLoading="isLoading"

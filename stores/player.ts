@@ -1,9 +1,8 @@
 import { defineStore } from 'pinia'
 import { Howl } from 'howler'
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
-import type { Track } from '@/types/global'
+import type { Track, Database } from '@/types/global'
 import type { SupabaseClient } from "@supabase/supabase-js";
-import type { Database } from '@/types/database.types'
 
 export const usePlayerStore = defineStore('player', () => {
     const currentTrack = ref<Track>(null)
@@ -110,7 +109,6 @@ export const usePlayerStore = defineStore('player', () => {
     const supabase:SupabaseClient<Database> = useSupabaseClient()
     const user = useSupabaseUser()
     const lastListenedTrackId = ref<string | null>(null)
-
     const recordListen = async () => {
         const trackId = currentTrack.value?.id
         if (!user.value || !trackId) return

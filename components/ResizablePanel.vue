@@ -104,12 +104,12 @@ onUnmounted(() => {
 
     <!-- Resizer Handle -->
     <div
-        @mousedown="startResize"
-        class="resizer absolute top-0 h-full w-2 z-50 cursor-col-resize"
         :class="{
         'right-[-1px]': position === 'left',
         'left-[-1px]': position === 'right',
-      }"
+        }"
+        class="resizer absolute top-0 h-full w-2 z-50 cursor-col-resize"
+        @mousedown="startResize"
     >
       <div
           class="w-[2px] h-full transition-all"

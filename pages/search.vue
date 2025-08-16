@@ -7,9 +7,9 @@
     <div class="mt-6 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4">
       <div v-for="track in searchStore.results" :key="track.id" class="border rounded p-3 shadow hover:shadow-md transition-shadow">
         <img
-            :src="track.cover_url || 'https://via.placeholder.com/300x300?text=No+Cover'"
+            :src="track?.cover_url"
             class="w-full cover object-cover rounded mb-2"
-        />
+            alt="Cover">
         <h2 class="text-lg font-semibold truncate">{{ track.title }}</h2>
         <p class="text-sm text-gray-600">
         <span v-if="track.track_authors?.length">
@@ -19,8 +19,8 @@
         </p>
         <div class="flex items-center justify-between mt-2">
           <button
-              @click="playTrack(track, tracks)"
               class="bg-green-500 hover:bg-green-600 text-white py-2 px-4 rounded-full flex items-center"
+              @click="playTrack(track, tracks)"
           >
             <UIcon
                 :name="isCurrentTrack(track) && isPlaying ? 'i-heroicons-pause' : 'i-heroicons-play'"
@@ -33,9 +33,9 @@
               PLAYING
             </span>
             <button
-                @click="openAddToPlaylistModal(track)"
                 class="text-gray-500 hover:text-gray-700 p-2"
                 title="Add to playlist"
+                @click="openAddToPlaylistModal(track)"
             >
               <UIcon name="i-heroicons-plus" class="w-5 h-5" />
             </button>
@@ -61,7 +61,7 @@ import {storeToRefs} from "pinia";
 const supabase = useSupabaseClient()
 const user = useSupabaseUser()
 const playerStore = usePlayerStore()
-const { currentTrack, isPlaying } = storeToRefs(playerStore)
+const { isPlaying } = storeToRefs(playerStore)
 const showAddToPlaylistModal = ref(false)
 const selectedTrack = ref(null)
 const tracks = ref([])
@@ -73,7 +73,7 @@ const searchStore = useSearchStore()
 // Open add to playlist modal
 const openAddToPlaylistModal = (track) => {
   if (!user.value) {
-    // Redirect to login if not logged in
+    // Redirect to log in if not logged in
     navigateTo('/login')
     return
   }

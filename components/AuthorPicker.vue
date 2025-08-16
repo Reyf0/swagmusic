@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue'
-import { Combobox, ComboboxInput, ComboboxButton, ComboboxOptions, ComboboxOption } from '@headlessui/vue'
+import { Combobox, ComboboxInput, ComboboxOptions, ComboboxOption } from '@headlessui/vue'
 import { useDebounceFn } from '@vueuse/core'
 import Draggable from 'vuedraggable'
 import type { SupabaseClient } from '@supabase/supabase-js'
@@ -32,14 +32,20 @@ const search = useDebounceFn(async () => {
     return
   }
   isLoading.value = true
-  const { data, error } = await supabase
-      .from('authors')
-      .select('id, name')
-      .ilike('name', `%${query.value}%`)
-      .limit(10)
-  options.value = data || []
-  isLoading.value = false
-  console.log("Data: " + data)
+  try {
+    const { data, error } = await supabase
+        .from('authors')
+        .select('id, name')
+        .ilike('name', `%${query.value}%`)
+        .limit(10)
+    options.value = data || []
+    if (error) throw error
+  } catch (e) {
+    console.error('Error fetching authors:', e)
+  } finally {
+    isLoading.value = false
+    console.log("Data: " + data)
+  }
 }, 300)
 
 watch(query, () => {
@@ -110,7 +116,7 @@ function addAuthor(val: Author) {
         >
           <ComboboxOptions
             v-if="options.length"
-            class="absolute z-10 mt-1 w-full bg-white border bg-gray-300 rounden-md shadow-lg max-h-60 overflow-auto"
+            class="absolute z-10 mt-1 w-full border bg-gray-300 rounded-md shadow-lg max-h-60 overflow-auto"
           >
             <ComboboxOption
                 v-for="item in options"

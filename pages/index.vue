@@ -13,16 +13,18 @@ const user = useSupabaseUser()
 
 const topTracks = ref([])
 const recentTracks = ref([])
-const dailyStats = ref([])
 const playerStore = usePlayerStore()
-const { currentTrack, isPlaying } = storeToRefs(playerStore)
+const { isPlaying } = storeToRefs(playerStore)
 const { playTrack, isCurrentTrack } = usePlayTrack()
+const { getLikes, addLike, deleteLike } = useLikes()
+
 
 
 const fetchTopTracks = async () => {
-  const { data, error } = await supabase
-      .from('play_history')
-      .select(`
+  try {
+    const { data, error } = await supabase
+        .from('play_history')
+        .select(`
       track_id,
       tracks (
         *,
@@ -32,29 +34,33 @@ const fetchTopTracks = async () => {
         )
       )
     `)
-      .order('played_at', { ascending: false })
-      .limit(1000)
+        .order('played_at', { ascending: false })
+        .limit(1000)
 
-  if (!data) return
+    if (!data) return
 
-  // Подсчет вручную на клиенте (если нет группировки в SQL)
-  const countMap = new Map()
-  data.forEach(item => {
-    const id = item.tracks.id
-    if (!countMap.has(id)) {
-      countMap.set(id, { ...item.tracks, count: 1 })
-    } else {
-      countMap.get(id).count++
-    }
-  })
+    // Подсчет вручную на клиенте (если нет группировки в SQL)
+    const countMap = new Map()
+    data.forEach(item => {
+      const id = item.tracks.id
+      if (!countMap.has(id)) {
+        countMap.set(id, { ...item.tracks, count: 1 })
+      } else {
+        countMap.get(id).count++
+      }
+    })
 
-  topTracks.value = [...countMap.values()].sort((a, b) => b.count - a.count).slice(0, 10)
+    topTracks.value = [...countMap.values()].sort((a, b) => b.count - a.count).slice(0, 10)
+  } catch (error) {
+    console.error('Error fetching top tracks:', error)
+  }
 }
 
 const fetchRecentPlays = async () => {
-  const { data } = await supabase
-      .from('play_history')
-      .select(`
+  try {
+    const { data } = await supabase
+        .from('play_history')
+        .select(`
       played_at,
       tracks (
         id,
@@ -63,12 +69,16 @@ const fetchRecentPlays = async () => {
         cover_url
       )
     `)
-      .eq('user_id', user.value.id)
-      .order('played_at', { ascending: false })
-      .limit(10)
+        .eq('user_id', user.value.id)
+        .order('played_at', { ascending: false })
+        .limit(10)
 
-  console.log("Recent Plays Data:", data)
-  recentTracks.value = data || []
+    console.log("Recent Plays Data:", data)
+    recentTracks.value = data || []
+  }
+  catch (e) {
+    console.error('Error fetching recent plays:', e)
+  }
 }
 
 const scrollCarousel = (refName: string, direction: 'left' | 'right') => {
@@ -80,8 +90,8 @@ const scrollCarousel = (refName: string, direction: 'left' | 'right') => {
 }
 
 onMounted(() => {
-  fetchTopTracks()
-  fetchRecentPlays()
+  fetchTopTracks().catch(console.error)
+  fetchRecentPlays().catch(console.error)
 })
 </script>
 
@@ -116,14 +126,15 @@ onMounted(() => {
                   :src="track.cover_url || 'https://via.placeholder.com/300x300?text=No+Cover'"
                   alt="cover"
                   class="w-full object-cover rounded"
-              />
+              >
               <div class="absolute inset-0 hover:bg-black bg-opacity-0 group-hover:bg-opacity-30 transition-all duration-300 flex items-center justify-center">
                 <button
                     class="play-button opacity-0 group-hover:opacity-100 transform translate-y-2 group-hover:translate-y-0 transition-all duration-300 bg-green-500 hover:bg-green-600 text-white rounded-full w-12 h-12 flex items-center justify-center shadow-lg"
                     @click="playTrack(track, topTracks)"
                 >
-                  <UIcon :name="isCurrentTrack(track) && isPlaying ? 'i-heroicons-pause' : 'i-heroicons-play'"
-                         class="w-6 h-6" />
+                  <UIcon
+                      :name="isCurrentTrack(track) && isPlaying ? 'i-heroicons-pause' : 'i-heroicons-play'"
+                      class="w-6 h-6" />
                 </button>
               </div>
             </div>
@@ -170,14 +181,15 @@ onMounted(() => {
                   :src="track.tracks.cover_url || '  https://via.placeholder.com/300x300?text=No+Cover'"
                   alt="cover"
                   class="w-full object-cover rounded"
-              />
+              >
               <div class="absolute inset-0 hover:bg-black bg-opacity-0 group-hover:bg-opacity-30 transition-all duration-300 flex items-center justify-center">
                 <button
                     class="play-button opacity-0 group-hover:opacity-100 transform translate-y-2 group-hover:translate-y-0 transition-all duration-300 bg-green-500 hover:bg-green-600 text-white rounded-full w-12 h-12 flex items-center justify-center shadow-lg"
                     @click="playTrack(track.tracks, recentTracks.map(t => t.tracks))"
                 >
-                  <UIcon :name="isCurrentTrack(track.tracks) && isPlaying ? 'i-heroicons-pause' : 'i-heroicons-play'"
-                         class="w-6 h-6" />
+                  <UIcon
+                      :name="isCurrentTrack(track.tracks) && isPlaying ? 'i-heroicons-pause' : 'i-heroicons-play'"
+                      class="w-6 h-6" />
                 </button>
               </div>
             </div>

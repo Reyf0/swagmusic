@@ -65,7 +65,7 @@ const nextTrack:Track = computed(() => {
           <img
               :src="track?.cover_url || 'https://via.placeholder.com/300x300?text=No+Cover'"
               class="w-24 h-24 object-cover rounded shadow"
-          >
+              alt="Cover">
           <div>
             <h2 class="text-xl font-bold hover:underline cursor-pointer">
               {{ track?.title || 'Untitled' }}
@@ -184,7 +184,7 @@ const nextTrack:Track = computed(() => {
         <img
             :src="track?.cover_url || 'https://via.placeholder.com/300x300?text=No+Cover'"
             class="w-24 h-24 object-cover rounded shadow"
-        >
+            alt="Cover">
         <div>
           <h2 class="text-xl font-bold hover:underline cursor-pointer">
             {{ track?.title || 'Untitled' }}
@@ -260,11 +260,8 @@ const nextTrack:Track = computed(() => {
                     {{ author.author.name || 'Unknown Artist' }}
                 </NuxtLink>
                 </span>
-
               </div>
-
             </button>
-
           </div>
         </div>
       </div>

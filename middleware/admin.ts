@@ -3,7 +3,7 @@ export default defineNuxtRouteMiddleware(async () => {
   const supabase = useSupabaseClient();
   const toast = useToast();
   
-  // If user is not logged in, redirect to login
+  // If user is not logged in, redirect to log in
   if (!user.value) {
     return navigateTo('/login');
   }

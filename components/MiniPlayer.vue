@@ -3,7 +3,6 @@ import { usePlayerStore } from '@/stores/player'
 import { storeToRefs } from 'pinia'
 import { ref, computed } from 'vue'
 
-
 const player = usePlayerStore()
 const {
   currentTrack,
@@ -14,6 +13,7 @@ const {
   isRepeat,
   isShuffle
 } = storeToRefs(player)
+const { addLike, deleteLike } = useLikes()
 const isMuted = ref(false)
 const recentVolume = ref(0)
 
@@ -42,6 +42,7 @@ const onSeek = (e: MouseEvent) => {
   const percent = Math.min(Math.max((e.clientX - rect.left) / rect.width, 0), 1)
   player.seek(percent * duration.value)
 }
+
 </script>
 
 <template>
@@ -54,7 +55,7 @@ const onSeek = (e: MouseEvent) => {
             :src="currentTrack.cover_url"
             class="w-12 h-12 object-cover"
             alt="Cover"
-        />
+        >
         <UIcon v-else name="i-heroicons-musical-note" class="text-gray-400" />
       </div>
       <div class="flex flex-col">
@@ -76,6 +77,10 @@ const onSeek = (e: MouseEvent) => {
           </div>
         </div>
       </div>
+      <button>
+        <UIcon v-if="!currentTrack.is_liked_by_user" :name="'i-heroicons-heart'" size="1.5em" @click="addLike({id: currentTrack.id, type: 'track'}); currentTrack.is_liked_by_user = true"/>
+        <UIcon v-else :name="'i-heroicons-heart-solid'" size="1.5em" class="text-[#00c74f]" @click="deleteLike({id: currentTrack.id, type: 'track'});  currentTrack.is_liked_by_user = false"/>
+      </button>
     </div>
     <div class="max-w-6xl flex flex-col justify-self-center gap-2">
       <!-- Top Row: Controls -->
@@ -158,12 +163,11 @@ const onSeek = (e: MouseEvent) => {
             max="1"
             step="0.01"
             :value="volume"
-            @input="player.setVolume($event.target.valueAsNumber); isMuted = $event.target.valueAsNumber === 0"
             class="w-full"
-        />
+            @input="player.setVolume($event.target.valueAsNumber); isMuted = $event.target.valueAsNumber === 0"
+        >
       </div>
     </div>
 
   </div>
 </template>
-

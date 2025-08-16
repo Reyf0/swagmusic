@@ -2,7 +2,7 @@
   <div class="w-full h-full flex flex-col bg-gray-900 text-white p-6">
     <div class="flex justify-between items-center mb-4">
       <h2 class="text-xl font-semibold">Lyrics</h2>
-      <UButton icon="i-heroicons-x-mark" @click="player.closeView('lyrics')" size="sm" color="gray" />
+      <UButton icon="i-heroicons-x-mark" size="sm" color="gray" @click="player.closeView('lyrics')" />
     </div>
 
     <div class="flex-grow overflow-y-auto whitespace-pre-line leading-relaxed">

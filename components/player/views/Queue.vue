@@ -2,12 +2,12 @@
   <div class="w-full h-full flex flex-col bg-gray-900 text-white p-6">
     <div class="flex justify-between items-center mb-4">
       <h2 class="text-xl font-semibold">Queue</h2>
-      <UButton icon="i-heroicons-x-mark" @click="player.closeView('queue')" size="sm" color="gray" />
+      <UButton icon="i-heroicons-x-mark" size="sm" color="gray" @click="player.closeView('queue')" />
     </div>
 
     <div class="flex-grow overflow-y-auto space-y-2">
       <div
-          v-for="(track, index) in queue"
+          v-for="(track) in queue"
           :key="track.id"
           class="flex items-center justify-between bg-gray-800 p-3 rounded cursor-pointer hover:bg-gray-700"
           @click="player.play(track, queue)"
@@ -19,7 +19,7 @@
                 :src="track.cover_url"
                 alt="cover"
                 class="w-full h-full object-cover"
-            />
+            >
             <UIcon v-else name="i-heroicons-musical-note" class="w-full h-full text-gray-400" />
           </div>
           <div>

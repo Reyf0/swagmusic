@@ -4,7 +4,7 @@ import type {Track} from "@/types/global";
 
 export const usePlayTrack = () => {
     const playerStore = usePlayerStore()
-    const { currentTrack, isPlaying, queue, currentTrackIndex } = storeToRefs(playerStore)
+    const { currentTrack, isPlaying, queue } = storeToRefs(playerStore)
 
     const isCurrentTrack = (track: Track): boolean => {
         return currentTrack.value?.id === track.id

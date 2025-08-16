@@ -4,12 +4,12 @@
       <h1 class="text-2xl font-bold mb-4">All Tracks</h1>
 
       <div v-if="isLoading" class="flex justify-center items-center py-10">
-        <div class="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-500"></div>
+        <div class="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-500"/>
       </div>
 
       <div v-else-if="error" class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
         <p>{{ error }}</p>
-        <button @click="fetchTracks" class="mt-2 bg-red-500 hover:bg-red-600 text-white py-1 px-3 rounded">
+        <button class="mt-2 bg-red-500 hover:bg-red-600 text-white py-1 px-3 rounded" @click="fetchTracks">
           Try Again
         </button>
       </div>
@@ -21,22 +21,23 @@
       <div v-else class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4">
         <div v-for="track in tracks" :key="track.id" class="track-card flex flex-col border rounded p-3 shadow hover:shadow-md transition-shadow">
           <div class="track-cover-wrapper relative grow overflow-hidden rounded-md shadow-md mb-3 group">
-            <div class="flex justify-center items-center h-full w-full">
+            <div class="flex justify-center items-center h-full w-full aspect-square bg-gradient-to-br from-gray-200 to-gray-300">
               <UIcon v-if="!track.cover_url" name="i-heroicons-musical-note" class="icon w-16 h-16 text-gray-400" />
               <img
                   v-else
-                  :src="track.cover_url || 'https://via.placeholder.com/300x300?text=No+Cover'"
+                  :src="track?.cover_url"
                   alt="cover"
                   class="w-full track-info object-cover rounded"
-              />
+              >
             </div>
             <div class="absolute inset-0 hover:bg-black bg-opacity-0 group-hover:bg-opacity-30 transition-all duration-300 flex items-center justify-center">
               <button
                   class="track-play-button opacity-0 group-hover:opacity-100 transform translate-y-2 group-hover:translate-y-0 transition-all duration-300 bg-green-500 hover:bg-green-600 text-white rounded-full w-12 h-12 flex items-center justify-center shadow-lg"
                   @click="playTrack(track, tracks)"
               >
-                <UIcon :name="isCurrentTrack(track) && isPlaying ? 'i-heroicons-pause' : 'i-heroicons-play'"
-                       class="w-6 h-6" />
+                <UIcon
+                    :name="isCurrentTrack(track) && isPlaying ? 'i-heroicons-pause' : 'i-heroicons-play'"
+                    class="w-6 h-6"/>
               </button>
             </div>
           </div>
@@ -44,9 +45,9 @@
           <div class="track-label justify-self-start">
             <h2 class="text-lg font-semibold truncate">{{ track?.title || 'No title'}}</h2>
             <p class="text-sm text-gray-600">
-          <span v-if="track.track_authors && track.track_authors.length">
-            <span v-for="(rel, index) in track.track_authors" :key="rel.author.id">
-              {{ rel.author.name }}<span v-if="index < track.track_authors.length - 1">, </span>
+          <span v-if="track.authors && track.authors.length">
+            <span v-for="(author, index) in track.authors" :key="author.id">
+              {{ author.name }}<span v-if="index < track.authors.length - 1">, </span>
             </span>
           </span>
               <span v-else>Unknown Artist</span>
@@ -56,8 +57,8 @@
           <div class="track-controls flex items-center justify-between mt-2">
 
             <button
-                @click="playTrack(track, tracks)"
                 class="bg-green-500 hover:bg-green-600 text-white py-2 px-4 rounded-full flex items-center"
+                @click="playTrack(track, tracks)"
             >
               <UIcon
                   :name="isCurrentTrack(track) && isPlaying ? 'i-heroicons-pause' : 'i-heroicons-play'"
@@ -72,9 +73,9 @@
               </span>
 
               <button
-                  @click="openAddToPlaylistModal(track)"
                   class="text-gray-500 hover:text-gray-700 p-2"
                   title="Add to playlist"
+                  @click="openAddToPlaylistModal(track)"
               >
                 <UIcon name="i-heroicons-plus" class="w-5 h-5" />
               </button>
@@ -99,57 +100,46 @@
 import { usePlayerStore } from '@/stores/player';
 import { storeToRefs } from 'pinia';
 import { useWindowSize } from '@vueuse/core';
-import type {Track} from "@/types/global";
+import type {TrackUI, Database, Like} from "@/types/global";
+import type {SupabaseClient} from "@supabase/supabase-js";
+import mapWithLikes from '@/utils/mapWithLikes'
 
-
-const supabase = useSupabaseClient()
+const supabase: SupabaseClient<Database> = useSupabaseClient()
 const user = useSupabaseUser()
 const playerStore = usePlayerStore()
-const { currentTrack, isPlaying } = storeToRefs(playerStore)
+const { isPlaying } = storeToRefs(playerStore)
 const { width } = useWindowSize({initialWidth: 0 })
 const isMobile = computed(() => width.value < 500)
 
-const tracks = ref<Track[]>([])
+const tracks = ref<TrackUI[]>([])
+const likes = ref<Like[]>([])
 const isLoading = ref(true)
 const error = ref(null)
 const showAddToPlaylistModal = ref(false)
-const selectedTrack = ref(null)
+const selectedTrack = ref<TrackUI>(null)
+const { getTracks } = useTracks()
+const { playTrack, isCurrentTrack } = usePlayTrack()
+const { getLikes } = useLikes()
 
 const fetchTracks = async () => {
   isLoading.value = true
   error.value = null
 
-  try {
-    const { data, error: fetchError } = await supabase
-      .from('tracks')
-      .select(`
-        *,
-        track_authors(
-          *,
-          author:authors(*)
-        )
-      `)
-      .order('created_at', { ascending: false })
+  tracks.value = await getTracks()
+  likes.value = await getLikes(tracks.value.map(track => track.id)) || []
+  const likedTrackIds = likes.value.map(like => like.target_id)
+  tracks.value = mapWithLikes(tracks.value, likedTrackIds)
 
-    if (fetchError) throw fetchError
-
-    tracks.value = data || []
-  } catch (e) {
-    console.error('Error fetching tracks:', e)
-    error.value = 'Failed to load tracks. Please try again later.'
-  } finally {
-    isLoading.value = false
-  }
+  if (!tracks.value.length) console.error('Error fetching tracks')
+  isLoading.value = false
 }
-
-const { playTrack, isCurrentTrack } = usePlayTrack()
 
 
 
 // Open add to playlist modal
 const openAddToPlaylistModal = (track) => {
   if (!user.value) {
-    // Redirect to login if not logged in
+    // Redirect to log in if not logged in
     navigateTo('/login')
     return
   }

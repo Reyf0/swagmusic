@@ -267,7 +267,7 @@ const uploadTrack = async () => {
       <p>Please <NuxtLink to="/login" class="font-bold underline">login</NuxtLink> to upload tracks.</p>
     </div>
 
-    <form v-else @submit.prevent="uploadTrack" class="space-y-6">
+    <form v-else class="space-y-6" @submit.prevent="uploadTrack">
       <!-- Success message -->
       <div v-if="successMsg" class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded">
         <p>{{ successMsg }}</p>
@@ -338,15 +338,15 @@ const uploadTrack = async () => {
         <input 
           id="audio"
           type="file" 
-          @change="onAudioChange"
           accept="audio/mp3,audio/wav,audio/mpeg"
           class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+          @change="onAudioChange"
         >
 
         <!-- Audio preview -->
         <div v-if="audioPreview" class="mt-2">
           <p class="text-sm text-gray-500 mb-1">Preview:</p>
-          <audio controls class="w-full" :src="audioPreview"></audio>
+          <audio controls class="w-full" :src="audioPreview"/>
         </div>
       </div>
 
@@ -356,9 +356,9 @@ const uploadTrack = async () => {
         <input 
           id="cover"
           type="file" 
-          @change="onCoverChange"
           accept="image/jpeg,image/png,image/gif"
           class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+          @change="onCoverChange"
         >
 
         <!-- Image preview -->
@@ -371,7 +371,7 @@ const uploadTrack = async () => {
       <!-- Upload progress -->
       <div v-if="isUploading" class="mt-4">
         <div class="w-full bg-gray-200 rounded-full h-2.5">
-          <div class="bg-indigo-600 h-2.5 rounded-full" :style="{ width: `${uploadProgress}%` }"></div>
+          <div class="bg-indigo-600 h-2.5 rounded-full" :style="{ width: `${uploadProgress}%` }"/>
         </div>
         <p class="text-sm text-gray-600 mt-1">Uploading: {{ uploadProgress }}%</p>
       </div>

@@ -2,6 +2,7 @@
 import { usePlayerStore } from '@/stores/player'
 import { storeToRefs } from 'pinia'
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const props = defineProps({
   playlist: {
     type: Object,
@@ -51,7 +52,7 @@ const formatDuration = (seconds) => {
         <!-- Playlist Cover -->
         <div class="playlist-cover w-48 h-48 bg-gray-200 rounded-md shadow-md flex items-center justify-center">
           <UIcon v-if="!playlist.cover_url" name="i-heroicons-musical-note" class="w-16 h-16 text-gray-400" />
-          <img v-else :src="playlist.cover_url" class="w-full h-full object-cover rounded-md" alt="Playlist cover" />
+          <img v-else :src="playlist.cover_url" class="w-full h-full object-cover rounded-md" alt="Playlist cover" >
         </div>
 
         <!-- Playlist Info -->
@@ -65,9 +66,9 @@ const formatDuration = (seconds) => {
           <!-- Action Buttons -->
           <div class="flex gap-3 mt-4">
             <button 
-              @click="playTrack(tracks[0], tracks)" 
+              :disabled="tracks.length === 0 || isLoading" 
               class="bg-green-500 hover:bg-green-600 text-white py-2 px-6 rounded-full flex items-center"
-              :disabled="tracks.length === 0 || isLoading"
+              @click="playTrack(tracks[0], tracks)"
             >
               <UIcon name="i-heroicons-play" class="w-5 h-5 mr-2" />
               Play
@@ -86,7 +87,7 @@ const formatDuration = (seconds) => {
     <!-- Tracks List -->
     <div class="tracks-list">
       <div v-if="isLoading" class="flex justify-center items-center py-10">
-        <div class="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-indigo-500"></div>
+        <div class="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-indigo-500"><!-- TODO add an icon --></div>
       </div>
 
       <div v-else-if="tracks.length === 0" class="text-center py-8 bg-gray-50 rounded-lg">
@@ -114,8 +115,8 @@ const formatDuration = (seconds) => {
             <span v-if="!isCurrentTrack(track) && !isPlaying" class="text-gray-400">{{ index + 1 }}</span>
             <button 
               v-else
-              @click="playTrack(track, tracks)"
               class="text-gray-600 hover:text-indigo-600"
+              @click="playTrack(track, tracks)"
             >
               <UIcon 
                 :name="isCurrentTrack(track) && isPlaying ? 'i-heroicons-pause' : 'i-heroicons-play'" 
@@ -130,7 +131,7 @@ const formatDuration = (seconds) => {
               :src="track.cover_url || 'https://via.placeholder.com/40x40?text=No+Cover'" 
               class="w-10 h-10 object-cover rounded mr-3"
               alt="Track cover"
-            />
+            >
             <div>
               <div class="font-medium" :class="{ 'text-indigo-600': isCurrentTrack(track) }">
                 {{ track.title }}

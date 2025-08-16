@@ -1,11 +1,7 @@
 <script setup lang="ts">
-import { usePlayerStore } from '@/stores/player'
-import { TransitionGroup } from 'vue'
 import NowPlaying from '@/components/player/views/NowPlaying.vue'
 import Queue  from '@/components/player/views/Queue.vue'
 import Lyrics from '@/components/player/views/Lyrics.vue'
-
-const player = usePlayerStore()
 
 defineProps<{
   view: 'now' | 'queue' | 'lyrics'
@@ -18,7 +14,6 @@ const viewComponents = {
   queue: Queue,
   lyrics: Lyrics
 }
-
 </script>
 
 <template>

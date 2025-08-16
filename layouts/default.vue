@@ -130,7 +130,7 @@ onMounted(() => {
                 placeholder="Search by title or artist"
                 class="w-full px-4 py-1 mx-10 border border-gray-500 rounded focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 @keydown.enter="handleSearch"
-            />
+            >
             <div class="flex space-x-4">
               <UButton><NuxtLink to="/" class="text-white hover:text-gray-300">Home</NuxtLink></UButton>
               <UButton><NuxtLink to="/tracks" class="text-white hover:text-gray-300">Tracks</NuxtLink></UButton>
@@ -160,8 +160,8 @@ onMounted(() => {
             :max-width="400"
             position="left"
             :resizable="true"
-            @resize="handleSidebarResize"
             class="shrink-0"
+            @resize="handleSidebarResize"
           >
             <PlaylistSidebar
               :is-collapsed="sidebarCollapsed"
@@ -192,8 +192,8 @@ onMounted(() => {
               :max-width="600"
               position="right"
               :resizable="true"
-              @resize="handleRightSidebarResize"
               class="shrink-0"
+              @resize="handleRightSidebarResize"
           >
             <aside class="w-full h-full border-l border-neutral-700 bg-neutral-800 text-white overflow-y-auto">
               <PlayerViews

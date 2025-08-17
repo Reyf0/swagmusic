@@ -151,7 +151,7 @@ const openAddToPlaylistModal = (track) => {
 // Handle adding track to playlist
 const handleAddToPlaylist = async ({ playlistId, track, playlistName }) => {
   try {
-    // Check if track is already in playlist
+    // Check if the track is already in the playlist
     const { data: existingData } = await supabase
       .from('playlist_tracks')
       .select('id')
@@ -169,7 +169,7 @@ const handleAddToPlaylist = async ({ playlistId, track, playlistName }) => {
       return
     }
 
-    // Get current highest position
+    // Get the current highest position
     const { data: positionData } = await supabase
       .from('playlist_tracks')
       .select('position')
@@ -180,8 +180,7 @@ const handleAddToPlaylist = async ({ playlistId, track, playlistName }) => {
     const nextPosition = positionData && positionData.length > 0 
       ? positionData[0].position + 1 
       : 0
-
-    // Add track to playlist
+    // Add track to the playlist
     const { error } = await supabase
       .from('playlist_tracks')
       .insert({
@@ -196,7 +195,7 @@ const handleAddToPlaylist = async ({ playlistId, track, playlistName }) => {
     // Update playlist track count
     await supabase.rpc('increment_playlist_track_count', { playlist_id: playlistId })
 
-    // Show success message
+    // Show a success message
     useToast().add({
       title: 'Added to playlist',
       description: `Added to "${playlistName}"`,

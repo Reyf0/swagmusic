@@ -158,19 +158,6 @@ const fetchRecentlyPlayed = async () => {
   }
 }
 
-// Temporary solution
-const getAudioDuration = (src) => {
-  try {
-    const audio = new Audio(src)
-    audio.addEventListener('loadedmetadata', () => {
-      return audio.duration;
-    })
-  } catch (e) {
-    console.error(e)
-    return null;
-  }
-}
-
 // Format seconds to mm:ss
 const formatDuration = (seconds) => {
   if (!seconds) return '--:--'

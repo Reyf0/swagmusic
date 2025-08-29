@@ -168,7 +168,7 @@ const uploadTrack = async () => {
     }
     uploadProgress.value = 75
 
-    // 3. Create author if it doesn't exist
+    // 3. Create an author if it doesn't exist
     let authorId
     const { data: existingAuthor, error: authorQueryError } = await supabase
       .from('authors')
@@ -203,7 +203,7 @@ const uploadTrack = async () => {
     }
 
 
-    // 4. Create track record
+    // 4. Create a track record
     const { data: track, error: trackError } = await supabase
       .from('tracks')
       .insert({
@@ -218,7 +218,7 @@ const uploadTrack = async () => {
 
     if (trackError) throw new Error(`Error creating track: ${trackError.message}`)
 
-    // 5. Create track-author relationship
+    // 5. Create a track-author relationship
     const { error: relationError } = await supabase
       .from('track_authors')
       .insert({

@@ -2,11 +2,18 @@ import { createClient } from '@supabase/supabase-js'
 import type { H3Event } from 'h3';
 import { readBody, getHeader } from 'h3'
 import type { Database } from '~/types/database.types'
+import * as z from 'zod'
 
 const supabaseAdmin = createClient<Database>(
     process.env.SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!
 )
+
+const userSchema = z.object({
+    email: z.string().email(),
+    password: z.string().min(6, 'Password must be at least 6 characters long'),
+    username: z.string().min(3, 'Username must be at least 3 characters long')
+})
 
 export default defineEventHandler(async (event: H3Event) => {
     const authHeader = getHeader(event, 'authorization')
@@ -37,11 +44,12 @@ export default defineEventHandler(async (event: H3Event) => {
     }
 
     const body = await readBody(event)
-    const { email, password, username } = body
-
-    if (!email || !password || !username) {
-        return { status: 400, body: { error: 'Missing fields' } }
+    const parsed = userSchema.safeParse(body)
+    if (!parsed.success) {
+        return createError({ statusCode: 400, statusMessage: parsed.error.message, data: parsed.error.flatten() })
     }
+
+    const { email, password, username } = parsed.data
 
     const { data, error } = await supabaseAdmin.auth.admin.createUser({
         email,
@@ -51,7 +59,7 @@ export default defineEventHandler(async (event: H3Event) => {
     })
 
     if (error) {
-        return { status: 500, body: { error: error.message } }
+        return createError({ statusCode: 500, statusMessage: error.message })
     }
 
     return { user: data.user }

@@ -11,8 +11,6 @@ const nextTrack:Track = computed(() => {
   const nextIndex = (currentTrackIndex.value + 1) % queue.value.length
   return queue.value[nextIndex]
 })
-
-
 </script>
 
 <template>
@@ -267,5 +265,4 @@ const nextTrack:Track = computed(() => {
       </div>
     </div>
   </div>
-
 </template>

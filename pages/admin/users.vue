@@ -400,6 +400,9 @@ const session = await supabase.auth.getSession()
 const access_token = session.data.session?.access_token
 const toast = useToast();
 const userSearchStore = useUserSearchStore();
+const { handleError } = useErrorHandler()
+
+
 
 // Table columns
 const columns = [
@@ -468,91 +471,86 @@ const debounce = (fn, delay) => {
 // Debounced search
 const debouncedSearch = debounce(async () => {
   currentPage.value = 1;
-  await userSearchStore.searchUsers(supabase);
+  await userSearchStore.searchUsers(supabase, access_token);
   await fetchUsers();
 }, 300);
 
 // Fetch users
 const fetchUsers = async () => {
-  try {
-    // If there's a search query, use the results from userSearchStore
-    if (userSearchStore.query.trim()) {
-      // Use the store's loading state
-      loading.value = userSearchStore.isLoading;
 
-      // Filter search results by role if needed
-      let filteredResults = [...userSearchStore.results];
+  // If there's a search query, use the results from userSearchStore
+  if (userSearchStore.query.trim()) {
+    // Use the store's loading state
+    loading.value = userSearchStore.isLoading;
 
-      if (filters.value.role === 'admin') {
-        filteredResults = filteredResults.filter(user => user.is_admin);
-      } else if (filters.value.role === 'user') {
-        filteredResults = filteredResults.filter(user => !user.is_admin);
-      }
+    // Filter search results by role if needed
+    let filteredResults = [...userSearchStore.results];
 
-      // Apply pagination to filtered results
-      totalUsers.value = filteredResults.length;
-      const from = (currentPage.value - 1) * pageSize;
-      const to = Math.min(from + pageSize, filteredResults.length);
-
-      // Map the results to match our expected format
-      users.value = filteredResults.slice(from, to).map(user => ({
-        id: user.id,
-        username: user.username || 'No username',
-        email: user.email || 'No email',
-        full_name: user.full_name || '-',
-        is_admin: user.is_admin || false,
-        role: user.is_admin ? 'Admin' : 'User',
-        created_at: new Date(user.created_at).toLocaleDateString()
-      }));
-    } else {
-      // If no search query, fetch all users with filters as before
-      loading.value = true;
-
-      let query = supabase
-          .from('profiles')
-          .select('*', { count: 'exact' });
-
-      // Apply role filter
-      if (filters.value.role === 'admin') {
-        query = query.eq('is_admin', true);
-      } else if (filters.value.role === 'user') {
-        query = query.eq('is_admin', false);
-      }
-
-      // Apply pagination
-      const from = (currentPage.value - 1) * pageSize;
-      const to = from + pageSize - 1;
-
-      query = query.order('created_at', { ascending: false }).range(from, to);
-
-      const { data, error, count } = await query;
-
-      if (error) throw error;
-
-      users.value = data.map(user => ({
-        id: user.id,
-        username: user.username || 'No username',
-        email: user.email || 'No email',
-        full_name: user.full_name || '-',
-        is_admin: user.is_admin || false,
-        role: user.is_admin ? 'Admin' : 'User',
-        created_at: new Date(user.created_at).toLocaleDateString()
-      }));
-
-      totalUsers.value = count || 0;
+    if (filters.value.role === 'admin') {
+      filteredResults = filteredResults.filter(user => user.is_admin);
+    } else if (filters.value.role === 'user') {
+      filteredResults = filteredResults.filter(user => !user.is_admin);
     }
-  } catch (err) {
-    console.error('Error fetching users:', err);
-    toast.add({
-      title: 'Error',
-      description: 'Failed to load users',
-      color: 'error'
-    });
-  } finally {
-    // Only set loading to false if we're not using the store's loading state
-    if (!userSearchStore.query.trim()) {
-      loading.value = false;
+
+    // Apply pagination to filtered results
+    totalUsers.value = filteredResults.length;
+    const from = (currentPage.value - 1) * pageSize;
+    const to = Math.min(from + pageSize, filteredResults.length);
+
+    // Map the results to match our expected format
+    users.value = filteredResults.slice(from, to).map(user => ({
+      id: user.id,
+      username: user.username || 'No username',
+      email: user.email || 'No email',
+      full_name: user.full_name || '-',
+      is_admin: user.is_admin || false,
+      role: user.is_admin ? 'Admin' : 'User',
+      created_at: new Date(user.created_at).toLocaleDateString()
+    }));
+  } else {
+    // If no search query, fetch all users with filters as before
+    loading.value = true;
+
+    let query = supabase
+        .from('profiles')
+        .select('*', { count: 'exact' });
+
+    // Apply role filter
+    if (filters.value.role === 'admin') {
+      query = query.eq('is_admin', true);
+    } else if (filters.value.role === 'user') {
+      query = query.eq('is_admin', false);
     }
+
+    // Apply pagination
+    const from = (currentPage.value - 1) * pageSize;
+    const to = from + pageSize - 1;
+
+    query = query.order('created_at', { ascending: false }).range(from, to);
+
+    const { data, error, count } = await query;
+
+    if (error || data == 0) {
+      handleError(error || 'Cannot fetch data', 'Failed to load users')
+      return;
+    }
+
+    users.value = data.map(user => ({
+      id: user.id,
+      username: user.username || 'No username',
+      email: user.email || 'No email',
+      full_name: user.full_name || '-',
+      is_admin: user.is_admin || false,
+      role: user.is_admin ? 'Admin' : 'User',
+      created_at: new Date(user.created_at).toLocaleDateString()
+    }));
+
+    totalUsers.value = count || 0;
+  }
+
+  // Only set loading to false if we're not using the store's loading state
+  if (!userSearchStore.query.trim()) {
+    loading.value = false;
   }
 };
 
@@ -602,11 +600,7 @@ const updateUser = async () => {
 // Add user
 const addUser = async () => {
   if (!newUser.value.email || !newUser.value.password) {
-    toast.add({
-      title: 'Error',
-      description: 'Email and password are required',
-      color: 'error'
-    });
+    handleError('Email and password are required')
     return;
   }
 
@@ -731,7 +725,7 @@ const toggleAdminStatus = async (user) => {
       .update({ is_admin: newStatus })
       .eq('id', user.id);
 
-    if (error) throw error;
+    if (error) console.error(error);
 
     toast.add({
       title: 'Success',

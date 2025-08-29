@@ -47,8 +47,4 @@ import { storeToRefs } from 'pinia'
 
 const player = usePlayerStore()
 const { queue, currentTrack } = storeToRefs(player)
-
-
-
-
 </script>

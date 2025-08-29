@@ -14,7 +14,6 @@ export const useTracks = () => {
 
     let controller: AbortController | null = null;
 
-
     /**
      * Нормализация трека для UI
      * @param track - Трек из базы данных
@@ -76,7 +75,6 @@ export const useTracks = () => {
         return query;
     }
 
-
     /**
      * Получение треков с нормализацией и возможностью фильтрации, поиска и пагинации
      * @param options - Опции для фильтрации, поиска и пагинации
@@ -98,8 +96,6 @@ export const useTracks = () => {
             return [];
         }
     };
-
-
 
     return {
         getTracks,

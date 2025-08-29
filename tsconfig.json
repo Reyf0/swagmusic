@@ -6,12 +6,12 @@
     "types": [
       "vitest",
       "@vitest/browser/matchers",
-      "@vitest/browser/providers/playwright",
+      "@vitest/browser/providers/playwright"
     ],
     "baseUrl": ".",
     "paths": {
       "@/*": ["./*"]
-    }
+    },
   },
   "include": [
     "types",
@@ -23,6 +23,22 @@
     "utils",
     "app.vue",
     "**/*.ts",
-    "**/*.vue"
+    "**/*.vue",
+    "components/**/*.vue",
+    "composables/**/*.ts"
+  ],
+  "references": [
+    {
+      "path": "./.nuxt/tsconfig.app.json"
+    },
+    {
+      "path": "./.nuxt/tsconfig.server.json"
+    },
+    {
+      "path": "./.nuxt/tsconfig.shared.json"
+    },
+    {
+      "path": "./.nuxt/tsconfig.node.json"
+    }
   ]
 }

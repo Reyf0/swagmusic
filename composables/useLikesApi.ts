@@ -11,11 +11,9 @@ export interface LikeTarget {
     type: LikeTargetType
 }
 
-export const useLikes = (supabaseClient?: SupabaseClient<Database>) => {
+export const useLikesApi = (supabaseClient?: SupabaseClient<Database>) => {
     const supabase: SupabaseClient<Database> = supabaseClient || useSupabaseClient()
     const user = useSupabaseUser()
-
-    const isLiked = ref<Record<string, boolean>>({}) // локальный кэш (id → liked)
 
     /**
      * Получение лайков для набора идентификаторов целей для текущего пользователя
@@ -44,11 +42,6 @@ export const useLikes = (supabaseClient?: SupabaseClient<Database>) => {
             console.error('Error fetching likes: ', error);
             return null
         }
-
-        data?.forEach(row => {
-            isLiked.value[row.target_id] = true
-        })
-
         return data as LikeRow[] | null;
     }
     /**
@@ -80,7 +73,6 @@ export const useLikes = (supabaseClient?: SupabaseClient<Database>) => {
             return null;
         }
 
-        isLiked.value[target.id] = true
         return (data && data.length > 0 ? (data[0] as LikeRow) : null)
     }
     /**
@@ -110,40 +102,13 @@ export const useLikes = (supabaseClient?: SupabaseClient<Database>) => {
             return null;
         }
 
-        isLiked.value[target.id] = false
         return true
     }
 
-    const toggleLike = async (target: LikeTarget) => {
-        if (!user.value || !user.value.id) {
-            console.warn('deleteLike: no authenticated user')
-            return null;
-        }
-
-        // Оптимистичное обновление UI
-        const currentlyLiked = !!isLiked.value[target.id]
-        isLiked.value[target.id] = !currentlyLiked
-
-        try {
-            if (currentlyLiked) {
-                await deleteLike(target)
-            } else {
-                await addLike(target)
-            }
-        } catch (e) {
-            console.error('Error toggling like:', e);
-
-            isLiked.value[target.id] = currentlyLiked
-        }
-
-    }
 
     return {
         addLike,
         deleteLike,
-        getLikes,
-        toggleLike,
-
-        isLiked
+        getLikes
     }
 }

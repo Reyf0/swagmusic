@@ -30,7 +30,7 @@ const fetchUserPlaylists = async () => {
       .eq('user_id', user.value.id)
       .order('created_at', { ascending: false })
 
-    if (error) throw error
+    if (error) console.error(error)
     playlists.value = data || []
   } catch (err) {
     console.error('Error fetching playlists:', err)
@@ -41,7 +41,7 @@ const fetchUserPlaylists = async () => {
 
 onMounted(() => {
   if (user.value) {
-    fetchUserPlaylists()
+    void fetchUserPlaylists()
   }
 })
 

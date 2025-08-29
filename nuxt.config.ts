@@ -1,4 +1,7 @@
 // https://nuxt.com/docs/api/configuration/nuxt-config
+
+import "./lib/env";
+
 export default defineNuxtConfig({
   compatibilityDate: '2025-05-15',
   devtools: { enabled: true },
@@ -13,7 +16,8 @@ export default defineNuxtConfig({
     '@nuxt/ui',
     '@nuxtjs/supabase',
     '@nuxtjs/tailwindcss',
-    '@pinia/nuxt'
+    '@pinia/nuxt',
+    'nuxt-auth-utils'
   ],
   typescript: {
     typeCheck: false
@@ -29,6 +33,9 @@ export default defineNuxtConfig({
       default: 'en',
       fallback: 'en'
     }
+  },
+  icon: {
+    cssLayer: 'icon',
   },
   app: {
     head: {

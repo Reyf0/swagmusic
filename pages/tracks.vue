@@ -14,7 +14,7 @@
         </button>
       </div>
 
-      <div v-else-if="tracks.length === 0" class="text-center py-10">
+      <div v-else-if="!tracks || tracks.length === 0" class="text-center py-10">
         <p class="text-gray-500">No tracks found.</p>
       </div>
 
@@ -73,14 +73,27 @@
               </span>
 
               <button
+                  :disabled="!!likesStore.pending[track.id]"
+                  class="p-2"
+                  :title="likesStore.isLiked(track.id) ? 'Unlike' : 'Like'"
+                  @click="onToggleLike(track)"
+              >
+                <UIcon
+                    :name="likesStore.isLiked(track.id) ? 'i-heroicons-heart-solid' : 'i-heroicons-heart'"
+                    :class="likesStore.isLiked(track.id) ? 'text-red-500' : 'text-black'"
+                    class="w-6 h-6"
+                />
+              </button>
+              <!--
+              <button
                   class="text-gray-500 hover:text-gray-700 p-2"
                   title="Add to playlist"
                   @click="openAddToPlaylistModal(track)"
               >
                 <UIcon name="i-heroicons-plus" class="w-5 h-5" />
               </button>
+              -->
             </div>
-
           </div>
         </div>
       </div>
@@ -100,41 +113,59 @@
 import { usePlayerStore } from '@/stores/player';
 import { storeToRefs } from 'pinia';
 import { useWindowSize } from '@vueuse/core';
-import type {TrackUI, Database, Like} from "@/types/global";
-import type {SupabaseClient} from "@supabase/supabase-js";
-import mapWithLikes from '@/utils/mapWithLikes'
+import type { TrackUI, Database } from "@/types/global";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
 const supabase: SupabaseClient<Database> = useSupabaseClient()
 const user = useSupabaseUser()
+
 const playerStore = usePlayerStore()
+const likesStore = useLikesStore()
+likesStore.attachPlayerStore(playerStore)
+
 const { isPlaying } = storeToRefs(playerStore)
-const { width } = useWindowSize({initialWidth: 0 })
+const { width } = useWindowSize({ initialWidth: 0 })
 const isMobile = computed(() => width.value < 500)
 
 const tracks = ref<TrackUI[]>([])
-const likes = ref<Like[]>([])
 const isLoading = ref(true)
 const error = ref(null)
 const showAddToPlaylistModal = ref(false)
 const selectedTrack = ref<TrackUI>(null)
 const { getTracks } = useTracks()
 const { playTrack, isCurrentTrack } = usePlayTrack()
-const { getLikes } = useLikes()
 
 const fetchTracks = async () => {
   isLoading.value = true
   error.value = null
-
-  tracks.value = await getTracks()
-  likes.value = await getLikes(tracks.value.map(track => track.id)) || []
-  const likedTrackIds = likes.value.map(like => like.target_id)
-  tracks.value = mapWithLikes(tracks.value, likedTrackIds)
-
-  if (!tracks.value.length) console.error('Error fetching tracks')
-  isLoading.value = false
+  try {
+    tracks.value = await getTracks() || []
+    // batch fetch likes for visible tracks
+    const ids = tracks.value.map(t => t.id)
+    if (ids.length > 0) {
+      await likesStore.fetchLikes(ids, 'track')
+    }
+  } catch (e) {
+    console.error(e)
+    error.value = 'Failed to load tracks'
+  } finally {
+    isLoading.value = false
+  }
 }
 
+const onToggleLike  = async (track: TrackUI) => {
+  if (!user.value || !user.value.id) {
+    console.warn('No authenticated user')
+    return navigateTo('/login')
+  }
 
+  try {
+    await likesStore.toggleLike({ id: track.id, type: 'track'})
+  } catch (e) {
+    console.error(e)
+    useToast().add({ title: 'Ошибка', description: 'Не удалось обновить лайк', color: 'error'})
+  }
+}
 
 // Open add to playlist modal
 const openAddToPlaylistModal = (track) => {
@@ -160,7 +191,7 @@ const handleAddToPlaylist = async ({ playlistId, track, playlistName }) => {
       .single()
 
     if (existingData) {
-      // Track already in playlist
+      // Track already in the playlist
       useToast().add({
         title: 'Already added',
         description: `This track is already in "${playlistName}"`,
@@ -214,17 +245,14 @@ const handleAddToPlaylist = async ({ playlistId, track, playlistName }) => {
   }
 }
 
-
-
-
-// Fetch tracks when component is mounted
+// Fetch tracks when a component is mounted
 onMounted(() => {
   fetchTracks()
 })
 </script>
 
 <style scoped>
-@import "tailwindcss";
+@reference "tailwindcss";
 
 @media (max-width: 500px) {
   .track-card {

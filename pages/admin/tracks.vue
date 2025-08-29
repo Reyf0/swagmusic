@@ -275,7 +275,7 @@
               class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-base font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:ml-3 sm:w-auto sm:text-sm"
               @click="uploadTrack"
             >
-              <span v-if="adding" class="animate-spin mr-2"><UIcon name="i-heroicons-arrow-path"/></span>
+              <span v-if="uploading" class="animate-spin mr-2"><UIcon name="i-heroicons-arrow-path"/></span>
               Add Track
             </button>
             <button
@@ -335,18 +335,19 @@
 
 <script setup lang="ts">
 import { useSearchStore } from '~/stores/searchStore';
-import type {Track} from "@/types/global";
 import AuthorPicker from "@/components/AuthorPicker.vue";
 import type { SupabaseClient } from '@supabase/supabase-js';
+import type { Database } from '@/types/database.types'
+import type {Track} from "@/types/global";
 
 definePageMeta({
   layout: 'admin',
   middleware: ['admin']
 });
 
-const supabase:SupabaseClient<Database> = useSupabaseClient();
-const toast = useToast();
-const searchStore = useSearchStore();
+const supabase = useSupabaseClient() as  SupabaseClient<Database>
+const toast = useToast()
+const searchStore = useSearchStore()
 
 // Table columns
 const columns = [
@@ -386,7 +387,7 @@ const newTrack = ref<Track>({
   track_authors: [] as { id: string; name: string }[]
 });
 const audioFile = ref<File | null>(null)
-const adding = ref(false);
+const uploading = ref(false);
 const uploadProgress = ref(0)
 
 // Track deleting
@@ -451,7 +452,7 @@ const fetchTracks = async () => {
 
       const { data, error, count } = await query;
 
-      if (error) throw error;
+      if (error) console.error(error);
 
       tracks.value = data;
       totalTracks.value = count || 0;
@@ -490,7 +491,7 @@ const updateTrack = async () => {
       })
       .eq('id', editingTrack.value.id);
 
-    if (error) throw error;
+    if (error) console.error(error);
 
     toast.add({
       title: 'Success',
@@ -522,7 +523,7 @@ const uploadTrack = async () => {
     return;
   }
 
-  adding.value = true;
+  uploading.value = true;
   uploadProgress.value = 0;
 
   try {
@@ -531,7 +532,7 @@ const uploadTrack = async () => {
         .from('tracks')
         .upload(fileName, audioFile.value)
 
-    if (fileUploadError) throw new Error(fileUploadError.message);
+    if (fileUploadError) console.error(fileUploadError)
 
     uploadProgress.value = 50;
     console.log("Creating record in database..")
@@ -551,7 +552,7 @@ const uploadTrack = async () => {
         .select('id')
         .single();
 
-    if (error) throw new Error(error.message);
+    if (error) console.error(error)
 
     uploadProgress.value = 75;
 
@@ -567,7 +568,7 @@ const uploadTrack = async () => {
         .from('track_authors')
         .insert(relations)
 
-    if (relError) throw new Error(relError.message);
+    if (relError) console.error(relError)
 
     uploadProgress.value = 100;
 
@@ -597,7 +598,7 @@ const uploadTrack = async () => {
       color: 'error'
     });
   } finally {
-    adding.value = false;
+    uploading.value = false;
   }
 };
 
@@ -622,7 +623,7 @@ const deleteTrack = async () => {
       .delete()
       .eq('id', deletingTrack.value.id);
 
-    if (error) throw error;
+    if (error) console.error(error);
 
     const fileName = deletingTrack.value.audio_url.split('/').pop();
     console.log(fileName)
@@ -631,7 +632,7 @@ const deleteTrack = async () => {
         .from('tracks')
         .remove([fileName])
 
-    if (fileDeletionError) throw fileDeletionError
+    if (fileDeletionError) console.error(fileDeletionError)
 
     toast.add({
       title: 'Success',
@@ -654,7 +655,7 @@ const deleteTrack = async () => {
   }
 };
 
-// Fetch tracks on component mount
+// Fetch tracks on a component mount
 onMounted(() => {
   fetchTracks();
 });

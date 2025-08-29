@@ -6,7 +6,6 @@ const router = useRouter();
 const errorMessage = ref('');
 const isLoading = ref(false);
 
-
 const signInWithEmail = async () => {
   if (!email.value || !password.value) {
     errorMessage.value = 'Please enter both email and password';

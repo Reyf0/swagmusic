@@ -4,6 +4,9 @@ import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import type { Track, Database } from '@/types/global'
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+type ViewName = 'now' | 'queue' | 'lyrics'
+type ViewMode = 'sidebar' | 'fullscreen'
+
 export const usePlayerStore = defineStore('player', () => {
     const currentTrack = ref<Track>(null)
     const sound = ref<Howl | null>(null)
@@ -109,6 +112,11 @@ export const usePlayerStore = defineStore('player', () => {
     const supabase:SupabaseClient<Database> = useSupabaseClient()
     const user = useSupabaseUser()
     const lastListenedTrackId = ref<string | null>(null)
+
+    const setCurrentTrack = (track: Track | null) => {
+        currentTrack.value = track
+    }
+
     const recordListen = async () => {
         const trackId = currentTrack.value?.id
         if (!user.value || !trackId) return
@@ -352,8 +360,6 @@ export const usePlayerStore = defineStore('player', () => {
             currentTrack.value = data;
             const tracks = [currentTrack.value, ...await useTracks().getTracks()]
             currentTrackIndex.value = 0
-            firstPlay.value = true
-            play(currentTrack.value, tracks)
         }
     }
 
@@ -396,8 +402,7 @@ export const usePlayerStore = defineStore('player', () => {
         isFullScreenMode,
         getSidebarView,
         getFullscreenView,
-
-
+        
         // Playback
         play,
         pause,
@@ -410,6 +415,7 @@ export const usePlayerStore = defineStore('player', () => {
         toggleRepeat,
         toggleShuffle,
         replaceQueue,
+        setCurrentTrack,
 
         // View logic
         openView,

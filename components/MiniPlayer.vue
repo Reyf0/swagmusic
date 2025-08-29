@@ -88,7 +88,7 @@ const onSeek = (e: MouseEvent) => {
         <!-- Controls -->
         <div class="flex self-center items-center gap-4">
           <UButton
-              icon="i-heroicons-arrow-path-rounded-square"
+              icon="ph:shuffle"
               variant="ghost"
               color="white"
               :class="{ 'text-green-500': isShuffle }"

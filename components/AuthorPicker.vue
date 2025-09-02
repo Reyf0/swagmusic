@@ -32,20 +32,18 @@ const search = useDebounceFn(async () => {
     return
   }
   isLoading.value = true
-  try {
-    const { data, error } = await supabase
-        .from('authors')
-        .select('id, name')
-        .ilike('name', `%${query.value}%`)
-        .limit(10)
-    options.value = data || []
-    if (error) throw error
-  } catch (e) {
-    console.error('Error fetching authors:', e)
-  } finally {
-    isLoading.value = false
-    console.log("Data: " + data)
+
+  const { data, error } = await supabase
+      .from('profiles')
+      .select('id, username')
+      .ilike('username', `%${query.value}%`)
+      .limit(10)
+  options.value = data || []
+  if (error) {
+    console.error('Error fetching authors:', error)
   }
+  isLoading.value = false
+  console.log("Data: " + data)
 }, 300)
 
 watch(query, () => {
@@ -75,7 +73,6 @@ function addAuthor(val: Author) {
 
 <template>
   <div>
-    <label class="block text-sm font-medium text-gray-700">Authors</label>
     <!-- Чипы + draggable -->
     <Draggable
       v-model="selected"
@@ -86,7 +83,7 @@ function addAuthor(val: Author) {
       <template #item="{ element, index }">
         <div class="flex items-center bg-gray-200 rounded px-2 py-1">
           <span class="handle cursor-move mr-1">☰</span>
-          <span class="mr-2">{{ element.name }}</span>
+          <span class="mr-2">{{ element.username }}</span>
           <button
               type="button"
               class="text-gray-600 hover:text-gray-800"
@@ -104,7 +101,7 @@ function addAuthor(val: Author) {
         <ComboboxInput
           class="w-full border bg-gray-300 rounded-md px-3 py-2 focus: ring-blue-500 focus:border-blue-500"
           placeholder="Type to search authors..."
-          @change="query = $event.target.value"
+          @input="query = $event.target.value"
         />
         <transition
             enter-active-class="transition ease-out duration-100"
@@ -124,7 +121,7 @@ function addAuthor(val: Author) {
                 :value="item"
             >
               <div class="px-3 py-2 cursor-pointer hover:bg-gray-100">
-                {{ item.name}}
+                {{ item.username }}
               </div>
             </ComboboxOption>
 
@@ -135,7 +132,3 @@ function addAuthor(val: Author) {
     </Combobox>
   </div>
 </template>
-
-<style scoped>
-
-</style>

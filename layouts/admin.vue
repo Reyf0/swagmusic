@@ -39,53 +39,48 @@
           <nav class="p-4 space-y-1">
             <UButton
                 block
-                to="/admin"
                 variant="ghost"
                 color="gray"
                 icon="i-heroicons-home"
                 class="justify-start"
             >
-              Dashboard
+              <NuxtLink to="/admin">Dashboard</NuxtLink>
             </UButton>
             <UButton
                 block
-                to="/admin/users"
                 variant="ghost"
                 color="gray"
                 icon="i-heroicons-users"
                 class="justify-start"
             >
-              Users
+              <NuxtLink to="/admin/users">Users</NuxtLink>
             </UButton>
             <UButton
                 block
-                to="/admin/tracks"
                 variant="ghost"
                 color="gray"
                 icon="i-heroicons-musical-note"
                 class="justify-start"
             >
-              Tracks
+              <NuxtLink to="/admin/tracks">Tracks</NuxtLink>
             </UButton>
             <UButton
                 block
-                to="/admin/albums"
                 variant="ghost"
                 color="gray"
                 icon="i-heroicons-rectangle-stack"
                 class="justify-start"
             >
-              Albums
+              <NuxtLink to="/admin/albums">Albums</NuxtLink>
             </UButton>
             <UButton
                 block
-                to="/admin/playlists"
                 variant="ghost"
                 color="gray"
                 icon="i-heroicons-queue-list"
                 class="justify-start"
             >
-              Playlists
+              <NuxtLink to="/admin/playlists">Playlists</NuxtLink>
             </UButton>
           </nav>
         </aside>
@@ -126,3 +121,10 @@ const logout = async () => {
   }
 };
 </script>
+
+<style scoped>
+nav a.router-link-active {
+  font-weight: bold;
+  color: #4ade80;
+}
+</style>

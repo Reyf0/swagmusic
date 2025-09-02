@@ -67,12 +67,17 @@
             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ row.id }}</td>
             <td class="px-6 py-4 whitespace-nowrap">
               <div class="flex items-center">
-                <div class="flex-shrink-0 h-10 w-10">
+                <div class="flex-shrink-0 h-10 w-10 flex items-center justify-center shadow rounded">
                   <img
+                    v-if="row.cover_url"
                     :src="row.cover_url"
                     class="h-10 w-10 rounded-md object-cover"
                     alt="Track cover"
                   >
+                  <UIcon
+                      v-else
+                      name="i-heroicons-musical-note"
+                  />
                 </div>
                 <div class="ml-4">
                   <div class="text-sm font-medium text-gray-900">{{ row.title }}</div>
@@ -338,7 +343,7 @@ import { useSearchStore } from '~/stores/searchStore';
 import AuthorPicker from "@/components/AuthorPicker.vue";
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { Database } from '@/types/database.types'
-import type {Track} from "@/types/global";
+import type { Track } from "@/types/global";
 
 definePageMeta({
   layout: 'admin',
@@ -348,6 +353,7 @@ definePageMeta({
 const supabase = useSupabaseClient() as  SupabaseClient<Database>
 const toast = useToast()
 const searchStore = useSearchStore()
+
 
 // Table columns
 const columns = [
@@ -438,10 +444,7 @@ const fetchTracks = async () => {
           .from('tracks')
           .select(`
             *,
-            track_authors (
-              *,
-              author:authors(*)
-            )
+            track_authors:profiles (*)
           `, { count: 'exact' });
 
       // Apply pagination
@@ -496,7 +499,7 @@ const updateTrack = async () => {
     toast.add({
       title: 'Success',
       description: 'Track updated successfully',
-      color: 'green'
+      color: 'success'
     });
 
     showEditModal.value = false;
@@ -556,10 +559,8 @@ const uploadTrack = async () => {
 
     uploadProgress.value = 75;
 
-    const trackId = trackData.id;
-
     const relations = newTrack.value.track_authors.map((author, idx) => ({
-      track_id: trackId,
+      track_id: trackData.id,
       author_id: author.id,
       order_index: idx
     }))
@@ -575,7 +576,7 @@ const uploadTrack = async () => {
     toast.add({
       title: 'Success',
       description: 'Track added successfully',
-      color: 'green'
+      color: 'success'
     });
 
     // Reset form and close modal
@@ -614,9 +615,7 @@ const deleteTrack = async () => {
 
   deleting.value = true;
 
-
   try {
-
     // Delete track
     const { error } = await supabase
       .from('tracks')
@@ -632,12 +631,15 @@ const deleteTrack = async () => {
         .from('tracks')
         .remove([fileName])
 
-    if (fileDeletionError) console.error(fileDeletionError)
+    if (fileDeletionError) {
+      console.error(fileDeletionError)
+      return
+    }
 
     toast.add({
       title: 'Success',
       description: 'Track deleted successfully',
-      color: 'green'
+      color: 'success'
     });
 
     showDeleteModal.value = false;

@@ -22,7 +22,7 @@
         <div v-for="track in tracks" :key="track.id" class="track-card flex flex-col border rounded p-3 shadow hover:shadow-md transition-shadow">
           <div class="track-cover-wrapper relative grow overflow-hidden rounded-md shadow-md mb-3 group">
             <div class="flex justify-center items-center h-full w-full aspect-square bg-gradient-to-br from-gray-200 to-gray-300">
-              <UIcon v-if="!track.cover_url" name="i-heroicons-musical-note" class="icon w-16 h-16 text-gray-400" />
+              <UIcon v-if="!track.cover_url" name="i-heroicons-musical-note" class="icon w-10 h-10 text-gray-400" />
               <img
                   v-else
                   :src="track?.cover_url"
@@ -122,6 +122,7 @@ const user = useSupabaseUser()
 const playerStore = usePlayerStore()
 const likesStore = useLikesStore()
 likesStore.attachPlayerStore(playerStore)
+const tracksStore = useTracksStore()
 
 const { isPlaying } = storeToRefs(playerStore)
 const { width } = useWindowSize({ initialWidth: 0 })
@@ -132,14 +133,15 @@ const isLoading = ref(true)
 const error = ref(null)
 const showAddToPlaylistModal = ref(false)
 const selectedTrack = ref<TrackUI>(null)
-const { getTracks } = useTracks()
 const { playTrack, isCurrentTrack } = usePlayTrack()
 
 const fetchTracks = async () => {
   isLoading.value = true
   error.value = null
   try {
-    tracks.value = await getTracks() || []
+    await tracksStore.loadFeed()
+    console.log(tracksStore.feedItems)
+    tracks.value = tracksStore.feedItems.value
     // batch fetch likes for visible tracks
     const ids = tracks.value.map(t => t.id)
     if (ids.length > 0) {

@@ -42,7 +42,10 @@ const fetchProfile = async () => {
         .eq('id', user.value.id)
         .single()
 
-    if (supabaseError) throw supabaseError
+    if (supabaseError) {
+      console.error(supabaseError)
+      return
+    }
     profile.value = data || {
       id: user.value.id,
       username: user.value.user_metadata?.username || user.value.email?.split('@')[0] || 'User'
@@ -128,7 +131,7 @@ onMounted(() => {
                 v-model="query"
                 type="text"
                 placeholder="Search by title or artist"
-                class="w-full px-4 py-1 mx-10 border border-gray-500 rounded focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                class="hover:bg-gray-700 transition w-full px-4 py-1 mx-10 border border-gray-500 text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-white"
                 @keydown.enter="handleSearch"
             >
             <div class="flex space-x-4">
@@ -146,6 +149,7 @@ onMounted(() => {
                 <UButton><NuxtLink to="/register" class="text-white hover:text-gray-300">Register</NuxtLink></UButton>
               </template>
             </div>
+            <ColorModeButton class="justify-self-end"/>
           </div>
         </nav>
 

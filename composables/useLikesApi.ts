@@ -1,15 +1,13 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from '@/types/database.types'
+import { ref } from 'vue'
 
 type LikeRow = Database['public']['Tables']['likes']['Row']
 type LikeInsert = Database['public']['Tables']['likes']['Insert']
 
 export type LikeTargetType = 'track' | 'playlist' | 'album'
+export type LikeTarget = { id: string; type?: LikeTargetType }
 
-export interface LikeTarget {
-    id: string
-    type: LikeTargetType
-}
 
 export const useLikesApi = (supabaseClient?: SupabaseClient<Database>) => {
     const supabase: SupabaseClient<Database> = supabaseClient || useSupabaseClient()

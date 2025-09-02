@@ -10,6 +10,7 @@ declare module '@supabase/postgrest-js' {
 }
 
 type Album = Database['public']['Tables']['albums']['Row']
+type AuthorUI = Database['public']['Tables']['profiles']['Row']
 type Track = Database['public']['Tables']['tracks']['Row'] & {
   track_authors: {
     author: Database['public']['Tables']['authors']['Row']
@@ -18,18 +19,17 @@ type Track = Database['public']['Tables']['tracks']['Row'] & {
 type TrackUI = {
   id: string
   title: string
-  authors: Author[]
+  authors: AuthorUI[]
   likes_count: number
   album_id: string | null
   audio_url: string | null
   cover_url: string | null
   created_at: string | null
   user_id: string | null
-  duration: number | null
+  duration_seconds: number | null
   is_liked_by_user: boolean | null
 }
 type Profile = Database['public']['Tables']['profiles']['Row']
-type Author = Database['public']['Tables']['authors']['Row']
 type Like = Database['public']['Tables']['likes']['Row']
 type PlayHistory = Database['public']['Tables']['play_history']['Row']
 type Playlist = Database['public']['Tables']['playlists']['Row']

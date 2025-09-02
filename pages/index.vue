@@ -99,7 +99,6 @@ onMounted(() => {
 
 <template>
   <div class="p-6 space-y-12">
-
     <div class="p-6">
       <h1 class="text-3xl font-bold mb-6">Welcome to SwagMusic</h1>
       <p class="mb-4">Your ultimate music streaming platform.</p>

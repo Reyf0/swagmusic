@@ -34,3 +34,9 @@ tests
 
 # Documentation
 /docs/
+/.junie/guidelines.md
+/content/index.md
+/package-lock.json
+
+# Sentry Config File
+.env.sentry-build-plugin

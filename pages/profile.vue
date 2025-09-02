@@ -1,14 +1,14 @@
 <template>
   <div class="p-6">
-    <h1 class="text-2xl font-bold mb-4">Профиль</h1>
+    <h1 class="text-2xl font-bold mb-4">Profile</h1>
     <div v-if="!user">
-      <p>Пожалуйста, <NuxtLink to="/login" class="text-blue-500 hover:underline">войдите</NuxtLink> чтобы просмотреть свой профиль.</p>
+      <p>Please <NuxtLink to="/login" class="text-blue-500 hover:underline">log in</NuxtLink> to view your profile.</p>
     </div>
     <div v-else-if="loading">
-      <p>Загрузка профиля...</p>
+      <p>Loading profile...</p>
     </div>
     <div v-else-if="error">
-      <p class="text-red-500">Ошибка: {{ error }}</p>
+      <p class="text-red-500">Error: {{ error }}</p>
     </div>
     <div v-else-if="profile">
       <div class="bg-white shadow rounded-lg p-6 mb-6">
@@ -24,7 +24,7 @@
                 @click="showAvatarEditor = true"
             >
               <UIcon name="i-heroicons-pencil" class="w-6 h-6 text-white mb-1" />
-              <span class="text-xs text-white">Изменить</span>
+              <span class="text-xs text-white">Edit</span>
             </div>
           </div>
           <div>
@@ -36,25 +36,25 @@
       </div>
 
       <div class="bg-white shadow rounded-lg p-6">
-        <h3 class="text-lg font-semibold mb-4">Информация профиля</h3>
+        <h3 class="text-lg font-semibold mb-4">Profile information</h3>
         <div class="space-y-3">
           <div>
-            <p class="text-sm text-gray-500">ID пользователя</p>
+            <p class="text-sm text-gray-500">User ID</p>
             <p>{{ user.id }}</p>
           </div>
           <div v-if="profile.full_name">
-            <p class="text-sm text-gray-500">Полное имя</p>
+            <p class="text-sm text-gray-500">Full name</p>
             <p>{{ profile.full_name }}</p>
           </div>
           <div>
-            <p class="text-sm text-gray-500">Дата регистрации</p>
+            <p class="text-sm text-gray-500">Registration date</p>
             <p>{{ new Date(user.created_at).toLocaleDateString() }}</p>
           </div>
         </div>
       </div>
     </div>
     <div v-else>
-      <p>Профиль не найден.</p>
+      <p>Profile not found.</p>
     </div>
     <div
         v-if="showAvatarEditor"
@@ -67,11 +67,11 @@
         >
           <UIcon name="i-heroicons-x-mark" class="w-5 h-5" />
         </button>
-        <h2 class="text-lg font-semibold mb-4">Изменить аватар</h2>
+        <h2 class="text-lg font-semibold mb-4">Change Avatar</h2>
         <UInput type="file" accept="image/*" @change="handleFileChange" />
         <div class="flex justify-end mt-4 space-x-2">
-          <UButton @click="uploadAvatar">Сохранить</UButton>
-          <UButton color="neutral" @click="showAvatarEditor = false">Отмена</UButton>
+          <UButton @click="uploadAvatar">Save</UButton>
+          <UButton color="neutral" @click="showAvatarEditor = false">Cancel</UButton>
         </div>
       </div>
     </div>

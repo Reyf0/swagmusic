@@ -179,10 +179,18 @@ const nextTrack:Track = computed(() => {
     >
       <!-- Обложка и инфо -->
       <div class="flex items-center space-x-4">
-        <img
-            :src="track?.cover_url || 'https://via.placeholder.com/300x300?text=No+Cover'"
-            class="w-24 h-24 object-cover rounded shadow"
-            alt="Cover">
+        <div class="w-24 h-24 flex justify-center items-center shadow-xl">
+          <img
+              v-if="track?.cover_url"
+              :src="track?.cover_url"
+              class="object-cover rounded shadow"
+              alt="Cover">
+          <UIcon
+              v-else
+              name="i-heroicons-musical-note"
+              class="w-5 h-5"
+          />
+        </div>
         <div>
           <h2 class="text-xl font-bold hover:underline cursor-pointer">
             {{ track?.title || 'Untitled' }}

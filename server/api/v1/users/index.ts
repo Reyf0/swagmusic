@@ -8,7 +8,7 @@ export default defineEventHandler(async (event: H3Event) => {
     const token = authHeader?.replace('Bearer ', '')
 
     if (!token) {
-        createError({ statusCode: 401, statusMessage: 'Missing authorization header' })
+        return createError({ statusCode: 401, statusMessage: 'Missing authorization header' })
     }
 
     const { data: supabaseUser, authError } = await supabaseAdmin.auth.getUser(token)

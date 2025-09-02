@@ -5,12 +5,12 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from '@/types/database.types'
 import type {Like, Track} from "@/types/global";
 import {usePlayTrack} from "@/composables/usePlayTrack";
+import { formatDuration } from '@/utils/formatDuration'
 
 const supabase:SupabaseClient<Database> = useSupabaseClient()
 const user = useSupabaseUser()
 const playerStore = usePlayerStore()
 const { isPlaying } = storeToRefs(playerStore)
-const { addLike } = useLikes()
 const { playTrack, isCurrentTrack } = usePlayTrack()
 
 const likedTracks = ref<Track[]>([])
@@ -158,14 +158,6 @@ const fetchRecentlyPlayed = async () => {
   }
 }
 
-// Format seconds to mm:ss
-const formatDuration = (seconds) => {
-  if (!seconds) return '--:--'
-  const mins = Math.floor(seconds / 60)
-  const secs = Math.floor(seconds % 60)
-  return `${mins}:${secs.toString().padStart(2, '0')}`
-}
-
 </script>
 
 <template>
@@ -271,7 +263,7 @@ const formatDuration = (seconds) => {
 
               <!-- Duration -->
               <div class="col-span-2 text-right text-gray-500">
-                {{ track.duration ? formatDuration(track.duration) : '--:--' }}
+                {{ track.duration_seconds ? formatDuration(track.duration_seconds) : '--:--' }}
               </div>
             </div>
           </div>

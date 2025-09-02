@@ -2,8 +2,11 @@
 import { usePlayerStore } from '@/stores/player'
 import { storeToRefs } from 'pinia'
 import { ref, computed } from 'vue'
+import type {TrackUI} from "@/types/global";
 
 const player = usePlayerStore()
+const likesStore = useLikesStore()
+likesStore.attachPlayerStore(player)
 const {
   currentTrack,
   isPlaying,
@@ -13,7 +16,6 @@ const {
   isRepeat,
   isShuffle
 } = storeToRefs(player)
-const { addLike, deleteLike } = useLikes()
 const isMuted = ref(false)
 const recentVolume = ref(0)
 
@@ -25,6 +27,20 @@ const toggleMute = () => {
     player.setVolume(0)
   }
   isMuted.value = !isMuted.value
+}
+
+const onToggleLike  = async (track: TrackUI) => {
+  if (!user.value || !user.value.id) {
+    console.warn('No authenticated user')
+    return navigateTo('/login')
+  }
+
+  try {
+    await likesStore.toggleLike({ id: track.id, type: 'track'})
+  } catch (e) {
+    console.error(e)
+    useToast().add({ title: 'Error', description: 'Failed to update like', color: 'error'})
+  }
 }
 
 const formatTime = (seconds: number) => {
@@ -46,7 +62,7 @@ const onSeek = (e: MouseEvent) => {
 </script>
 
 <template>
-  <div class="fixed flex flex-row justify-between bottom-0 left-0 right-0 z-30 bg-black text-white p-3 shadow-lg backdrop-blur">
+  <div class="flex flex-row justify-between bg-black text-white p-3 shadow-lg backdrop-blur">
     <!-- Track Info -->
     <div class="flex justify-self-start items-center gap-3">
       <div class="w-12 h-12 bg-gray-800 flex items-center justify-center overflow-hidden rounded">
@@ -77,9 +93,17 @@ const onSeek = (e: MouseEvent) => {
           </div>
         </div>
       </div>
-      <button>
-        <UIcon v-if="!currentTrack.is_liked_by_user" :name="'i-heroicons-heart'" size="1.5em" @click="addLike({id: currentTrack.id, type: 'track'}); currentTrack.is_liked_by_user = true"/>
-        <UIcon v-else :name="'i-heroicons-heart-solid'" size="1.5em" class="text-[#00c74f]" @click="deleteLike({id: currentTrack.id, type: 'track'});  currentTrack.is_liked_by_user = false"/>
+      <button
+          :disabled="!!likesStore.pending[currentTrack.id]"
+          class="p-2"
+          :title="likesStore.isLiked(currentTrack.id) ? 'Unlike' : 'Like'"
+          @click="onToggleLike(currentTrack)"
+      >
+        <UIcon
+            :name="likesStore.isLiked(currentTrack.id) ? 'i-heroicons-heart-solid' : 'i-heroicons-heart'"
+            :class="likesStore.isLiked(currentTrack.id) ? 'text-red-500' : 'text-black'"
+            class="w-6 h-6"
+        />
       </button>
     </div>
     <div class="max-w-6xl flex flex-col justify-self-center gap-2">
@@ -87,26 +111,36 @@ const onSeek = (e: MouseEvent) => {
       <div class="flex justify-center items-center">
         <!-- Controls -->
         <div class="flex self-center items-center gap-4">
-          <UButton
-              icon="ph:shuffle"
+          <UIcon
+              name="ph:shuffle"
               variant="ghost"
               color="white"
+              class="w-4.5 h-4.5 text-gray-400 hover:text-gray-200 transition"
               :class="{ 'text-green-500': isShuffle }"
               @click="player.toggleShuffle()"
           />
-          <UButton icon="i-heroicons-backward" variant="ghost" color="white" @click="player.playPrevious()" />
+          <UButton icon="i-heroicons-backward"
+                   variant="ghost"
+                   class="text-gray-400 hover:text-gray-200 transition"
+                   @click="player.playPrevious()" />
           <UButton
               color="white"
-              class="flex justify-center items-center bg-white text-gray-900 w-10 h-10 rounded-full"
+              class="hover:scale-105 transition flex justify-center items-center bg-white text-gray-900 w-10 h-10 rounded-full"
               @click="isPlaying ? player.pause() : player.resume()"
           >
-            <UIcon :name="isPlaying ? 'i-heroicons-pause' : 'i-heroicons-play'"/>
+            <UIcon
+                :name="isPlaying ? 'i-heroicons-pause' : 'i-heroicons-play-solid'"
+                class="w-5 h-5"
+            />
           </UButton>
-          <UButton icon="i-heroicons-forward" variant="ghost" color="white" @click="player.playNext()" />
-          <UButton
-              icon="i-heroicons-arrow-path"
-              variant="ghost"
-              color="white"
+          <UButton icon="i-heroicons-forward"
+                   class="text-gray-400 hover:text-gray-200 transition"
+                   variant="ghost"
+                   color="white"
+                   @click="player.playNext()" />
+          <UIcon
+              name="i-heroicons-arrow-path"
+              class="w-4.5 h-4.5 text-gray-400 hover:text-gray-200 transition"
               :class="{ 'text-green-500': isRepeat }"
               @click="player.toggleRepeat()"
           />
@@ -122,7 +156,6 @@ const onSeek = (e: MouseEvent) => {
         <span class="w-10">{{ formatTime(duration) }}</span>
       </div>
     </div>
-
 
     <div class="flex items-center justify-self-end">
       <!-- Buttons -->
@@ -163,11 +196,20 @@ const onSeek = (e: MouseEvent) => {
             max="1"
             step="0.01"
             :value="volume"
-            class="w-full"
+            class="volume-range w-full"
             @input="player.setVolume($event.target.valueAsNumber); isMuted = $event.target.valueAsNumber === 0"
         >
       </div>
     </div>
-
   </div>
 </template>
+<!-- TODO style volume input -->
+<style lang="postcss" scoped>
+
+.volume-range {
+  width: 100%;
+  height: 8px;
+  color: #424242;
+  cursor: pointer;
+}
+</style>

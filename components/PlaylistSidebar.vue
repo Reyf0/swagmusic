@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
+import type { SupabaseClient } from "@supabase/supabase-js";
+import type { Database } from "@/types/global"
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const props = defineProps<{
@@ -11,15 +13,13 @@ const emit = defineEmits<{
   'resize': [width: number]
 }>()
 
-const supabase = useSupabaseClient()
+const supabase:SupabaseClient<Database> = useSupabaseClient()
 const user = useSupabaseUser()
 const playlists = ref<Playlist[]>([])
-const loading = ref(true)
+const isLoading = ref(true)
 
 const fetchUserPlaylists = async () => {
-  if (!user.value) return
-
-  loading.value = true
+  isLoading.value = true
   try {
     const { data, error } = await supabase
       .from('playlists')
@@ -35,13 +35,15 @@ const fetchUserPlaylists = async () => {
   } catch (err) {
     console.error('Error fetching playlists:', err)
   } finally {
-    loading.value = false
+    isLoading.value = false
   }
 }
 
 onMounted(() => {
-  if (user.value) {
+  if (user?.value) {
     void fetchUserPlaylists()
+  } else {
+    isLoading.value = false
   }
 })
 
@@ -51,21 +53,21 @@ const navigateToPlaylist = (playlistId: string) => {
 </script>
 
 <template>
-  <div 
+  <div
     class="playlist-sidebar bg-black text-white flex flex-col h-full transition-all duration-300"
     :class="{ 'collapsed': isCollapsed }"
   >
     <!-- Header -->
     <div class="flex items-center justify-between p-4 border-b border-gray-700">
       <h2 v-if="!isCollapsed" class="text-lg font-semibold">Your Library</h2>
-      <button 
+      <button
         class="p-2 hover:bg-gray-800 rounded-full transition-colors"
         :title="isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'"
         @click="emit('toggle-collapse')"
       >
-        <UIcon 
-          :name="isCollapsed ? 'i-heroicons-chevron-right' : 'i-heroicons-chevron-left'" 
-          class="w-5 h-5" 
+        <UIcon
+          :name="isCollapsed ? 'i-heroicons-chevron-right' : 'i-heroicons-chevron-left'"
+          class="w-5 h-5"
         />
       </button>
     </div>
@@ -75,7 +77,7 @@ const navigateToPlaylist = (playlistId: string) => {
       <template v-if="!isCollapsed">
         <!-- Create Playlist Button -->
         <div class="p-4">
-          <UButton 
+          <UButton
             class="w-full bg-gray-800 hover:bg-gray-700 text-white"
             @click="navigateTo('/create-playlist')"
           >
@@ -86,7 +88,7 @@ const navigateToPlaylist = (playlistId: string) => {
 
         <!-- Playlists List -->
         <div class="px-2">
-          <div v-if="loading" class="flex justify-center py-8">
+          <div v-if="isLoading" class="flex justify-center py-8">
             <div class="animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-white"/>
           </div>
 
@@ -104,9 +106,9 @@ const navigateToPlaylist = (playlistId: string) => {
               @click="navigateToPlaylist(playlist.id)"
             >
               <div class="w-12 h-12 bg-gray-700 rounded-lg flex items-center justify-center mr-3 flex-shrink-0">
-                <img 
-                  v-if="playlist.cover_url" 
-                  :src="playlist.cover_url" 
+                <img
+                  v-if="playlist.cover_url"
+                  :src="playlist.cover_url"
                   :alt="playlist.name"
                   class="w-full h-full object-cover rounded-lg"
                 >
@@ -126,7 +128,7 @@ const navigateToPlaylist = (playlistId: string) => {
       <!-- Collapsed state -->
       <template v-else>
         <div class="p-2 space-y-2">
-          <button 
+          <button
             class="w-full p-3 hover:bg-gray-800 rounded-lg transition-colors"
             title="Create Playlist"
             @click="navigateTo('/create-playlist')"
@@ -142,9 +144,9 @@ const navigateToPlaylist = (playlistId: string) => {
             @click="navigateToPlaylist(playlist.id)"
           >
             <div class="w-6 h-6 bg-gray-700 rounded flex items-center justify-center mx-auto">
-              <img 
-                v-if="playlist.cover_url" 
-                :src="playlist.cover_url" 
+              <img
+                v-if="playlist?.cover_url"
+                :src="playlist?.cover_url"
                 :alt="playlist.name"
                 class="w-full h-full object-cover rounded"
               >

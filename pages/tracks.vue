@@ -19,7 +19,7 @@
       </div>
 
       <div v-else class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4">
-        <div v-for="track in tracks" :key="track.id" class="track-card flex flex-col border rounded p-3 shadow hover:shadow-md transition-shadow">
+        <div v-for="track in tracksStore.feedItems" :key="track.id" class="track-card flex flex-col border rounded p-3 shadow hover:shadow-md transition-shadow">
           <div class="track-cover-wrapper relative grow overflow-hidden rounded-md shadow-md mb-3 group">
             <div class="flex justify-center items-center h-full w-full aspect-square bg-gradient-to-br from-gray-200 to-gray-300">
               <UIcon v-if="!track.cover_url" name="i-heroicons-musical-note" class="icon w-10 h-10 text-gray-400" />
@@ -141,12 +141,11 @@ const fetchTracks = async () => {
   try {
     await tracksStore.loadFeed()
     console.log(tracksStore.feedItems)
-    tracks.value = tracksStore.feedItems.value
     // batch fetch likes for visible tracks
-    const ids = tracks.value.map(t => t.id)
-    if (ids.length > 0) {
-      await likesStore.fetchLikes(ids, 'track')
-    }
+    // const ids = tracks.value.map(t => t.id)
+    // if (ids.length > 0) {
+    //   await likesStore.fetchLikes(ids, 'track')
+    // }
   } catch (e) {
     console.error(e)
     error.value = 'Failed to load tracks'
@@ -210,8 +209,8 @@ const handleAddToPlaylist = async ({ playlistId, track, playlistName }) => {
       .order('position', { ascending: false })
       .limit(1)
 
-    const nextPosition = positionData && positionData.length > 0 
-      ? positionData[0].position + 1 
+    const nextPosition = positionData && positionData.length > 0
+      ? positionData[0].position + 1
       : 0
     // Add track to the playlist
     const { error } = await supabase

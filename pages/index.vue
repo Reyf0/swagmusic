@@ -6,6 +6,8 @@ import type { Track } from "@/types/global";
 const supabase = useSupabaseClient()
 const user = useSupabaseUser()
 
+const tracksStore = useTracksStore()
+
 const topTracks = ref<Track[]>([])
 const recentTracks = ref<Track[]>([])
 
@@ -62,7 +64,6 @@ const fetchTopTracks = async () => {
 const fetchRecentPlays = async () => {
   isLoadingRecentTracks.value = true
   errorLoadingRecentTracks.value = false
-
   try {
     const { data, error } = await supabase
         .from('play_history')
@@ -93,7 +94,7 @@ const fetchRecentPlays = async () => {
 
 onMounted(() => {
   fetchTopTracks().catch(console.error)
-  fetchRecentPlays().catch(console.error)
+  if (user?.value?.id) fetchRecentPlays().catch(console.error)
 })
 </script>
 
@@ -122,7 +123,7 @@ onMounted(() => {
     </section>
 
     <!-- Recent Listens -->
-    <section>
+    <section v-if="user?.value?.id">
       <h2 class="text-2xl font-bold mb-4 ">🎧 Recently Listened</h2>
       <div v-if="isLoadingRecentTracks">
         <div class="flex gap-4 overflow-x-scroll scrollbar-hide">

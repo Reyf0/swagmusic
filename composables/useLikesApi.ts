@@ -8,10 +8,17 @@ type LikeInsert = Database['public']['Tables']['likes']['Insert']
 export type LikeTargetType = 'track' | 'playlist' | 'album'
 export type LikeTarget = { id: string; type?: LikeTargetType }
 
-
 export const useLikesApi = (supabaseClient?: SupabaseClient<Database>) => {
     const supabase: SupabaseClient<Database> = supabaseClient || useSupabaseClient()
     const user = useSupabaseUser()
+
+    const lastError = ref<Error | null>(null)
+
+    // abort controller for getLikes
+    let getLikesController: AbortController | null = null
+    
+    const isAbort = (err: any) =>
+        err && (err.name === 'AbortError' || /aborted/i.test(String(err?.message ?? '')))
 
     /**
      * Получение лайков для набора идентификаторов целей для текущего пользователя
@@ -24,24 +31,57 @@ export const useLikesApi = (supabaseClient?: SupabaseClient<Database>) => {
         targetIds: string[],
         targetType: LikeTargetType = 'track'
     ): Promise<LikeRow[] | null> => {
+        lastError.value = null
+
         if (!user.value || !user.value.id) {
-            console.warn('getLikes: no authenticated user')
+            // not authenticated -> treat as no likes
             return null;
         }
 
-        const { data, error } = await supabase
-            .from('likes')
-            .select('target_id')
-            .in('target_id', targetIds)
-            .eq('target_type', targetType)
-            .eq('user_id', user.value.id)
+        // Cancel previous getLikes if any
+        try { getLikesController?.abort() } catch (_) {}
+        getLikesController = new AbortController()
 
-        if (error) {
-            console.error('Error fetching likes: ', error);
+        try {
+            // split into chunks to avoid very long IN lists
+            const CHUNK = 200
+            const out: LikeRow[] = []
+            for (let i = 0; i < targetIds.length; i += CHUNK) {
+                const chunk = targetIds.slice(i, i + CHUNK)
+                const builder = supabase
+                    .from('likes')
+                    .select('target_id')
+                    .in('target_id', chunk)
+                    .eq('target_type', targetType)
+                    .eq('user_id', user.value.id)
+                // attach abort signal (v2)
+                const { data, error } = await builder.abortSignal(getLikesController.signal)
+                if (error) {
+                    if (isAbort(error)) {
+                        return null
+                    }
+                    lastError.value = error
+                    console.error('getLikes error', error)
+                    return null
+                }
+                if (data && data.length) out.push(...(data as LikeRow[]))
+            }
+            return out
+        } catch (err: any) {
+            if (isAbort(err)) return null
+            lastError.value = err
+            console.error('getLikes unexpected error', err)
             return null
+        } finally {
+            getLikesController = null
         }
-        return data as LikeRow[] | null;
     }
+
+    const cancelGetLikes = () => {
+        try { getLikesController?.abort() } catch (_) {}
+        getLikesController = null
+    }
+
     /**
      * Добавление лайка для текущего пользователя
      *
@@ -51,27 +91,38 @@ export const useLikesApi = (supabaseClient?: SupabaseClient<Database>) => {
     const addLike = async (
         target: LikeTarget
     ): Promise<LikeRow | null> => {
-        if (!user.value) {
+        lastError.value = null
+        if (!user.value || !user.value.id) {
             console.warn('addLike: no authenticated user')
             return null;
         }
 
         const payload: LikeInsert = {
             target_id: target.id,
-            target_type: target.type ?? 'track',
+            target_type: (target.type ?? 'track') as LikeTargetType,
             user_id: user.value.id
-        } as unknown as LikeInsert
+        } as LikeInsert
 
-        const { data, error } = await supabase
-            .from('likes')
-            .upsert(payload, { onConflict: ['target_id', 'target_type', 'user_id'] })
+        try {
+            // upsert with returned representation
+            const builder = supabase
+                .from('likes')
+                .upsert(payload, { onConflict: ['target_id', 'target_type', 'user_id'], returning: 'representation' })
 
-        if (error) {
-            console.error('Error adding like:', error);
-            return null;
+            const { data, error } = await builder
+            if (error) {
+                lastError.value = error
+                console.error('addLike error', error)
+                return null
+            }
+            // data is array of inserted/updated rows (representation)
+            if (Array.isArray(data) && data.length > 0) return data[0] as LikeRow
+            return null
+        } catch (err: any) {
+            lastError.value = err
+            console.error('addLike unexpected', err)
+            return null
         }
-
-        return (data && data.length > 0 ? (data[0] as LikeRow) : null)
     }
     /**
      * Удаление лайка для текущего пользователя
@@ -82,31 +133,43 @@ export const useLikesApi = (supabaseClient?: SupabaseClient<Database>) => {
     const deleteLike = async (
         target: LikeTarget
     ): Promise<boolean | null> => {
+        lastError.value = null
         if (!user.value || !user.value.id) {
             console.warn('deleteLike: no authenticated user')
             return null;
         }
 
-        const { error } = await supabase
-            .from('likes')
-            .delete()
-            .match({
-                target_id: target.id,
-                target_type: target.type ?? 'track',
-                user_id: user.value.id
-            })
-        if (error) {
-            console.error('Error deleting like:', error);
-            return null;
+        try {
+            const builder = supabase
+                .from('likes')
+                .delete()
+                .match({
+                    target_id: target.id,
+                    target_type: target.type ?? 'track',
+                    user_id: user.value.id
+                })
+                .select() // возвращает удалённые строки
+            const { data, error } = await builder
+            if (error) {
+                lastError.value = error
+                console.error('deleteLike error', error)
+                return null
+            }
+            // если удалено >=1 строк, success
+            return Array.isArray(data) ? data.length > 0 : true
+        } catch (err: any) {
+            lastError.value = err
+            console.error('deleteLike unexpected', err)
+            return null
         }
-
-        return true
     }
 
 
     return {
+        getLikes,
+        cancelGetLikes,
         addLike,
         deleteLike,
-        getLikes
+        lastError
     }
 }

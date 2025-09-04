@@ -54,6 +54,12 @@ export const useLikesStore = defineStore('likes', () => {
         }
     }
 
+    // public cancel for in-flight getLikes
+    function cancelFetchLikes() {
+        api.cancelGetLikes()
+    }
+
+
     const _addLike = async (target: LikeTarget) => {
         const row = await api.addLike(target)
         likes.value = { ...likes.value, [target.id]: true }
@@ -107,6 +113,9 @@ export const useLikesStore = defineStore('likes', () => {
     return {
         likes, pending,
         attachPlayerStore,
-        isLiked, fetchLikes, toggleLike, refreshLike
+        isLiked, fetchLikes, toggleLike, refreshLike,
+        fetchLikes, toggleLike, refreshLike,
+        // cancel method to call from components on unmount if needed
+        cancelFetchLikes
     }
 })

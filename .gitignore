@@ -33,8 +33,8 @@ tests
 /vitest-example/
 
 # Documentation
-/docs/
-/.junie/guidelines.md
+# /docs/
+# /.junie/guidelines.md
 /content/index.md
 /package-lock.json
 

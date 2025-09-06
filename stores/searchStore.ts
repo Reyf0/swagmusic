@@ -1,4 +1,3 @@
-// stores/searchStore.ts
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import type { SupabaseClient } from '@supabase/supabase-js'

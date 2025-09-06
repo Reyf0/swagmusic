@@ -14,12 +14,12 @@
         </button>
       </div>
 
-      <div v-else-if="!tracks || tracks.length === 0" class="text-center py-10">
+      <div v-else-if="!feedItems || feedItems.length === 0" class="text-center py-10">
         <p class="text-gray-500">No tracks found.</p>
       </div>
 
       <div v-else class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4">
-        <div v-for="track in tracksStore.feedItems" :key="track.id" class="track-card flex flex-col border rounded p-3 shadow hover:shadow-md transition-shadow">
+        <div v-for="track in feedItems" :key="track.id" class="track-card flex flex-col border rounded p-3 shadow hover:shadow-md transition-shadow">
           <div class="track-cover-wrapper relative grow overflow-hidden rounded-md shadow-md mb-3 group">
             <div class="flex justify-center items-center h-full w-full aspect-square bg-gradient-to-br from-gray-200 to-gray-300">
               <UIcon v-if="!track.cover_url" name="i-heroicons-musical-note" class="icon w-10 h-10 text-gray-400" />
@@ -33,7 +33,7 @@
             <div class="absolute inset-0 hover:bg-black bg-opacity-0 group-hover:bg-opacity-30 transition-all duration-300 flex items-center justify-center">
               <button
                   class="track-play-button opacity-0 group-hover:opacity-100 transform translate-y-2 group-hover:translate-y-0 transition-all duration-300 bg-green-500 hover:bg-green-600 text-white rounded-full w-12 h-12 flex items-center justify-center shadow-lg"
-                  @click="playTrack(track, tracks)"
+                  @click="playTrack(track, feedItems)"
               >
                 <UIcon
                     :name="isCurrentTrack(track) && isPlaying ? 'i-heroicons-pause' : 'i-heroicons-play'"
@@ -58,7 +58,7 @@
 
             <button
                 class="bg-green-500 hover:bg-green-600 text-white py-2 px-4 rounded-full flex items-center"
-                @click="playTrack(track, tracks)"
+                @click="playTrack(track, feedItems)"
             >
               <UIcon
                   :name="isCurrentTrack(track) && isPlaying ? 'i-heroicons-pause' : 'i-heroicons-play'"
@@ -123,12 +123,12 @@ const playerStore = usePlayerStore()
 const likesStore = useLikesStore()
 likesStore.attachPlayerStore(playerStore)
 const tracksStore = useTracksStore()
+const { feedItems } = storeToRefs(tracksStore)
 
 const { isPlaying } = storeToRefs(playerStore)
 const { width } = useWindowSize({ initialWidth: 0 })
 const isMobile = computed(() => width.value < 500)
 
-const tracks = ref<TrackUI[]>([])
 const isLoading = ref(true)
 const error = ref(null)
 const showAddToPlaylistModal = ref(false)
@@ -139,13 +139,12 @@ const fetchTracks = async () => {
   isLoading.value = true
   error.value = null
   try {
-    await tracksStore.loadFeed()
-    console.log(tracksStore.feedItems)
-    // batch fetch likes for visible tracks
-    // const ids = tracks.value.map(t => t.id)
-    // if (ids.length > 0) {
-    //   await likesStore.fetchLikes(ids, 'track')
-    // }
+    await tracksStore.loadFeed(true)
+    console.log(feedItems.value)
+    const ids = feedItems.value.map(t => t.id)
+    if (ids.length > 0) {
+      await likesStore.fetchLikes(ids, 'track')
+    }
   } catch (e) {
     console.error(e)
     error.value = 'Failed to load tracks'

@@ -28,7 +28,7 @@ qodana.yaml
 .ai
 
 # Tests
-tests
+# tests
 /pages/admin/test.vue
 /vitest-example/
 

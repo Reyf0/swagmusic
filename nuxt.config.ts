@@ -31,9 +31,12 @@ export default defineNuxtConfig({
 
   runtimeConfig: {
     sentryDsn: process.env.SENTRY_DSN,
+    supabaseServiceKey: process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_API_SECRET_KEY,
 
     public: {
-      errorLoggerEndpoint: process.env.ERROR_ENDPOINT || '/api/v1/error'
+        supabaseUrl: process.env.NUXT_PUBLIC_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL || '',
+        supabaseKey: process.env.NUXT_PUBLIC_SUPABASE_ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.SUPABASE_KEY || '',
+        errorLoggerEndpoint: process.env.ERROR_ENDPOINT || '/api/v1/error'
     }
   },
 

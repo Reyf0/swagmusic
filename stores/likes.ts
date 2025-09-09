@@ -113,8 +113,8 @@ export const useLikesStore = defineStore('likes', () => {
     return {
         likes, pending,
         attachPlayerStore,
-        isLiked, toggleLike, refreshLike,
-        fetchLikes, toggleLike, refreshLike,
+        isLiked, toggleLike,
+        fetchLikes, refreshLike,
         // cancel method to call from components on unmount if needed
         cancelFetchLikes
     }

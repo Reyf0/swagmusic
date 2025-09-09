@@ -16,7 +16,7 @@ const signInWithEmail = async () => {
   isLoading.value = true;
 
   try {
-    const { error } = await supabase.auth.signInWithPassword({
+    const { data, error } = await supabase.auth.signInWithPassword({
       email: email.value,
       password: password.value,
     });
@@ -26,6 +26,10 @@ const signInWithEmail = async () => {
     } else {
       await router.push('/');
     }
+
+    const accessToken = data.session?.access_token;
+    await $fetch('/api/v1/auth/process', { method: 'POST', body: { access_token: accessToken}})
+
   } catch (e) {
     errorMessage.value = 'An unexpected error occurred';
     console.error(e);

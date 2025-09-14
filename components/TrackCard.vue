@@ -1,10 +1,10 @@
 <script setup lang="ts">
-import type { TrackWithAuthors } from '@/stores/searchStore'
-import type { Track } from '@/types/global'
+import type { AnyTrack } from '@/types'
+
 
 interface Props {
-  track: TrackWithAuthors | Track
-  tracks?: (TrackWithAuthors | Track)[]
+  track: AnyTrack
+  tracks?: (AnyTrack)[]
   variant?: 'carousel' | 'grid'
   showAddToPlaylist?: boolean
 }
@@ -16,7 +16,7 @@ const props = withDefaults(defineProps<Props>(), {
 })
 
 interface Emits {
-  (e: 'addToPlaylist', track: TrackWithAuthors | Track): void
+  (e: 'addToPlaylist', track: AnyTrack): void
 }
 
 const emit = defineEmits<Emits>()
@@ -34,7 +34,7 @@ const handleAddToPlaylist = () => {
 }
 
 // Get authors list with proper type checking
-const getAuthors = (track: TrackWithAuthors | Track) => {
+const getAuthors = (track: AnyTrack) => {
   if ('track_authors' in track && track.track_authors) {
     return track.track_authors
       .map(ta => ta.author?.name)
@@ -66,9 +66,9 @@ const isTrackPlaying = computed(() => currentTrack.value && isPlaying.value)
         :alt="`Cover for ${track.title}`"
         class="w-full object-cover rounded"
       >
-      <div class="absolute inset-0 bg-transparent group-hover:bg-black group-hover:bg-opacity-30 transition-all duration-300 flex items-center justify-center">
+      <div class="absolute inset-0 bg-transparent group-hover:bg-opacity-30 transition-all duration-300 flex items-center justify-center">
         <button
-          class="play-button opacity-0 group-hover:opacity-100 transform translate-y-2 group-hover:translate-y-0 transition-all duration-300 bg-green-500 hover:bg-green-600 text-white rounded-full w-12 h-12 flex items-center justify-center shadow-lg"
+          class="play-button opacity-0 group-hover:opacity-100 transform translate-y-2 group-hover:translate-y-0 transition-all duration-300 bg-green-500 hover:bg-green-400 text-white rounded-full w-12 h-12 flex items-center justify-center shadow-lg"
           @click="handlePlay"
           :aria-label="isTrackPlaying ? `Pause ${track.title}` : `Play ${track.title}`"
         >
@@ -110,7 +110,7 @@ const isTrackPlaying = computed(() => currentTrack.value && isPlaying.value)
 
     <div class="flex items-center justify-between mt-2">
       <button
-        class="bg-green-500 hover:bg-green-600 text-white py-2 px-4 rounded-full flex items-center transition-colors"
+        class="bg-green-500 hover:bg-green-400 text-white py-2 px-4 rounded-full flex items-center transition-colors"
         @click="handlePlay"
         :aria-label="isTrackPlaying ? `Pause ${track.title}` : `Play ${track.title}`"
       >
@@ -145,7 +145,7 @@ const isTrackPlaying = computed(() => currentTrack.value && isPlaying.value)
 
 <style lang="postcss" scoped>
 .track-card .play-button {
-  @apply absolute bg-green-500 hover:bg-green-600 text-white rounded-full w-12 h-12 flex items-center justify-center shadow-lg opacity-0 group-hover:opacity-100;
+  @apply absolute bg-green-500 hover:bg-green-400 text-white rounded-full w-12 h-12 flex items-center justify-center shadow-lg opacity-0 group-hover:opacity-100;
 }
 
 .track-card:hover .play-button {

@@ -2,7 +2,8 @@ import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { Database } from '@/types/database.types'
-import { profileUpdateSchema, ProfileUpdateInput } from '@/lib/schemas/profile'
+import { profileUpdateSchema } from '@/lib/schemas/profile'
+import type { ProfileUpdateInput } from '@/lib/schemas/profile'
 
 // Типы
 type ProfilesRow = Database['public']['Tables']['profiles']['Row']
@@ -21,7 +22,7 @@ export const useProfileStore = defineStore('profile', () => {
   const id = computed(() => profile.value?.id ?? authUser.value?.id ?? null)
   const isLoggedIn = computed(() => !!authUser.value)
   const displayName = computed(() => {
-    return profile.value?.full_name || profile.value?.username || authUser.value?.email || null
+    return profile.value?.full_name || profile.value?.username || authUser.value?.user_metadata?.username || authUser.value?.email?.split('@')[0] || null
   })
   const avatarUrl = computed(() => profile.value?.avatar_url ?? null)
   const isAdmin = computed(() => !!profile.value?.is_admin)

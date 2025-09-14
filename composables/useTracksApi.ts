@@ -1,13 +1,6 @@
 import { ref } from 'vue'
 import type { SupabaseClient } from '@supabase/supabase-js'
-import type { Database } from '@/types/global'
-
-// Типы на основе database.types.ts
-type TrackRow = Database['public']['Tables']['tracks']['Row']
-type TracksViewRow = {
-    // представление tracks_with_authors — содержит поля из tracks плюс authors jsonb
-    // оставляем свободную типизацию для authors (json)
-} & Partial<TrackRow> & { authors?: any[]; created_at?: string }
+import type { Database, TrackEntityUI } from '@/types'
 
 export const useTracksApi = () => {
     const supabase: SupabaseClient<Database> = useSupabaseClient()
@@ -18,6 +11,7 @@ export const useTracksApi = () => {
     let autocompleteController: AbortController | null = null
     let feedController: AbortController | null = null
     let trackController: AbortController | null = null
+    let recentController: AbortController | null = null
 
     // Утилита для безопасного распознавания Abort
     function isAbort(err: any) {
@@ -63,7 +57,7 @@ export const useTracksApi = () => {
             // attach signal then execute
             const { data, error } = await rpcBuilder.abortSignal(searchController.signal)
             if (error) throw error
-            return (data ?? []) as TracksViewRow[]
+            return (data ?? []) as TrackEntityUI[]
         } catch (err: any) {
             if (isAbort(err)) {
                 // запрос был отменён — не считаем это ошибкой
@@ -163,7 +157,7 @@ export const useTracksApi = () => {
             const builder = supabase.from('tracks_with_authors').select('*').eq('id', id).limit(1).single()
             const { data, error } = await builder.abortSignal(trackController.signal)
             if (error) throw error
-            return data as TracksViewRow
+            return data as TrackEntityUI
         } catch (err: any) {
             if (isAbort(err)) return null
             lastError.value = err
@@ -173,6 +167,35 @@ export const useTracksApi = () => {
             if (trackController) {
                 try { trackController = null } catch (_) {}
             }
+        }
+    }
+
+    /**
+     * New: get recent tracks enriched (RPC get_user_recent_tracks_full)
+     * Returns TrackEntityUI[] where each row contains track fields + authors JSON + last_played + play_count
+     */
+    async function getRecentTracksFull(params: { userId: string; limit?: number; after?: string | null }) {
+        if (recentController) { try { recentController.abort() } catch (_) {} recentController = null }
+        recentController = new AbortController()
+        lastError.value = null
+
+        const { userId, limit = 50, after = null } = params
+        try {
+            const rpcBuilder = supabase.rpc('get_user_recent_tracks_full', {
+                p_user_id: userId,
+                p_limit: limit,
+                p_after: after
+            })
+            const { data, error } = await rpcBuilder.abortSignal(recentController.signal)
+            if (error) throw error
+            return (data ?? []) as TrackEntityUI[]
+        } catch (err: any) {
+            if (isAbort(err)) return []
+            lastError.value = err
+            console.error('useTracksApi.getRecentTracksFull error', err)
+            return []
+        } finally {
+            recentController = null
         }
     }
 
@@ -195,11 +218,16 @@ export const useTracksApi = () => {
         try { if (trackController) trackController.abort() } catch (_) {}
         trackController = null
     }
+    function cancelRecent() {
+        try { if (recentController) recentController.abort() } catch (_) {}
+        recentController = null
+    }
     function cancelAll() {
         cancelSearch()
         cancelAutocomplete()
         cancelFeed()
         cancelTrack()
+        cancelRecent()
     }
 
     return {
@@ -207,10 +235,12 @@ export const useTracksApi = () => {
         autocomplete,
         getFeed,
         getTrackById,
+        getRecentTracksFull,
         cancelSearch,
         cancelAutocomplete,
         cancelFeed,
         cancelTrack,
+        cancelRecent,
         cancelAll,
         lastError
     }

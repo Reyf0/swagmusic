@@ -1,9 +1,8 @@
-// middleware/auth.global.ts
 export default defineNuxtRouteMiddleware((to) => {
   const user = useSupabaseUser();
 
   // Public routes that don't require authentication
-  const publicRoutes = ['/login', '/register', '/', '/tracks'];
+  const publicRoutes = ['/login', '/register', '/', '/tracks', '/search'];
 
   // Only redirect if:
   // 1. User is not authenticated

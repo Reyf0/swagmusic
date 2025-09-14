@@ -1,4 +1,4 @@
-import type { Tables } from './database.types'
+import type { Tables } from '@/types/database.types'
 
 export type AlbumWithTracks = Tables<'albums'> & {
     tracks: Tables<'tracks'>[]
@@ -6,7 +6,7 @@ export type AlbumWithTracks = Tables<'albums'> & {
 
 export type TrackWithAuthors = Tables<'tracks'> & {
     track_authors: {
-        author: Tables<'authors'>
+        author: Tables<'profiles'>
     }[]
 }
 
@@ -23,6 +23,6 @@ export type UserWithProfile = {
 export type TrackWithAlbumAndAuthors = Tables<'tracks'> & {
     album: Tables<'albums'> | null
     track_authors: {
-        author: Tables<'authors'>
+        author: Tables<'profiles'>
     }[]
 }

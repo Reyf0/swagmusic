@@ -1,57 +1,26 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import UiCarousel from "@/components/UiCarousel.vue";
-import type { Track } from "@/types/global";
+import type { TrackUI } from "@/types";
 
 const supabase = useSupabaseClient()
 const user = useSupabaseUser()
 
 const tracksStore = useTracksStore()
-
-const topTracks = ref<Track[]>([])
-const recentTracks = ref<Track[]>([])
+const { feedItems, recentItems } = storeToRefs(tracksStore)
 
 const isLoadingTopTracks = ref(true)
 const errorLoadingTopTracks = ref(false)
 const isLoadingRecentTracks = ref(true)
 const errorLoadingRecentTracks = ref(false)
 
-// TODO Try useAsyncData
+
 const fetchTopTracks = async () => {
   isLoadingTopTracks.value = true
   errorLoadingTopTracks.value = false
 
   try {
-    const { data, error } = await supabase
-        .from('play_history')
-        .select(`
-      track_id,
-      tracks (
-        *,
-        track_authors(
-          *,
-          author:authors(*)
-        )
-      )
-    `)
-        .order('played_at', { ascending: false })
-        .limit(1000)
-    if (error) console.error(error)
-    if (!data) return
-
-
-    // Подсчет вручную на клиенте (если нет группировки в SQL)
-    const countMap = new Map()
-    data.forEach(item => {
-      const id = item.tracks.id
-      if (!countMap.has(id)) {
-        countMap.set(id, { ...item.tracks, count: 1 })
-      } else {
-        countMap.get(id).count++
-      }
-    })
-
-    topTracks.value = [...countMap.values()].sort((a, b) => b.count - a.count).slice(0, 10)
+    await tracksStore.loadFeed(true)
   } catch (error) {
     errorLoadingTopTracks.value = true
     console.error('Error fetching top tracks:', error)
@@ -59,29 +28,13 @@ const fetchTopTracks = async () => {
     isLoadingTopTracks.value = false
   }
 }
-// TODO Try useAsyncData
-// TODO Fix this function. Tracks should be mapped
+
 const fetchRecentPlays = async () => {
   isLoadingRecentTracks.value = true
   errorLoadingRecentTracks.value = false
   try {
-    const { data, error } = await supabase
-        .from('play_history')
-        .select(`
-      played_at,
-      tracks (
-        id,
-        title,
-        audio_url,
-        cover_url
-      )
-    `)
-        .eq('user_id', user.value.id)
-        .order('played_at', { ascending: false })
-        .limit(10)
-    if (error) console.error(error);
-
-    recentTracks.value = data?.map(item => ({ ...item.tracks })) || []
+    await tracksStore.loadRecent({ userId: user.value.id })
+    if (tracksStore.error) throw tracksStore.error
   }
   catch (e) {
     errorLoadingRecentTracks.value = true
@@ -94,7 +47,11 @@ const fetchRecentPlays = async () => {
 
 onMounted(() => {
   fetchTopTracks().catch(console.error)
-  if (user?.value?.id) fetchRecentPlays().catch(console.error)
+  fetchRecentPlays().catch(console.error)
+})
+
+onUnmounted(() => {
+  tracksStore.cancelFeed()
 })
 </script>
 
@@ -119,7 +76,7 @@ onMounted(() => {
         </div>
       </div>
       <div v-else-if="errorLoadingTopTracks">Error</div>
-      <UiCarousel v-else :tracks="topTracks" />
+      <UiCarousel v-else :tracks="feedItems" />
     </section>
 
     <!-- Recent Listens -->
@@ -136,7 +93,7 @@ onMounted(() => {
         </div>
       </div>
       <div v-else-if="errorLoadingRecentTracks">Error</div>
-      <UiCarousel v-else :tracks="recentTracks" />
+      <UiCarousel v-else :tracks="recentItems" />
     </section>
   </div>
 </template>

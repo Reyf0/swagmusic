@@ -2,7 +2,7 @@
 import { ref } from 'vue'
 import { getAudioDurationFromFile } from '@/utils/getAudioDurationFromFile'
 import type { SupabaseClient } from "@supabase/supabase-js";
-import type { AuthorUI, Database } from '@/types/global'
+import type { AuthorUI, Database } from '@/types'
 
 const supabase:SupabaseClient<Database> = useSupabaseClient()
 const user = useSupabaseUser()

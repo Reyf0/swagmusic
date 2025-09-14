@@ -1,3 +1,145 @@
+<script setup lang="ts">
+import { usePlayerStore } from '@/stores/player';
+import { storeToRefs } from 'pinia';
+import { useWindowSize } from '@vueuse/core';
+import type { TrackUI, Database } from "@/types/global";
+import type { SupabaseClient } from "@supabase/supabase-js";
+
+const supabase: SupabaseClient<Database> = useSupabaseClient()
+const user = useSupabaseUser()
+
+const playerStore = usePlayerStore()
+const likesStore = useLikesStore()
+likesStore.attachPlayerStore(playerStore)
+const tracksStore = useTracksStore()
+const { feedItems } = storeToRefs(tracksStore)
+
+const { isPlaying } = storeToRefs(playerStore)
+const { width } = useWindowSize({ initialWidth: 0 })
+const isMobile = computed(() => width.value < 500)
+
+const isLoading = ref(true)
+const error = ref(null)
+const showAddToPlaylistModal = ref(false)
+const selectedTrack = ref<TrackUI>(null)
+const { playTrack, isCurrentTrack } = usePlayTrack()
+
+const fetchTracks = async () => {
+  isLoading.value = true
+  error.value = null
+  try {
+    await tracksStore.loadFeed(true)
+    console.log(feedItems.value)
+    const ids = feedItems.value.map(t => t.id)
+    if (ids.length > 0) {
+      await likesStore.fetchLikes(ids, 'track')
+    }
+  } catch (e) {
+    console.error(e)
+    error.value = 'Failed to load tracks'
+  } finally {
+    isLoading.value = false
+  }
+}
+
+const onToggleLike  = async (track: TrackUI) => {
+  if (!user.value || !user.value.id) {
+    console.warn('No authenticated user')
+    return navigateTo('/login')
+  }
+
+  try {
+    await likesStore.toggleLike({ id: track.id, type: 'track'})
+  } catch (e) {
+    console.error(e)
+    useToast().add({ title: 'Ошибка', description: 'Не удалось обновить лайк', color: 'error'})
+  }
+}
+
+// Open add to playlist modal
+const openAddToPlaylistModal = (track) => {
+  if (!user.value) {
+    // Redirect to log in if not logged in
+    navigateTo('/login')
+    return
+  }
+
+  selectedTrack.value = track
+  showAddToPlaylistModal.value = true
+}
+
+// Handle adding track to playlist
+const handleAddToPlaylist = async ({ playlistId, track, playlistName }) => {
+  try {
+    // Check if the track is already in the playlist
+    const { data: existingData } = await supabase
+        .from('playlist_tracks')
+        .select('id')
+        .eq('playlist_id', playlistId)
+        .eq('track_id', track.id)
+        .single()
+
+    if (existingData) {
+      // Track already in the playlist
+      useToast().add({
+        title: 'Already added',
+        description: `This track is already in "${playlistName}"`,
+        color: 'blue'
+      })
+      return
+    }
+
+    // Get the current highest position
+    const { data: positionData } = await supabase
+        .from('playlist_tracks')
+        .select('position')
+        .eq('playlist_id', playlistId)
+        .order('position', { ascending: false })
+        .limit(1)
+
+    const nextPosition = positionData && positionData.length > 0
+        ? positionData[0].position + 1
+        : 0
+    // Add track to the playlist
+    const { error } = await supabase
+        .from('playlist_tracks')
+        .insert({
+          playlist_id: playlistId,
+          track_id: track.id,
+          position: nextPosition,
+          added_at: new Date().toISOString()
+        })
+
+    if (error) throw error
+
+    // Update playlist track count
+    await supabase.rpc('increment_playlist_track_count', { playlist_id: playlistId })
+
+    // Show a success message
+    useToast().add({
+      title: 'Added to playlist',
+      description: `Added to "${playlistName}"`,
+      color: 'green'
+    })
+
+    // Close modal
+    showAddToPlaylistModal.value = false
+  } catch (e) {
+    console.error('Error adding track to playlist:', e)
+    useToast().add({
+      title: 'Error',
+      description: 'Failed to add track to playlist',
+      color: 'red'
+    })
+  }
+}
+
+// Fetch tracks when a component is mounted
+onMounted(() => {
+  fetchTracks()
+})
+</script>
+
 <template>
   <div>
     <div class="p-6">
@@ -109,147 +251,7 @@
   </div>
 </template>
 
-<script setup lang="ts">
-import { usePlayerStore } from '@/stores/player';
-import { storeToRefs } from 'pinia';
-import { useWindowSize } from '@vueuse/core';
-import type { TrackUI, Database } from "@/types/global";
-import type { SupabaseClient } from "@supabase/supabase-js";
 
-const supabase: SupabaseClient<Database> = useSupabaseClient()
-const user = useSupabaseUser()
-
-const playerStore = usePlayerStore()
-const likesStore = useLikesStore()
-likesStore.attachPlayerStore(playerStore)
-const tracksStore = useTracksStore()
-const { feedItems } = storeToRefs(tracksStore)
-
-const { isPlaying } = storeToRefs(playerStore)
-const { width } = useWindowSize({ initialWidth: 0 })
-const isMobile = computed(() => width.value < 500)
-
-const isLoading = ref(true)
-const error = ref(null)
-const showAddToPlaylistModal = ref(false)
-const selectedTrack = ref<TrackUI>(null)
-const { playTrack, isCurrentTrack } = usePlayTrack()
-
-const fetchTracks = async () => {
-  isLoading.value = true
-  error.value = null
-  try {
-    await tracksStore.loadFeed(true)
-    console.log(feedItems.value)
-    const ids = feedItems.value.map(t => t.id)
-    if (ids.length > 0) {
-      await likesStore.fetchLikes(ids, 'track')
-    }
-  } catch (e) {
-    console.error(e)
-    error.value = 'Failed to load tracks'
-  } finally {
-    isLoading.value = false
-  }
-}
-
-const onToggleLike  = async (track: TrackUI) => {
-  if (!user.value || !user.value.id) {
-    console.warn('No authenticated user')
-    return navigateTo('/login')
-  }
-
-  try {
-    await likesStore.toggleLike({ id: track.id, type: 'track'})
-  } catch (e) {
-    console.error(e)
-    useToast().add({ title: 'Ошибка', description: 'Не удалось обновить лайк', color: 'error'})
-  }
-}
-
-// Open add to playlist modal
-const openAddToPlaylistModal = (track) => {
-  if (!user.value) {
-    // Redirect to log in if not logged in
-    navigateTo('/login')
-    return
-  }
-
-  selectedTrack.value = track
-  showAddToPlaylistModal.value = true
-}
-
-// Handle adding track to playlist
-const handleAddToPlaylist = async ({ playlistId, track, playlistName }) => {
-  try {
-    // Check if the track is already in the playlist
-    const { data: existingData } = await supabase
-      .from('playlist_tracks')
-      .select('id')
-      .eq('playlist_id', playlistId)
-      .eq('track_id', track.id)
-      .single()
-
-    if (existingData) {
-      // Track already in the playlist
-      useToast().add({
-        title: 'Already added',
-        description: `This track is already in "${playlistName}"`,
-        color: 'blue'
-      })
-      return
-    }
-
-    // Get the current highest position
-    const { data: positionData } = await supabase
-      .from('playlist_tracks')
-      .select('position')
-      .eq('playlist_id', playlistId)
-      .order('position', { ascending: false })
-      .limit(1)
-
-    const nextPosition = positionData && positionData.length > 0
-      ? positionData[0].position + 1
-      : 0
-    // Add track to the playlist
-    const { error } = await supabase
-      .from('playlist_tracks')
-      .insert({
-        playlist_id: playlistId,
-        track_id: track.id,
-        position: nextPosition,
-        added_at: new Date().toISOString()
-      })
-
-    if (error) throw error
-
-    // Update playlist track count
-    await supabase.rpc('increment_playlist_track_count', { playlist_id: playlistId })
-
-    // Show a success message
-    useToast().add({
-      title: 'Added to playlist',
-      description: `Added to "${playlistName}"`,
-      color: 'green'
-    })
-
-    // Close modal
-    showAddToPlaylistModal.value = false
-  } catch (e) {
-    console.error('Error adding track to playlist:', e)
-    useToast().add({
-      title: 'Error',
-      description: 'Failed to add track to playlist',
-      color: 'red'
-    })
-  }
-}
-
-// Fetch tracks when a component is mounted
-onMounted(() => {
-  fetchTracks()
-})
-</script>
 
 <style scoped>
 @reference "tailwindcss";

@@ -1,21 +1,29 @@
 <script setup lang="ts">
 import { usePlayerStore } from '@/stores/player'
 import { useSearchStore } from '@/stores/searchStore'
+import { useProfileStore } from '@/stores/useProfileStore'
 import { storeToRefs } from 'pinia'
 import MiniPlayer from '@/components/MiniPlayer.vue'
 import PlayerViews from '@/components/player/PlayerViews.vue'
 import ResizablePanel from '@/components/ResizablePanel.vue'
 import PlaylistSidebar from '@/components/PlaylistSidebar.vue'
 import { ref, onMounted, watch } from 'vue'
+import type { DropdownMenuItem } from '@nuxt/ui'
 
-const user = useSupabaseUser()
 const supabase = useSupabaseClient()
-const router = useRouter()
-const toast = useToast()
 
-const profile = ref(null)
+const profileStore = useProfileStore()
+const { displayName, avatarUrl, isLoggedIn, isAdmin } = storeToRefs(profileStore)
+const playerStore = usePlayerStore()
+const searchStore = useSearchStore()
+const { query } = storeToRefs(searchStore)
+const { currentTrack } = storeToRefs(playerStore)
+
 const loading = ref(true)
 const error = ref(null)
+
+const router = useRouter()
+const toast = useToast()
 
 // Sidebar state
 const sidebarCollapsed = ref(false)
@@ -25,30 +33,27 @@ const collapseThreshold = 240
 const collapseWidth = 60
 const expandedDefaultWidth = 240
 
-const playerStore = usePlayerStore()
-const searchStore = useSearchStore()
-const { query } = storeToRefs(searchStore)
-const { currentTrack } = storeToRefs(playerStore)
+// Profile state
+const profileDropdownMenuItems = ref<DropdownMenuItem[][]>([
+    [
+      { label: 'Profile', to: '/profile' },
+      { label: 'Upload', to: '/upload'},
+      { label: 'Settings '}
+    ],
+    [
+      { label: 'Log out', slot: 'logOut', onSelect() { signOut() } }
+    ]
+])
 
 const fetchProfile = async () => {
-  if (!user.value) return
   loading.value = true
   error.value = null
 
   try {
-    const { data, error: supabaseError } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', user.value.id)
-        .single()
+    await profileStore.loadProfile()
 
-    if (supabaseError) {
-      console.error(supabaseError)
-      return
-    }
-    profile.value = data || {
-      id: user.value.id,
-      username: user.value.user_metadata?.username || user.value.email?.split('@')[0] || 'User'
+    if (isAdmin) {
+      profileDropdownMenuItems.value.splice(1, 0,[{ label: 'Admin', to: '/admin' }])
     }
   } catch (err) {
     console.error('Error fetching profile:', err)
@@ -115,7 +120,7 @@ watch(query, async () => {
 })
 
 onMounted(() => {
-  if (user.value) fetchProfile()
+  fetchProfile()
 })
 </script>
 
@@ -137,19 +142,22 @@ onMounted(() => {
             <div class="flex space-x-4">
               <UButton><NuxtLink to="/" class="text-white hover:text-gray-300">Home</NuxtLink></UButton>
               <UButton><NuxtLink to="/tracks" class="text-white hover:text-gray-300">Tracks</NuxtLink></UButton>
-              <template v-if="user">
+              <template v-if="isLoggedIn">
                 <UButton><NuxtLink to="/library" class="text-white hover:text-gray-300">Library</NuxtLink></UButton>
-                <UButton><NuxtLink to="/upload" class="text-white hover:text-gray-300">Upload</NuxtLink></UButton>
-                <UButton><NuxtLink to="/profile" class="text-white hover:text-gray-300">Profile</NuxtLink></UButton>
-                <UButton class="text-white hover:text-gray-300" @click="signOut">Sign out</UButton>
-                <UButton v-if="profile?.is_admin" class="text-white hover:text-gray-300"><NuxtLink to="/admin">Admin</NuxtLink></UButton>
+                <UDropdownMenu
+                    :items="profileDropdownMenuItems"
+                >
+                  <UTooltip :text="displayName">
+                    <UAvatar :src="avatarUrl" :alt="displayName"/>
+                  </UTooltip>
+                </UDropdownMenu>
               </template>
               <template v-else>
                 <UButton><NuxtLink to="/login" class="text-white hover:text-gray-300">Login</NuxtLink></UButton>
                 <UButton><NuxtLink to="/register" class="text-white hover:text-gray-300">Register</NuxtLink></UButton>
               </template>
             </div>
-            <ColorModeButton class="justify-self-end"/>
+
           </div>
         </nav>
 

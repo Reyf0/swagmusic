@@ -1,5 +1,5 @@
 <template>
-  <div class="w-full h-full flex flex-col bg-gray-900 text-white p-6">
+  <div class="w-full h-full flex flex-col bg-old-neutral-900 text-white p-6">
     <div class="flex justify-between items-center mb-4">
       <h2 class="text-xl font-semibold">Queue</h2>
       <UButton icon="i-heroicons-x-mark" size="sm" color="gray" @click="player.closeView('queue')" />
@@ -9,11 +9,11 @@
       <div
           v-for="(track) in queue"
           :key="track.id"
-          class="flex items-center justify-between bg-gray-800 p-3 rounded cursor-pointer hover:bg-gray-700"
+          class="flex items-center justify-between bg-old-neutral-800 p-3 rounded cursor-pointer hover:bg-old-neutral-700"
           @click="player.play(track, queue)"
       >
         <div class="flex items-center space-x-3">
-          <div class="flex justify-center items-center w-12 h-12 bg-gray-700 overflow-hidden rounded">
+          <div class="flex justify-center items-center w-12 h-12 bg-old-neutral-700 overflow-hidden rounded">
             <img
                 v-if="track.cover_url"
                 :src="track.cover_url"

@@ -1,4 +1,5 @@
 import { readBody, createError } from 'h3'
+import { env } from '@/lib/env'
 
 export default defineEventHandler(async (event) => {
     const body = await readBody(event) as { access_token?: string }
@@ -8,13 +9,13 @@ export default defineEventHandler(async (event) => {
     const config = useRuntimeConfig()
 
     const SUPABASE_URL =
-        config.public?.supabaseUrl ||
+        env.supabaseUrl ||
         process.env.NUXT_PUBLIC_SUPABASE_URL ||
         process.env.NEXT_PUBLIC_SUPABASE_URL ||
         process.env.SUPABASE_URL
 
     const ANON_KEY =
-        config.public?.supabaseKey ||
+        env.supabaseKey ||
         process.env.NUXT_PUBLIC_SUPABASE_ANON_KEY ||
         process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
         process.env.SUPABASE_ANON_KEY

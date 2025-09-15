@@ -25,7 +25,7 @@ const fetchUserPlaylists = async () => {
       .from('playlists')
       .select(`
         *,
-        profiles!playlists_user_id_fkey1(username)
+        author:profiles(*)
       `)
       .eq('user_id', user.value.id)
       .order('created_at', { ascending: false })
@@ -59,12 +59,12 @@ const navigateToPlaylist = (playlistId: string) => {
   >
     <!-- Header -->
     <div
-        class="flex items-center p-4 border-b border-gray-700"
+        class="flex items-center p-4 border-b border-old-neutral-700"
         :class="isCollapsed ? 'justify-center' : 'justify-between'"
     >
       <h2 v-if="!isCollapsed" class="text-lg font-semibold">Your Library</h2>
       <button
-        class="flex items-center justify-center rounded-lg p-2 hover:bg-gray-800 transition-colors"
+        class="flex items-center justify-center rounded-lg p-2 hover:bg-old-neutral-800 transition-colors"
         :title="isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'"
         @click="emit('toggle-collapse')"
       >
@@ -81,7 +81,7 @@ const navigateToPlaylist = (playlistId: string) => {
         <!-- Create Playlist Button -->
         <div class="p-4">
           <UButton
-            class="w-full bg-gray-800 hover:bg-gray-700 text-white"
+            class="w-full bg-old-neutral-800 hover:bg-old-neutral-700 text-white"
             @click="navigateTo('/create-playlist')"
           >
             <UIcon name="i-heroicons-plus" class="w-4 h-4 mr-2" />
@@ -106,10 +106,10 @@ const navigateToPlaylist = (playlistId: string) => {
             <div
               v-for="playlist in playlists"
               :key="playlist.id"
-              class="flex items-center p-3 hover:bg-gray-800 rounded-lg cursor-pointer transition-colors group"
+              class="flex items-center p-3 hover:bg-old-neutral-800 rounded-lg cursor-pointer transition-colors group"
               @click="navigateToPlaylist(playlist.id)"
             >
-              <div class="size-12 bg-gray-700 rounded-lg flex items-center justify-center mr-3 flex-shrink-0">
+              <div class="size-12 bg-old-neutral-700 rounded-lg flex items-center justify-center mr-3 flex-shrink-0">
                 <img
                   v-if="playlist.cover_url"
                   :src="playlist.cover_url"
@@ -133,7 +133,7 @@ const navigateToPlaylist = (playlistId: string) => {
       <template v-else>
         <div class="flex flex-col items-center justify-center p-2 space-y-2">
           <button
-            class="flex items-center justify-center p-2.5 hover:bg-gray-800 rounded-lg transition-colors"
+            class="flex items-center justify-center p-2.5 hover:bg-old-neutral-800 rounded-lg transition-colors"
             title="Create Playlist"
             @click="navigateTo('/create-playlist')"
           >
@@ -143,18 +143,18 @@ const navigateToPlaylist = (playlistId: string) => {
           <div
             v-for="playlist in playlists.slice(0, 10)"
             :key="playlist.id"
-            class="flex justify-center items-center w-full p-3 hover:bg-gray-800 rounded-lg cursor-pointer transition-colors"
+            class="flex justify-center items-center w-full p-3 hover:bg-old-neutral-800 rounded-lg cursor-pointer transition-colors"
             :title="playlist.name"
             @click="navigateToPlaylist(playlist.id)"
           >
-            <div class="w-6 h-6 bg-gray-700 rounded flex items-center justify-center mx-auto">
+            <div class="w-6 h-6 bg-old-neutral-700 rounded flex items-center justify-center mx-auto">
               <img
                 v-if="playlist?.cover_url"
                 :src="playlist?.cover_url"
                 :alt="playlist.name"
                 class="w-full h-full object-cover rounded"
               >
-              <UIcon v-else name="i-heroicons-musical-note" class="w-4 h-4 text-gray-400" />
+              <UIcon v-else name="i-heroicons-musical-note" class="w-4 h-4 text-old-neutral-400" />
             </div>
           </div>
         </div>

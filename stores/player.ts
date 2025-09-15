@@ -43,7 +43,7 @@ export const usePlayerStore = defineStore('player', () => {
     )
     const isFullScreenMode = computed(() => getFullscreenView.value !== null)
     const isViewOpen = (view: ViewName) => activeViews.value[view] !== null
-
+    
     const openView = (view: ViewName) => {
         const supports = viewModes[view]
         const sidebar = getSidebarView.value
@@ -105,6 +105,15 @@ export const usePlayerStore = defineStore('player', () => {
 
         // Включаем новый режим
         activeViews.value[view] = newMode
+    }
+
+    const checkIfNoActiveViews = () => {
+        for (const view in activeViews.value) {
+            if (activeViews.value[view] != null) {
+                return false
+            }
+        }
+        return true
     }
 
 
@@ -232,6 +241,9 @@ export const usePlayerStore = defineStore('player', () => {
                 currentTime.value = 0
             }
         })
+        if (checkIfNoActiveViews()) {
+            openView('now')
+        }
 
         sound.value.play()
         isPlaying.value = true

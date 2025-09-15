@@ -90,7 +90,7 @@ watch(() => track.value.cover_url, () => {
 
         <div>
           <!-- Инфо -->
-          <div class="flex items-center bg-neutral-800 mb-3 space-x-4 rounded-lg">
+          <div class="flex items-center bg-old-neutral-800 mb-3 space-x-4 rounded-lg">
             <div class="p-4">
               <h2 class="text-white text-xl font-bold hover:underline cursor-pointer">
                 {{ track?.title || 'Untitled' }}
@@ -115,16 +115,16 @@ watch(() => track.value.cover_url, () => {
               :class="mode === 'fullscreen'
           ? 'grid grid-cols-2 gap-4'
           : 'flex flex-col space-y-4'"
-              class="*:rounded-lg"
+              class="*:rounded-lg *:bg-old-neutral-800"
           >
             <!-- Карточка: Об исполнителе -->
-            <div class="bg-neutral-800 p-4 shadow hover:shadow-lg transition hover:scale-[1.02]">
+            <div class="p-4 shadow hover:shadow-lg transition hover:scale-[1.02]">
               <h3 class="font-semibold mb-1 text-white">Об исполнителе</h3>
               <p class="text-sm text-gray-400">Тут краткая биография, ссылки, жанры и т.п.</p>
             </div>
 
             <!-- Карточка: Сведения о треке -->
-            <div class="bg-neutral-800 p-4 shadow hover:shadow-lg transition hover:scale-[1.02]">
+            <div class="p-4 shadow hover:shadow-lg transition hover:scale-[1.02]">
               <h3 class="font-semibold mb-1 text-white">Сведения</h3>
               <ul class="text-sm text-gray-400 space-y-1">
                 <li>Альбом: {{ track?.album?.title || 'Без альбома' }}</li>
@@ -134,7 +134,7 @@ watch(() => track.value.cover_url, () => {
             </div>
 
             <!-- Карточка: Далее в очереди -->
-            <div class="bg-neutral-800 p-4 shadow hover:shadow-lg transition hover:scale-[1.02] col-span-2">
+            <div class="p-4 shadow hover:shadow-lg transition hover:scale-[1.02] col-span-2">
               <div>
                 <h3 class="font-semibold mb-2 text-white">Далее в очереди</h3>
                 <UButton
@@ -160,11 +160,11 @@ watch(() => track.value.cover_url, () => {
       </div>
     </main>
   </div>
-
+  <!-- Sidebar -->
   <div v-else class="h-full w-full flex flex-col text-white">
     <!-- Верхняя панель -->
     <div
-        class="sticky top-0 z-10 bg-neutral-900 px-4 py-3 flex items-center justify-between group"
+        class="sticky top-0 z-10 bg-old-neutral-900 px-4 py-3 flex items-center justify-between group"
     >
       <div class="flex items-center space-x-2">
         <!-- Кнопка закрытия -->
@@ -203,8 +203,7 @@ watch(() => track.value.cover_url, () => {
 
     <!-- Основная часть (scrollable) -->
     <div
-        class="flex-1 overflow-y-auto px-4"
-        :class="mode === 'fullscreen' ? 'py-6' : 'py-4 space-y-6'"
+        class="flex-1 overflow-y-auto p-4 space-y-6"
     >
       <!-- Обложка и инфо -->
       <div class="flex items-center space-x-4">
@@ -244,16 +243,16 @@ watch(() => track.value.cover_url, () => {
           :class="mode === 'fullscreen'
           ? 'grid grid-cols-2 gap-4'
           : 'flex flex-col space-y-4'"
-          class="*:rounded-xl"
+          class="*:rounded-xl *:bg-old-neutral-800"
       >
         <!-- Карточка: Об исполнителе -->
-        <div class="bg-neutral-800 p-4 shadow hover:shadow-lg transition hover:scale-[1.02]">
+        <div class="p-4 shadow hover:shadow-lg transition hover:scale-[1.02]">
           <h3 class="font-semibold mb-1">Об исполнителе</h3>
           <p class="text-sm text-gray-400">Тут краткая биография, ссылки, жанры и т.п.</p>
         </div>
 
         <!-- Карточка: Сведения о треке -->
-        <div class="bg-neutral-800 p-4 shadow hover:shadow-lg transition hover:scale-[1.02]">
+        <div class="p-4 shadow hover:shadow-lg transition hover:scale-[1.02]">
           <h3 class="font-semibold mb-1">Сведения</h3>
           <ul class="text-sm text-gray-400 space-y-1">
             <li>Альбом: {{ track?.album?.title || 'Без альбома' }}</li>
@@ -263,7 +262,7 @@ watch(() => track.value.cover_url, () => {
         </div>
 
         <!-- Карточка: Далее в очереди -->
-        <div class="bg-neutral-800 p-4 shadow hover:shadow-lg transition hover:scale-[1.02] col-span-2">
+        <div class="p-4 shadow hover:shadow-lg transition hover:scale-[1.02] col-span-2">
           <div class="flex items-center justify-between mb-2">
             <h3 class="font-semibold mb-2 truncate whitespace-nowrap overflow-hidden text-ellipsis">Далее в очереди</h3>
             <UButton

@@ -24,7 +24,7 @@
     "@nuxt/icon": "^1.15.0",
     "@nuxt/image": "^1.10.0",
     "@nuxt/scripts": "^0.11.9",
-    "@nuxt/ui": "^3.3.0",
+    "@nuxt/ui": "^4.0.0-alpha.1",
     "@nuxtjs/supabase": "^1.5.3",
     "@nuxtjs/tailwindcss": "^7.0.0-beta.0",
     "@pinia/nuxt": "^0.11.1",

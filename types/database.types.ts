@@ -199,26 +199,32 @@ export type Database = {
           created_at: string | null
           description: string | null
           id: string
+          metadata: Json | null
           name: string
+          updated_at: string
           user_id: string | null
         }
         Insert: {
           created_at?: string | null
           description?: string | null
           id?: string
+          metadata?: Json | null
           name: string
+          updated_at?: string
           user_id?: string | null
         }
         Update: {
           created_at?: string | null
           description?: string | null
           id?: string
+          metadata?: Json | null
           name?: string
+          updated_at?: string
           user_id?: string | null
         }
         Relationships: [
           {
-            foreignKeyName: "playlists_user_id_fkey1"
+            foreignKeyName: "playlists_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
@@ -234,6 +240,7 @@ export type Database = {
           full_name: string | null
           id: string
           is_admin: boolean | null
+          slug: string | null
           updated_at: string | null
           username: string | null
           website: string | null
@@ -245,6 +252,7 @@ export type Database = {
           full_name?: string | null
           id: string
           is_admin?: boolean | null
+          slug?: string | null
           updated_at?: string | null
           username?: string | null
           website?: string | null
@@ -256,9 +264,43 @@ export type Database = {
           full_name?: string | null
           id?: string
           is_admin?: boolean | null
+          slug?: string | null
           updated_at?: string | null
           username?: string | null
           website?: string | null
+        }
+        Relationships: []
+      }
+      search_logs: {
+        Row: {
+          created_at: string | null
+          id: number
+          ip: unknown | null
+          normalized_query: string | null
+          query: string | null
+          results_count: number | null
+          user_agent: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: number
+          ip?: unknown | null
+          normalized_query?: string | null
+          query?: string | null
+          results_count?: number | null
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: number
+          ip?: unknown | null
+          normalized_query?: string | null
+          query?: string | null
+          results_count?: number | null
+          user_agent?: string | null
+          user_id?: string | null
         }
         Relationships: []
       }
@@ -327,6 +369,42 @@ export type Database = {
           },
         ]
       }
+      track_embeddings: {
+        Row: {
+          created_at: string | null
+          embedding: string | null
+          model: string | null
+          track_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          embedding?: string | null
+          model?: string | null
+          track_id: string
+        }
+        Update: {
+          created_at?: string | null
+          embedding?: string | null
+          model?: string | null
+          track_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "track_embeddings_track_id_fkey"
+            columns: ["track_id"]
+            isOneToOne: true
+            referencedRelation: "tracks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "track_embeddings_track_id_fkey"
+            columns: ["track_id"]
+            isOneToOne: true
+            referencedRelation: "tracks_with_authors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       track_genres: {
         Row: {
           genre_id: string
@@ -375,7 +453,9 @@ export type Database = {
           id: string
           language: string | null
           likes_count: number
+          metadata: Json | null
           search_vector: unknown | null
+          slug: string | null
           title: string
           title_normalized: string | null
           tsv_multi: unknown | null
@@ -391,7 +471,9 @@ export type Database = {
           id?: string
           language?: string | null
           likes_count?: number
+          metadata?: Json | null
           search_vector?: unknown | null
+          slug?: string | null
           title: string
           title_normalized?: string | null
           tsv_multi?: unknown | null
@@ -407,7 +489,9 @@ export type Database = {
           id?: string
           language?: string | null
           likes_count?: number
+          metadata?: Json | null
           search_vector?: unknown | null
+          slug?: string | null
           title?: string
           title_normalized?: string | null
           tsv_multi?: unknown | null
@@ -429,6 +513,30 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      user_recommendations: {
+        Row: {
+          candidates: Json
+          created_at: string | null
+          expires_at: string | null
+          strategy: string
+          user_id: string
+        }
+        Insert: {
+          candidates: Json
+          created_at?: string | null
+          expires_at?: string | null
+          strategy: string
+          user_id: string
+        }
+        Update: {
+          candidates?: Json
+          created_at?: string | null
+          expires_at?: string | null
+          strategy?: string
+          user_id?: string
+        }
+        Relationships: []
       }
     }
     Views: {
@@ -496,11 +604,56 @@ export type Database = {
         Args: { p_genre_ids: string[]; p_track_id: string }
         Returns: boolean
       }
+      autocomplete_tracks: {
+        Args: { p_limit?: number; p_q: string }
+        Returns: {
+          id: string
+          score: number
+          title: string
+        }[]
+      }
       get_listen_stats_by_day: {
         Args: Record<PropertyKey, never>
         Returns: {
           day: string
           total_listens: number
+        }[]
+      }
+      get_popular_tracks: {
+        Args: { p_limit?: number }
+        Returns: {
+          plays: number
+          track_id: string
+        }[]
+      }
+      get_related_tracks: {
+        Args: { p_limit?: number; p_seed_track_id: string }
+        Returns: {
+          co_plays: number
+          track_id: string
+        }[]
+      }
+      get_tracks_by_embedding: {
+        Args: { p_embedding: number[]; p_exclude?: string[]; p_limit?: number }
+        Returns: {
+          distance: number
+          track_id: string
+        }[]
+      }
+      get_tracks_feed: {
+        Args: {
+          p_after_created_at?: string
+          p_after_id?: string
+          p_limit?: number
+        }
+        Returns: {
+          audio_url: string
+          cover_url: string
+          created_at: string
+          duration_seconds: number
+          id: string
+          title: string
+          user_id: string
         }[]
       }
       get_tracks_search: {
@@ -543,6 +696,53 @@ export type Database = {
           id: string
           is_liked_by_user: boolean
           title: string
+        }[]
+      }
+      get_trending: {
+        Args: { p_days?: number; p_limit?: number }
+        Returns: {
+          plays: number
+          track_id: string
+        }[]
+      }
+      get_user_recent_authors: {
+        Args: { p_limit?: number; p_user_id: string }
+        Returns: {
+          author_id: string
+          avatar_url: string
+          last_played: string
+          name: string
+          plays: number
+        }[]
+      }
+      get_user_recent_playlists: {
+        Args: { p_limit?: number; p_user_id: string }
+        Returns: {
+          last_played: string
+          playlist_id: string
+          plays: number
+        }[]
+      }
+      get_user_recent_tracks: {
+        Args: { p_after?: string; p_limit?: number; p_user_id: string }
+        Returns: {
+          last_played: string
+          play_count: number
+          track_id: string
+        }[]
+      }
+      get_user_recent_tracks_full: {
+        Args: { p_after?: string; p_limit?: number; p_user_id: string }
+        Returns: {
+          audio_url: string
+          authors: Json
+          cover_url: string
+          duration_seconds: number
+          id: string
+          last_played: string
+          play_count: number
+          title: string
+          user_id: string
         }[]
       }
     }

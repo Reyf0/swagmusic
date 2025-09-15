@@ -75,7 +75,7 @@ export default defineNuxtConfig({
             title: 'SwagMusic',
             htmlAttrs: {
                 lang: 'en',
-            }
+            },
         }
     },
 

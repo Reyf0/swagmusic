@@ -37,6 +37,16 @@ const signInWithEmail = async () => {
     isLoading.value = false;
   }
 }
+
+async function signInWithGoogle(response) {
+  const { data, error } = await supabase.auth.signInWithOAuth({
+    provider: 'google',
+    options: {
+      redirectTo: window.location.origin,
+    }
+  })
+}
+
 </script>
 
 <template>
@@ -80,6 +90,18 @@ const signInWithEmail = async () => {
       >
         <span v-if="isLoading">Signing in...</span>
         <span v-else>Sign In</span>
+      </button>
+
+      <button
+          @click="signInWithGoogle"
+          class="flex items-center justify-center gap-2 w-full py-2 px-4 border rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
+      >
+        <img
+            src="https://developers.google.com/identity/images/g-logo.png"
+            alt="Google"
+            class="w-5 h-5"
+        />
+        <span>Sign in with Google</span>
       </button>
 
       <div class="text-center mt-4">

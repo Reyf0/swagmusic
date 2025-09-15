@@ -1,5 +1,4 @@
 import type { Database } from './database-extended.types'
-import { TrackWithAuthors, TrackWithAlbumAndAuthors } from '@/types/extended'
 
 export type Album = Database['public']['Tables']['albums']['Row']
 export type AuthorUI = Database['public']['Tables']['profiles']['Row']
@@ -18,7 +17,6 @@ export type TrackUI = {
     duration_seconds: number | null
     is_liked_by_user: boolean | null
 }
-
 
 export type Profile = Database['public']['Tables']['profiles']['Row']
 export type Like = Database['public']['Tables']['likes']['Row']

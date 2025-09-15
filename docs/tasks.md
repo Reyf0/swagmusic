@@ -34,7 +34,7 @@ This document contains a comprehensive list of actionable improvement tasks iden
 
 ### Code Quality & Architecture
 10. [ ] **Extract layout complexity into composables** - Break down `layouts/default.vue` into smaller, focused composables for:
-    - [ ] Profile management logic
+    - [x] Profile management logic
     - [ ] Search functionality
     - [ ] Sidebar management
     - [ ] Navigation logic

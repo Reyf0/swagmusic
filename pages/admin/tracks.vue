@@ -1,359 +1,15 @@
-<template>
-  <div>
-    <div class="flex justify-between items-center mb-6">
-      <h1 class="text-2xl font-bold">Track Management</h1>
-      <button 
-        class="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-        @click="showAddTrackModal = true"
-      >
-        <span class="i-heroicons-plus mr-2"/>
-        Add Track
-      </button>
-
-    </div>
-
-    <!-- Search and filters -->
-    <div class="bg-white p-4 rounded-lg shadow mb-6">
-      <div class="flex flex-col md:flex-row gap-4">
-        <div class="relative md:w-1/3">
-          <span class="absolute inset-y-0 left-0 flex items-center pl-3">
-            <span class="i-heroicons-magnifying-glass text-gray-400"/>
-          </span>
-          <input
-            v-model="searchStore.query"
-            type="text"
-            placeholder="Search tracks..."
-            class="pl-10 pr-4 py-2 w-full border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            @input="debouncedSearch"
-          >
-        </div>
-        <div class="flex-grow"/>
-        <button
-          class="inline-flex items-center px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500"
-          @click="fetchTracks"
-        >
-          <span class="i-heroicons-arrow-path mr-2" :class="{ 'animate-spin': loading }"/>
-          Refresh
-        </button>
-      </div>
-    </div>
-
-    <!-- Tracks table -->
-    <div class="bg-white rounded-lg shadow overflow-hidden">
-      <div v-if="loading" class="py-8 text-center">
-        <span class="i-heroicons-arrow-path animate-spin h-8 w-8 mx-auto text-gray-400"/>
-        <p class="mt-2 text-gray-500">Loading tracks...</p>
-      </div>
-      <div v-else-if="tracks.length === 0" class="py-8 text-center">
-        <span class="i-heroicons-musical-note h-12 w-12 mx-auto text-gray-400"/>
-        <p class="mt-2 text-gray-500">No tracks found</p>
-        <button
-          class="mt-4 px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500"
-          @click="fetchTracks"
-        >
-          Reset Filters
-        </button>
-      </div>
-      <table v-else class="min-w-full divide-y divide-gray-200">
-        <thead class="bg-gray-50">
-          <tr>
-            <th v-for="column in columns" :key="column.id" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-              {{ column.title }}
-            </th>
-          </tr>
-        </thead>
-        <tbody class="bg-white divide-y divide-gray-200">
-          <tr v-for="row in tracks" :key="row.id" class="hover:bg-gray-50">
-            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ row.id }}</td>
-            <td class="px-6 py-4 whitespace-nowrap">
-              <div class="flex items-center">
-                <div class="flex-shrink-0 h-10 w-10 flex items-center justify-center shadow rounded">
-                  <img
-                    v-if="row.cover_url"
-                    :src="row.cover_url"
-                    class="h-10 w-10 rounded-md object-cover"
-                    alt="Track cover"
-                  >
-                  <UIcon
-                      v-else
-                      name="i-heroicons-musical-note"
-                  />
-                </div>
-                <div class="ml-4">
-                  <div class="text-sm font-medium text-gray-900">{{ row.title }}</div>
-                  <div class="text-sm text-gray-500">
-                    <span v-if="row.track_authors && row.track_authors.length">
-                      <span v-for="(rel, index) in row.track_authors" :key="rel.author.id">
-                        {{ rel.author.name }}<span v-if="index < row.track_authors.length - 1">, </span>
-                      </span>
-                    </span>
-                    <span v-else>Unknown Artist</span>
-                  </div>
-                </div>
-              </div>
-            </td>
-            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ formatDate(row.created_at) }}</td>
-            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ row.play_count || 0 }}</td>
-            <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-              <div class="flex space-x-2 justify-end">
-                <button
-                  class="p-1 rounded-md text-blue-600 hover:bg-blue-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  @click="editTrack(row)"
-                >
-                  <UIcon name="i-heroicons-pencil-square" class="text-black h-4 w-4"/>
-                </button>
-                <button
-                  class="p-1 rounded-md text-red-600 hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-red-500"
-                  @click="confirmDeleteTrack(row)"
-                >
-                  <UIcon name="i-heroicons-trash" class="text-black h-4 w-4"/>
-                </button>
-              </div>
-            </td>
-          </tr>
-        </tbody>
-      </table>
-
-      <!-- Pagination -->
-      <div class="bg-white px-4 py-3 border-t border-gray-200 sm:px-6">
-        <div class="flex justify-between items-center">
-          <p class="text-sm text-gray-500">
-            Showing {{ tracks.length }} of {{ totalTracks }} tracks
-          </p>
-          <div class="flex items-center gap-1">
-            <button
-              v-for="page in totalPages"
-              :key="page"
-              :class="[
-                'px-3 py-1 text-sm rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500',
-                currentPage === page
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-white text-gray-700 hover:bg-gray-100'
-              ]"
-              @click="currentPage = page; fetchTracks()"
-            >
-              {{ page }}
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Edit Track Modal -->
-    <div v-if="showEditModal" class="fixed inset-0 z-50 overflow-y-auto text-black" aria-labelledby="modal-title" role="dialog" aria-modal="true">
-      <div class="flex items-end justify-center min-h-screen z-75 pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-        <!-- Background overlay -->
-        <!-- <div class="fixed inset-0 bg-opacity-75 transition-opacity z-50" aria-hidden="true" @click="showEditModal = false"></div> -->
-
-
-        <!-- Modal panel -->
-        <div class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
-          <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
-            <div class="flex justify-between items-center pb-3 border-b">
-              <h3 id="modal-title" class="text-lg font-medium text-gray-900">Edit Track</h3>
-              <button class="text-gray-400 hover:text-gray-500" @click="showEditModal = false">
-                <UIcon name="i-heroicons-x-mark" class="h-6 w-6"/>
-              </button>
-            </div>
-            <div class="space-y-4 mt-4">
-              <div>
-                <label for="title" class="block text-sm font-medium text-gray-700">Title</label>
-                <input
-                  id="title"
-                  v-model="editingTrack.title"
-                  type="text"
-                  placeholder="Track title"
-                  class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                >
-              </div>
-              <div class="mt-4">
-                <AuthorPicker :model-value="editingAuthors"/>
-              </div>
-              <div>
-                <label for="cover_url" class="block text-sm font-medium text-gray-700">Cover URL</label>
-                <input
-                  id="cover_url"
-                  v-model="editingTrack.cover_url"
-                  type="text"
-                  placeholder="Cover image URL"
-                  class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                >
-              </div>
-              <div v-if="editingTrack.cover_url" class="mt-2">
-                <img
-                  :src="editingTrack.cover_url"
-                  alt="Cover preview"
-                  class="h-24 w-24 object-cover rounded-md"
-                >
-              </div>
-            </div>
-          </div>
-          <div class="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
-            <button
-              type="button"
-              class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-base font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:ml-3 sm:w-auto sm:text-sm"
-              @click="updateTrack"
-            >
-              <UIcon v-if="editing" name="i-heroicons-arrow-path" class="animate-spin mr-2"/>
-              Save Changes
-            </button>
-            <button
-              type="button"
-              class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
-              @click="showEditModal = false"
-            >
-              Cancel
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Add Track Modal -->
-    <div v-if="showAddTrackModal" class="fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
-      <div class="flex items-end justify-center min-h-screen z-75 pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-        <!-- Background overlay -->
-        <!-- <div class="fixed inset-0 bg-opacity-75 z-50 transition-opacity" aria-hidden="true" @click="showAddTrackModal = false"></div> -->
-
-        <!-- Modal panel -->
-        <div class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
-          <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
-            <div class="flex justify-between items-center pb-3 border-b">
-              <h3 id="modal-title" class="text-lg font-medium text-gray-900">Add New Track</h3>
-              <button class="text-gray-400 hover:text-gray-500" @click="showAddTrackModal = false">
-                <UIcon name="i-heroicons-x-mark" class="h-6 w-6"/>
-              </button>
-            </div>
-            <div class="space-y-4 mt-4">
-              <div>
-                <label for="new-title" class="block text-sm font-medium text-gray-700">Title <span class="text-red-500">*</span></label>
-                <input
-                  id="new-title"
-                  v-model="newTrack.title"
-                  type="text"
-                  placeholder="Track title"
-                  required
-                  class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                >
-              </div>
-              <div>
-                <AuthorPicker
-                  v-model="newTrack.track_authors"
-                />
-              </div>
-              <div>
-                <label for="new-cover-url" class="block text-sm font-medium text-gray-700">Cover URL</label>
-                <input
-                  id="new-cover-url"
-                  v-model="newTrack.cover_url"
-                  type="text"
-                  placeholder="Cover image URL"
-                  class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                >
-              </div>
-              <div v-if="newTrack.cover_url" class="mt-2">
-                <img
-                  :src="newTrack.cover_url"
-                  alt="Cover preview"
-                  class="h-24 w-24 object-cover rounded-md"
-                >
-              </div>
-              <div>
-                <label class="block text-sm font-medium text-gray-700">Audio File <span class="text-red-500">*</span></label>
-                <UFileUpload
-                    v-model="audioFile"
-                    icon="i-lucide-file-audio"
-                    accept="audio/mp3,audio/wav"
-                    class="cursor-pointer"
-                    size="xs"
-                    label="Drop your audio file here"
-                    description="MP3, WAV"
-                    @update:model-value="console.log(audioFile)"
-                />
-              </div>
-            </div>
-          </div>
-          <UProgress v-model="uploadProgress" color="primary"/>
-          <div class="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
-            <button
-              type="button"
-              class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-base font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:ml-3 sm:w-auto sm:text-sm"
-              @click="uploadTrack"
-            >
-              <span v-if="uploading" class="animate-spin mr-2"><UIcon name="i-heroicons-arrow-path"/></span>
-              Add Track
-            </button>
-            <button
-              type="button"
-              class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
-              @click="showAddTrackModal = false"
-            >
-              Cancel
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Delete Confirmation Modal -->
-    <div v-if="showDeleteModal" class="fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
-      <div class="flex items-end justify-center min-h-screen z-75 pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-        <!-- Background overlay -->
-        <!-- <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" aria-hidden="true" @click="showDeleteModal = false"></div> -->
-
-        <!-- Modal panel -->
-        <div class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
-          <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
-            <div class="flex justify-between items-center pb-3 border-b">
-              <h3 id="modal-title" class="text-lg font-medium text-gray-900">Confirm Delete</h3>
-              <button class="text-gray-400 hover:text-gray-500" @click="showDeleteModal = false">
-                <span class="i-heroicons-x-mark h-6 w-6"/>
-              </button>
-            </div>
-            <div class="mt-4">
-              <p>Are you sure you want to delete the track <strong>{{ deletingTrack?.title }}</strong>?</p>
-              <p class="text-red-500 mt-2">This action cannot be undone.</p>
-            </div>
-          </div>
-          <div class="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
-            <button
-              type="button"
-              class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-red-600 text-base font-medium text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 sm:ml-3 sm:w-auto sm:text-sm"
-              @click="deleteTrack"
-            >
-              <span v-if="deleting" class="i-heroicons-arrow-path animate-spin mr-2"/>
-              Delete Track
-            </button>
-            <button
-              type="button"
-              class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
-              @click="showDeleteModal = false"
-            >
-              Cancel
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-</template>
-
 <script setup lang="ts">
-import { useSearchStore } from '~/stores/searchStore';
 import AuthorPicker from "@/components/AuthorPicker.vue";
 import type { SupabaseClient } from '@supabase/supabase-js';
-import type { Database } from '@/types/database.types'
-import type { Track } from "@/types/global";
+import type { Database, Track } from '@/types'
 
 definePageMeta({
   layout: 'admin',
   middleware: ['admin']
 });
 
-const supabase = useSupabaseClient() as  SupabaseClient<Database>
+const supabase = useSupabaseClient() as SupabaseClient<Database>
 const toast = useToast()
-const searchStore = useSearchStore()
-
 
 // Table columns
 const columns = [
@@ -399,6 +55,10 @@ const uploadProgress = ref(0)
 // Track deleting
 const deletingTrack = ref<Track | null>(null);
 const deleting = ref(false);
+
+// Search
+const searchStore = { query: ''}
+const query = ref('')
 
 // Format date
 const formatDate = (dateString) => {
@@ -662,3 +322,343 @@ onMounted(() => {
   fetchTracks();
 });
 </script>
+
+<template>
+  <div>
+    <div class="flex justify-between items-center mb-6">
+      <h1 class="text-2xl font-bold">Track Management</h1>
+      <button
+          class="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+          @click="showAddTrackModal = true"
+      >
+        <span class="i-heroicons-plus mr-2"/>
+        Add Track
+      </button>
+
+    </div>
+
+    <!-- Search and filters -->
+    <div class="bg-white p-4 rounded-lg shadow mb-6">
+      <div class="flex flex-col md:flex-row gap-4">
+        <div class="relative md:w-1/3">
+          <span class="absolute inset-y-0 left-0 flex items-center pl-3">
+            <span class="i-heroicons-magnifying-glass text-gray-400"/>
+          </span>
+          <input
+              v-model="searchStore.query"
+              type="text"
+              placeholder="Search tracks..."
+              class="pl-10 pr-4 py-2 w-full border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              @input="debouncedSearch"
+          >
+        </div>
+        <div class="flex-grow"/>
+        <button
+            class="inline-flex items-center px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500"
+            @click="fetchTracks"
+        >
+          <span class="i-heroicons-arrow-path mr-2" :class="{ 'animate-spin': loading }"/>
+          Refresh
+        </button>
+      </div>
+    </div>
+
+    <!-- Tracks table -->
+    <div class="bg-white rounded-lg shadow overflow-hidden">
+      <div v-if="loading" class="py-8 text-center">
+        <span class="i-heroicons-arrow-path animate-spin h-8 w-8 mx-auto text-gray-400"/>
+        <p class="mt-2 text-gray-500">Loading tracks...</p>
+      </div>
+      <div v-else-if="tracks.length === 0" class="py-8 text-center">
+        <span class="i-heroicons-musical-note h-12 w-12 mx-auto text-gray-400"/>
+        <p class="mt-2 text-gray-500">No tracks found</p>
+        <button
+            class="mt-4 px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500"
+            @click="fetchTracks"
+        >
+          Reset Filters
+        </button>
+      </div>
+      <table v-else class="min-w-full divide-y divide-gray-200">
+        <thead class="bg-gray-50">
+        <tr>
+          <th v-for="column in columns" :key="column.id" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+            {{ column.title }}
+          </th>
+        </tr>
+        </thead>
+        <tbody class="bg-white divide-y divide-gray-200">
+        <tr v-for="row in tracks" :key="row.id" class="hover:bg-gray-50">
+          <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ row.id }}</td>
+          <td class="px-6 py-4 whitespace-nowrap">
+            <div class="flex items-center">
+              <div class="flex-shrink-0 h-10 w-10 flex items-center justify-center shadow rounded">
+                <img
+                    v-if="row.cover_url"
+                    :src="row.cover_url"
+                    class="h-10 w-10 rounded-md object-cover"
+                    alt="Track cover"
+                >
+                <UIcon
+                    v-else
+                    name="i-heroicons-musical-note"
+                />
+              </div>
+              <div class="ml-4">
+                <div class="text-sm font-medium text-gray-900">{{ row.title }}</div>
+                <div class="text-sm text-gray-500">
+                    <span v-if="row.track_authors && row.track_authors.length">
+                      <span v-for="(rel, index) in row.track_authors" :key="rel.author.id">
+                        {{ rel.author.name }}<span v-if="index < row.track_authors.length - 1">, </span>
+                      </span>
+                    </span>
+                  <span v-else>Unknown Artist</span>
+                </div>
+              </div>
+            </div>
+          </td>
+          <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ formatDate(row.created_at) }}</td>
+          <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ row.play_count || 0 }}</td>
+          <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+            <div class="flex space-x-2 justify-end">
+              <button
+                  class="p-1 rounded-md text-blue-600 hover:bg-blue-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  @click="editTrack(row)"
+              >
+                <UIcon name="i-heroicons-pencil-square" class="text-black h-4 w-4"/>
+              </button>
+              <button
+                  class="p-1 rounded-md text-red-600 hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-red-500"
+                  @click="confirmDeleteTrack(row)"
+              >
+                <UIcon name="i-heroicons-trash" class="text-black h-4 w-4"/>
+              </button>
+            </div>
+          </td>
+        </tr>
+        </tbody>
+      </table>
+
+      <!-- Pagination -->
+      <div class="bg-white px-4 py-3 border-t border-gray-200 sm:px-6">
+        <div class="flex justify-between items-center">
+          <p class="text-sm text-gray-500">
+            Showing {{ tracks.length }} of {{ totalTracks }} tracks
+          </p>
+          <div class="flex items-center gap-1">
+            <button
+                v-for="page in totalPages"
+                :key="page"
+                :class="[
+                'px-3 py-1 text-sm rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500',
+                currentPage === page
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-white text-gray-700 hover:bg-gray-100'
+              ]"
+                @click="currentPage = page; fetchTracks()"
+            >
+              {{ page }}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Edit Track Modal -->
+    <div v-if="showEditModal" class="fixed inset-0 z-50 overflow-y-auto text-black" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+      <div class="flex items-end justify-center min-h-screen z-75 pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+        <!-- Background overlay -->
+        <!-- <div class="fixed inset-0 bg-opacity-75 transition-opacity z-50" aria-hidden="true" @click="showEditModal = false"></div> -->
+
+
+        <!-- Modal panel -->
+        <div class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
+          <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+            <div class="flex justify-between items-center pb-3 border-b">
+              <h3 id="modal-title" class="text-lg font-medium text-gray-900">Edit Track</h3>
+              <button class="text-gray-400 hover:text-gray-500" @click="showEditModal = false">
+                <UIcon name="i-heroicons-x-mark" class="h-6 w-6"/>
+              </button>
+            </div>
+            <div class="space-y-4 mt-4">
+              <div>
+                <label for="title" class="block text-sm font-medium text-gray-700">Title</label>
+                <input
+                    id="title"
+                    v-model="editingTrack.title"
+                    type="text"
+                    placeholder="Track title"
+                    class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                >
+              </div>
+              <div class="mt-4">
+                <AuthorPicker :model-value="editingAuthors"/>
+              </div>
+              <div>
+                <label for="cover_url" class="block text-sm font-medium text-gray-700">Cover URL</label>
+                <input
+                    id="cover_url"
+                    v-model="editingTrack.cover_url"
+                    type="text"
+                    placeholder="Cover image URL"
+                    class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                >
+              </div>
+              <div v-if="editingTrack.cover_url" class="mt-2">
+                <img
+                    :src="editingTrack.cover_url"
+                    alt="Cover preview"
+                    class="h-24 w-24 object-cover rounded-md"
+                >
+              </div>
+            </div>
+          </div>
+          <div class="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+            <button
+                type="button"
+                class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-base font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:ml-3 sm:w-auto sm:text-sm"
+                @click="updateTrack"
+            >
+              <UIcon v-if="editing" name="i-heroicons-arrow-path" class="animate-spin mr-2"/>
+              Save Changes
+            </button>
+            <button
+                type="button"
+                class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
+                @click="showEditModal = false"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Add Track Modal -->
+    <div v-if="showAddTrackModal" class="fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+      <div class="flex items-end justify-center min-h-screen z-75 pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+        <!-- Background overlay -->
+        <!-- <div class="fixed inset-0 bg-opacity-75 z-50 transition-opacity" aria-hidden="true" @click="showAddTrackModal = false"></div> -->
+
+        <!-- Modal panel -->
+        <div class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
+          <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+            <div class="flex justify-between items-center pb-3 border-b">
+              <h3 id="modal-title" class="text-lg font-medium text-gray-900">Add New Track</h3>
+              <button class="text-gray-400 hover:text-gray-500" @click="showAddTrackModal = false">
+                <UIcon name="i-heroicons-x-mark" class="h-6 w-6"/>
+              </button>
+            </div>
+            <div class="space-y-4 mt-4">
+              <div>
+                <label for="new-title" class="block text-sm font-medium text-gray-700">Title <span class="text-red-500">*</span></label>
+                <input
+                    id="new-title"
+                    v-model="newTrack.title"
+                    type="text"
+                    placeholder="Track title"
+                    required
+                    class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                >
+              </div>
+              <div>
+                <AuthorPicker
+                    v-model="newTrack.track_authors"
+                />
+              </div>
+              <div>
+                <label for="new-cover-url" class="block text-sm font-medium text-gray-700">Cover URL</label>
+                <input
+                    id="new-cover-url"
+                    v-model="newTrack.cover_url"
+                    type="text"
+                    placeholder="Cover image URL"
+                    class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                >
+              </div>
+              <div v-if="newTrack.cover_url" class="mt-2">
+                <img
+                    :src="newTrack.cover_url"
+                    alt="Cover preview"
+                    class="h-24 w-24 object-cover rounded-md"
+                >
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700">Audio File <span class="text-red-500">*</span></label>
+                <UFileUpload
+                    v-model="audioFile"
+                    icon="i-lucide-file-audio"
+                    accept="audio/mp3,audio/wav"
+                    class="cursor-pointer"
+                    size="xs"
+                    label="Drop your audio file here"
+                    description="MP3, WAV"
+                    @update:model-value="console.log(audioFile)"
+                />
+              </div>
+            </div>
+          </div>
+          <UProgress v-model="uploadProgress" color="primary"/>
+          <div class="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+            <button
+                type="button"
+                class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-base font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:ml-3 sm:w-auto sm:text-sm"
+                @click="uploadTrack"
+            >
+              <span v-if="uploading" class="animate-spin mr-2"><UIcon name="i-heroicons-arrow-path"/></span>
+              Add Track
+            </button>
+            <button
+                type="button"
+                class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
+                @click="showAddTrackModal = false"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Delete Confirmation Modal -->
+    <div v-if="showDeleteModal" class="fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+      <div class="flex items-end justify-center min-h-screen z-75 pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+        <!-- Background overlay -->
+        <!-- <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" aria-hidden="true" @click="showDeleteModal = false"></div> -->
+
+        <!-- Modal panel -->
+        <div class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
+          <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+            <div class="flex justify-between items-center pb-3 border-b">
+              <h3 id="modal-title" class="text-lg font-medium text-gray-900">Confirm Delete</h3>
+              <button class="text-gray-400 hover:text-gray-500" @click="showDeleteModal = false">
+                <span class="i-heroicons-x-mark h-6 w-6"/>
+              </button>
+            </div>
+            <div class="mt-4">
+              <p>Are you sure you want to delete the track <strong>{{ deletingTrack?.title }}</strong>?</p>
+              <p class="text-red-500 mt-2">This action cannot be undone.</p>
+            </div>
+          </div>
+          <div class="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+            <button
+                type="button"
+                class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-red-600 text-base font-medium text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 sm:ml-3 sm:w-auto sm:text-sm"
+                @click="deleteTrack"
+            >
+              <span v-if="deleting" class="i-heroicons-arrow-path animate-spin mr-2"/>
+              Delete Track
+            </button>
+            <button
+                type="button"
+                class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
+                @click="showDeleteModal = false"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</template>

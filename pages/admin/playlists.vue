@@ -1,19 +1,7 @@
-<template>
-  <div>
-    <div class="flex justify-between items-center mb-6">
-      <h1 class="text-2xl font-bold">Playlist Management</h1>
-      <UButton color="primary" icon="i-heroicons-plus">
-        Add Playlist
-      </UButton>
-    </div>
-    
-    <UTable :data="playlists"/>
-  </div>
-</template>
-
-<script setup>
-import { ref } from 'vue';
-import { useSearchStore } from "@/stores/searchStore.js";
+<script lang="ts" setup>
+import { ref, onMounted } from 'vue';
+import type { TableColumn } from '@nuxt/ui'
+import type { Playlist } from '@/types'
 
 definePageMeta({
   layout: 'admin',
@@ -21,11 +9,10 @@ definePageMeta({
 });
 
 const supabase = useSupabaseClient();
-const searchStore = useSearchStore();
 const toast = useToast();
 
 // Playlists data
-const playlists = ref([]);
+const playlists = ref<Playlist[]>([]);
 const loading = ref(true);
 
 // Pagination
@@ -74,7 +61,6 @@ const fetchPlaylists = async () => {
         .from('playlists')
         .select('*')
     playlists.value = data;
-
   }
   catch (err) {
     console.error('Error fetching playlists:', err);
@@ -92,6 +78,16 @@ onMounted(() => {
   fetchPlaylists();
   console.log(playlists.value)
 });
-
-
 </script>
+
+<template>
+  <div>
+    <div class="flex justify-between items-center mb-6">
+      <h1 class="text-2xl font-bold">Playlist Management</h1>
+      <UButton color="primary" icon="i-heroicons-plus" class="text-black bg-white rounded-full border">
+        Add Playlist
+      </UButton>
+    </div>
+    <UTable :data="playlists" class="bg-white rounded-xl"/>
+  </div>
+</template>

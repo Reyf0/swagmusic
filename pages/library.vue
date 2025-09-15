@@ -10,8 +10,11 @@ const supabase:SupabaseClient<Database> = useSupabaseClient()
 const user = useSupabaseUser()
 
 const playerStore = usePlayerStore()
-
 const { isPlaying } = storeToRefs(playerStore)
+
+// TODO Implement recent tracks using tracksStore
+const tracksStore = useTracksStore()
+const { items } = storeToRefs(tracksStore)
 const { playTrack, isCurrentTrack } = usePlayTrack()
 
 const likedTracks = ref<Track[]>([])

@@ -1,64 +1,16 @@
-<template>
-  <div>
-    <!-- Loading state -->
-    <div v-if="searchStore.isLoading" class="mt-4 text-center text-gray-500">
-      <UIcon name="i-heroicons-magnifying-glass" class="w-6 h-6 animate-spin mx-auto mb-2" />
-      Searching...
-    </div>
-    
-    <!-- Error state -->
-    <div v-if="searchStore.error" class="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg">
-      <div class="flex items-center">
-        <UIcon name="i-heroicons-exclamation-triangle" class="w-5 h-5 text-red-500 mr-2" />
-        <p class="text-red-700">{{ searchStore.error }}</p>
-      </div>
-      <UButton 
-        @click="searchStore.clearError()" 
-        variant="ghost" 
-        color="red" 
-        size="sm" 
-        class="mt-2"
-      >
-        Dismiss
-      </UButton>
-    </div>
-    
-    <!-- No results state (only show if search was performed and no error) -->
-    <div v-if="!searchStore.isLoading && !searchStore.error && searchStore.hasSearched && searchStore.results.length === 0" class="mt-4 text-center text-gray-500">
-      <UIcon name="i-heroicons-musical-note" class="w-12 h-12 mx-auto mb-2 opacity-50" />
-      <p>No tracks found for "{{ searchStore.query }}"</p>
-      <p class="text-sm mt-1">Try searching with different keywords or check the spelling.</p>
-    </div>
-    <div class="mt-6 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4">
-      <TrackCard
-        v-for="track in searchStore.results"
-        :key="track.id"
-        :track="track"
-        :tracks="searchStore.results"
-        variant="grid"
-        show-add-to-playlist
-        @add-to-playlist="openAddToPlaylistModal"
-      />
-    </div>
-    <!-- Add to Playlist Modal -->
-    <AddToPlaylistModal
-        :is-open="showAddToPlaylistModal"
-        :track="selectedTrack"
-        @close="showAddToPlaylistModal = false"
-        @add-to-playlist="handleAddToPlaylist"
-    />
-  </div>
-</template>
-
 <script setup lang="ts">
-import { useSearchStore } from '@/stores/searchStore'
+import { useTracksStore } from "@/stores/useTracksStore";
+import { storeToRefs } from "pinia";
+import { SupabaseClient } from '@supabase/supabase-js'
 
-const supabase = useSupabaseClient()
+const supabase:SupabaseClient<Database> = useSupabaseClient()
 const user = useSupabaseUser()
+
+const tracksStore = useTracksStore()
+const { isSearching, q, search, error , items } = storeToRefs(tracksStore)
+
 const showAddToPlaylistModal = ref(false)
 const selectedTrack = ref(null)
-
-const searchStore = useSearchStore()
 
 // Open add to playlist modal
 const openAddToPlaylistModal = (track) => {
@@ -138,3 +90,55 @@ const handleAddToPlaylist = async ({ playlistId, track, playlistName }) => {
   }
 }
 </script>
+
+<template>
+  <div class="m-5">
+    <!-- Loading state -->
+    <div v-if="isSearching" class="mt-4 text-center text-gray-500">
+      <UIcon name="i-heroicons-magnifying-glass" class="w-6 h-6 animate-spin mx-auto mb-2" />
+      Searching...
+    </div>
+
+    <!-- Error state -->
+    <div v-if="error" class="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+      <div class="flex items-center">
+        <UIcon name="i-heroicons-exclamation-triangle" class="w-5 h-5 text-red-500 mr-2" />
+        <p class="text-red-700">{{ error }}</p>
+      </div>
+      <UButton
+          @click="error.value = null"
+          variant="ghost"
+          color="red"
+          size="sm"
+          class="mt-2"
+      >
+        Dismiss
+      </UButton>
+    </div>
+
+    <!-- No results state (only show if search was performed and no error) -->
+    <div v-if="!isSearching && !error && items.value?.length === 0" class="mt-4 text-center text-gray-500">
+      <UIcon name="i-heroicons-musical-note" class="w-12 h-12 mx-auto mb-2 opacity-50" />
+      <p>No tracks found for "{{ q }}"</p>
+      <p class="text-sm mt-1">Try searching with different keywords or check the spelling.</p>
+    </div>
+    <div class="mt-6 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4">
+      <TrackCard
+          v-for="track in items"
+          :key="track.id"
+          :track="track"
+          :tracks="items"
+          variant="grid"
+          show-add-to-playlist
+          @add-to-playlist="openAddToPlaylistModal"
+      />
+    </div>
+    <!-- Add to Playlist Modal -->
+    <AddToPlaylistModal
+        :is-open="showAddToPlaylistModal"
+        :track="selectedTrack"
+        @close="showAddToPlaylistModal = false"
+        @add-to-playlist="handleAddToPlaylist"
+    />
+  </div>
+</template>

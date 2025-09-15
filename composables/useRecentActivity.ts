@@ -1,54 +1,53 @@
 import { ref } from 'vue'
-import type { SupabaseClient } from '@supabase/supabase-js'
-import type { Database, Playlist, AuthorUI, RecentTrackItem } from '@/types'
+import { useTracksStore } from '@/stores/useTracksStore'
+import { useAuthorsApi } from '@/composables/useAuthorsApi'
+import { usePlaylistsApi } from '@/composables/usePlaylistsApi'
+import type { AuthorRecentRow } from '@/composables/useAuthorsApi'
+import type { RecentPlaylistRow } from '@/composables/usePlaylistsApi'
+import type { Database, TrackUI, Playlist } from '@/types'
+
+/**
+ * useRecentActivity
+ * Оркестратор для страницы «Недавно слушали»:
+ * - делегирует треки в tracksStore (loadRecent)
+ * - получает recent authors и recent playlists через domain APIs
+ * - батчево подгружает детали плейлистов и возвращает структурированный результат
+ *
+ * Возвращает: { tracks, authors, playlists } — удобно для компонентов
+ *
+ * Порядок вызовов:
+ *  1) tracksStore.loadRecent(...) -> tracksStore.recentItems
+ *  2) authorsApi.getRecentAuthors(...)
+ *  3) playlistsApi.getRecentPlaylists(...) -> playlistsApi.getPlaylistsByIds(...)
+ *
+ * Отмена: tracksStore.cancelRecent() + api.cancel...
+ */
+
+export type RecentTrackItem = TrackUI & {
+    last_played?: string
+    play_count?: number
+}
 
 export const useRecentActivity = () => {
-    const supabase: SupabaseClient<Database> = useSupabaseClient()
     const user = useSupabaseUser()
-
     const tracksStore = useTracksStore()
+    const authorsApi = useAuthorsApi()
+    const playlistsApi = usePlaylistsApi()
 
-    // state
     const loading = ref(false)
     const error = ref<string | null>(null)
 
-    const recentTracks = ref<RecentTrackItem[]>([])
-    const recentAuthors = ref<AuthorUI[]>([])
-    const recentPlaylists = ref<Array<{ playlist: Playlist; last_played: string; plays: number }>>([])
-
-    // Abort controllers
-    let tracksController: AbortController | null = null
-    let authorsController: AbortController | null = null
-    let playlistsController: AbortController | null = null
-    let detailsController: AbortController | null = null
-
-    function isAbort(e: any) {
-        return e && (e.name === 'AbortError' || /aborted/i.test(String(e?.message ?? '')))
-    }
-
-    /** Cancel in-flight requests */
-    function cancelAll() {
-        try { tracksController?.abort() } catch {}
-        try { authorsController?.abort() } catch {}
-        try { playlistsController?.abort() } catch {}
-        try { detailsController?.abort() } catch {}
-        tracksController = authorsController = playlistsController = detailsController = null
-    }
-
     /**
-     * Load all recent activity:
-     *  - recent tracks (via RPC get_user_recent_tracks) -> then fetch full tracks_with_authors rows
-     *  - recent authors (via RPC get_user_recent_authors)
-     *  - recent playlists (via RPC get_user_recent_playlists) -> then fetch playlists rows
+     * loadAll — загружает всё сразу.
+     * options: { tracksLimit, authorsLimit, playlistsLimit }
      */
     async function loadAll(options?: { tracksLimit?: number; authorsLimit?: number; playlistsLimit?: number }) {
-        cancelAll()
+        // cancel previous in-flight requests
+        cancel()
+
         if (!user.value?.id) {
-            // Not logged in — clear and return
-            recentTracks.value = []
-            recentAuthors.value = []
-            recentPlaylists.value = []
-            return
+            // неавторизованный — возвращаем пустые массивы
+            return { tracks: [], authors: [], playlists: [] }
         }
 
         loading.value = true
@@ -58,117 +57,61 @@ export const useRecentActivity = () => {
         const authorsLimit = options?.authorsLimit ?? 10
         const playlistsLimit = options?.playlistsLimit ?? 10
 
-        // create controllers
-        tracksController = new AbortController()
-        authorsController = new AbortController()
-        playlistsController = new AbortController()
-        detailsController = new AbortController()
-
         try {
-            // 1) get recent track ids + last_played
-            const rpcTracks = await supabase
-                .rpc('get_user_recent_tracks_full', {
-                    p_user_id: user.value.id,
-                    p_limit: tracksLimit
-                })
-                .abortSignal(tracksController.signal)
+            // 1) треки — делегируем в tracksStore (get_user_recent_tracks_full + merge в кэш)
+            await tracksStore.loadRecent({ userId: user.value.id, limit: tracksLimit, reset: true })
+            const tracksResult = tracksStore.recentItems as RecentTrackItem[] // recentItems содержит last_played, play_count и authors
 
-            if (rpcTracks.error) throw rpcTracks.error
-            const recentRows = (rpcTracks.data ?? []) as Array<{ track_id: string; last_played: string; play_count: number }>
+            // 2) недавние авторы
+            const authors = await authorsApi.getRecentAuthors({ userId: user.value.id, limit: authorsLimit }) as AuthorRecentRow[]
 
+            // 3) недавние плейлисты -> затем детали
+            const recentPlaylistsRows = await playlistsApi.getRecentPlaylists({ userId: user.value.id, limit: playlistsLimit }) as RecentPlaylistRow[]
+            let playlists: Array<{ playlist: Playlist | { id: string }; last_played: string; plays: number }> = []
 
-            const trackIds = recentRows.map(r => r.track_id)
-            if (trackIds.length === 0) {
-                recentTracks.value = []
-            } else {
-                // 2) fetch full track rows (with authors) from view tracks_with_authors
-                // use detailsController so this can be canceled separately
-                const { data: detailedTracks, error: detailsErr } = await supabase
-                    .from('tracks_with_authors')
-                    .select('*')
-                    .in('id', trackIds)
-                    .abortSignal(detailsController.signal)
+            if (recentPlaylistsRows && recentPlaylistsRows.length > 0) {
+                const ids = recentPlaylistsRows.map(r => r.playlist_id)
+                const details = await playlistsApi.getPlaylistsByIds(ids)
+                const map = new Map<string, any>()
+                ;(details ?? []).forEach((p: any) => map.set(p.id, p))
 
-                if (detailsErr) throw detailsErr
-
-                // Map track id -> row for preserving order
-                const mapById = new Map<string, any>()
-                ;(detailedTracks ?? []).forEach((t: any) => mapById.set(t.id, t))
-
-                recentTracks.value = recentRows.map(r => ({
-                    track: mapById.get(r.track_id) ?? { id: r.track_id },
+                playlists = recentPlaylistsRows.map(r => ({
+                    playlist: map.get(r.playlist_id) ?? { id: r.playlist_id },
                     last_played: r.last_played,
-                    play_count: r.play_count,
-                    authors: (mapById.get(r.track_id)?.authors) ?? []
-                }))
-            }
-
-            // 3) get recent authors (RPC)
-            const rpcAuthors = await supabase
-                .rpc('get_user_recent_authors', { p_user_id: user.value.id, p_limit: authorsLimit })
-                .abortSignal(authorsController.signal)
-
-            if (rpcAuthors.error) throw rpcAuthors.error
-            recentAuthors.value = (rpcAuthors.data ?? []) as AuthorUI[]
-
-            // 4) get recent playlists (RPC) and fetch playlist details
-            const rpcPlaylists = await supabase
-                .rpc('get_user_recent_playlists', { p_user_id: user.value.id, p_limit: playlistsLimit })
-                .abortSignal(playlistsController.signal)
-
-            if (rpcPlaylists.error) throw rpcPlaylists.error
-            const playlistRows = (rpcPlaylists.data ?? []) as Array<{ playlist_id: string; last_played: string; plays: number }>
-
-            if (playlistRows.length === 0) {
-                recentPlaylists.value = []
-            } else {
-                const playlistIds = playlistRows.map(p => p.playlist_id)
-                const { data: playlistsDetails, error: plErr } = await supabase
-                    .from('playlists')
-                    .select('*, user_id')
-                    .in('id', playlistIds)
-                    .abortSignal(detailsController.signal)
-
-                if (plErr) throw plErr
-                const plMap = new Map<string, Playlist>()
-                ;(playlistsDetails ?? []).forEach((p: any) => plMap.set(p.id, p))
-
-                recentPlaylists.value = playlistRows.map(p => ({
-                    playlist: plMap.get(p.playlist_id) ?? { id: p.playlist_id },
-                    last_played: p.last_played,
-                    plays: p.plays
+                    plays: r.plays
                 }))
             }
 
             return {
-                tracks: recentTracks.value,
-                authors: recentAuthors.value,
-                playlists: recentPlaylists.value
+                tracks: tracksResult ?? [],
+                authors: authors ?? [],
+                playlists
             }
         } catch (err: any) {
-            if (isAbort(err)) {
-                // canceled -> no error
-                return null
-            }
+            // если отмена — апи/стор возвращают пустые массивы или бросают AbortError, здесь ловим общие ошибки
             console.error('useRecentActivity.loadAll error', err)
+            if (err?.name === 'AbortError') {
+                // отменено — не считаем это ошибкой
+                return { tracks: tracksStore.recentItems ?? [], authors: [], playlists: [] }
+            }
             error.value = String(err?.message ?? err)
-            // fallback: clear or keep previous
-            return null
+            return { tracks: tracksStore.recentItems ?? [], authors: [], playlists: [] }
         } finally {
             loading.value = false
-            // do not auto-abort controllers here (they will be reused/cancelled next call)
         }
     }
 
-    /** convenience methods */
-    const reload = (opts?: { tracksLimit?: number; authorsLimit?: number; playlistsLimit?: number }) => loadAll(opts)
-    const cancel = () => cancelAll()
+    function cancel() {
+        // cancel tracks request
+        tracksStore.cancelRecent()
+        // cancel authors/playlists requests
+        authorsApi.cancelRecentAuthors()
+        authorsApi.cancelAuthorsByIds()
+        playlistsApi.cancelRecentPlaylists()
+        playlistsApi.cancelPlaylistsByIds()
+    }
 
     return {
-        // state
-        loading, error,
-        recentTracks, recentAuthors, recentPlaylists,
-        // actions
-        loadAll, reload, cancel
+        loading, error, loadAll, cancel
     }
 }

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { usePlayerStore } from '@/stores/player'
-import { useSearchStore } from '@/stores/searchStore'
 import { useProfileStore } from '@/stores/useProfileStore'
+import { useTracksStore } from '@/stores/useTracksStore'
 import { storeToRefs } from 'pinia'
 import MiniPlayer from '@/components/MiniPlayer.vue'
 import PlayerViews from '@/components/player/PlayerViews.vue'
@@ -15,9 +15,9 @@ const supabase = useSupabaseClient()
 const profileStore = useProfileStore()
 const { displayName, avatarUrl, isLoggedIn, isAdmin } = storeToRefs(profileStore)
 const playerStore = usePlayerStore()
-const searchStore = useSearchStore()
-const { query } = storeToRefs(searchStore)
 const { currentTrack } = storeToRefs(playerStore)
+const tracksStore = useTracksStore()
+const { q } = storeToRefs(tracksStore)
 
 const loading = ref(true)
 const error = ref(null)
@@ -37,8 +37,9 @@ const expandedDefaultWidth = 240
 const profileDropdownMenuItems = ref<DropdownMenuItem[][]>([
     [
       { label: 'Profile', to: '/profile' },
-      { label: 'Upload', to: '/upload'},
-      { label: 'Settings '}
+      { label: 'Upload', to: '/upload' },
+      { label: 'Settings' },
+      { label: 'Studio', to: '/studio' }
     ],
     [
       { label: 'Log out', slot: 'logOut', onSelect() { signOut() } }
@@ -75,7 +76,7 @@ const signOut = async () => {
 }
 
 const handleSearch = async () => {
-  if (query.value) await router.push({ path: '/search', query: { q: query.value } })
+  if (q.value) await router.push({ path: '/search', query: { q: q.value } })
 }
 
 // Sidebar handlers
@@ -115,8 +116,8 @@ const handleRightSidebarResize = (width: number) => {
 }
 
 
-watch(query, async () => {
-  await searchStore.searchTracks(supabase)
+watch(q, async () => {
+  tracksStore.search()
 })
 
 onMounted(() => {
@@ -133,7 +134,7 @@ onMounted(() => {
           <div class="container mx-auto flex justify-between items-center">
             <UButton><NuxtLink to="/" class="text-[#4ade80] text-xl font-bold">SwagMusic</NuxtLink></UButton>
             <input
-                v-model="query"
+                v-model="q"
                 type="text"
                 placeholder="Search by title or artist"
                 class="hover:bg-old-neutral-700 transition w-full px-4 py-1 mx-10 border border-gray-500 text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-white"

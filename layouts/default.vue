@@ -129,21 +129,21 @@ onMounted(() => {
     <UApp>
       <div class="flex flex-col h-screen">
         <!-- NAVIGATION -->
-        <nav class="bg-gray-800 p-4">
+        <nav class="bg-black p-4">
           <div class="container mx-auto flex justify-between items-center">
-            <UButton><NuxtLink to="/" class="text-white text-xl font-bold">SwagMusic</NuxtLink></UButton>
+            <UButton><NuxtLink to="/" class="text-[#4ade80] text-xl font-bold">SwagMusic</NuxtLink></UButton>
             <input
                 v-model="query"
                 type="text"
                 placeholder="Search by title or artist"
-                class="hover:bg-gray-700 transition w-full px-4 py-1 mx-10 border border-gray-500 text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-white"
+                class="hover:bg-old-neutral-700 transition w-full px-4 py-1 mx-10 border border-gray-500 text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-white"
                 @keydown.enter="handleSearch"
             >
-            <div class="flex space-x-4">
-              <UButton><NuxtLink to="/" class="text-white hover:text-gray-300">Home</NuxtLink></UButton>
-              <UButton><NuxtLink to="/tracks" class="text-white hover:text-gray-300">Tracks</NuxtLink></UButton>
+            <div class="flex space-x-4 **:font-bold">
+              <UButton><NuxtLink to="/" class="hover:text-white text-gray-300">Home</NuxtLink></UButton>
+              <UButton><NuxtLink to="/tracks" class="hover:text-white text-gray-300">Tracks</NuxtLink></UButton>
               <template v-if="isLoggedIn">
-                <UButton><NuxtLink to="/library" class="text-white hover:text-gray-300">Library</NuxtLink></UButton>
+                <UButton><NuxtLink to="/library" class="hover:text-white text-gray-300">Library</NuxtLink></UButton>
                 <UDropdownMenu
                     :items="profileDropdownMenuItems"
                 >
@@ -153,9 +153,10 @@ onMounted(() => {
                 </UDropdownMenu>
               </template>
               <template v-else>
-                <UButton><NuxtLink to="/login" class="text-white hover:text-gray-300">Login</NuxtLink></UButton>
-                <UButton><NuxtLink to="/register" class="text-white hover:text-gray-300">Register</NuxtLink></UButton>
+                <UButton><NuxtLink to="/register" class="hover:text-white text-gray-300">Register</NuxtLink></UButton>
+                <UButton class="has-[a.router-link-active]:bg-transparent border bg-white hover:*:text-white"><NuxtLink to="/login" class="text-black">Login</NuxtLink></UButton>
               </template>
+              <ColorModeButton class="text-white hover:bg-gray-800/50"/>
             </div>
 
           </div>
@@ -163,7 +164,7 @@ onMounted(() => {
 
         <!-- MAIN CONTENT -->
         <!-- Main content + sidebar + views -->
-        <div class="flex flex-1 overflow-hidden">
+        <div class="flex  dark:text-white dark:bg-old-neutral-900 flex-1 overflow-hidden">
           <!-- Playlist Sidebar -->
           <ResizablePanel
             :width="sidebarWidth"
@@ -183,7 +184,7 @@ onMounted(() => {
           </ResizablePanel>
 
           <!-- Page Content -->
-          <main class="flex-1 overflow-y-auto p-4">
+          <main class="flex-1 overflow-y-auto">
             <!-- Если открыт fullscreen View, рендерим его -->
             <PlayerViews
                 v-if="playerStore.getFullscreenView"
@@ -207,7 +208,7 @@ onMounted(() => {
               class="shrink-0"
               @resize="handleRightSidebarResize"
           >
-            <aside class="w-full h-full border-l border-neutral-700 bg-neutral-800 text-white overflow-y-auto">
+            <aside class="w-full h-full border-l border-old-neutral-700 bg-old-neutral-900 text-white overflow-y-auto">
               <PlayerViews
                   :view="playerStore.getSidebarView!"
                   mode="sidebar"
@@ -227,7 +228,6 @@ onMounted(() => {
 
 <style scoped>
 nav a.router-link-active {
-  font-weight: bold;
   color: #4ade80;
 }
 </style>

@@ -13,14 +13,14 @@
           @click="player.play(track, queue)"
       >
         <div class="flex items-center space-x-3">
-          <div class="w-12 h-12 bg-gray-700 overflow-hidden rounded">
+          <div class="flex justify-center items-center w-12 h-12 bg-gray-700 overflow-hidden rounded">
             <img
                 v-if="track.cover_url"
                 :src="track.cover_url"
                 alt="cover"
                 class="w-full h-full object-cover"
             >
-            <UIcon v-else name="i-heroicons-musical-note" class="w-full h-full text-gray-400" />
+            <UIcon v-else name="i-heroicons-musical-note" class="w-5 h-5 text-gray-400" />
           </div>
           <div>
             <p class="font-semibold">{{ track.title }}</p>

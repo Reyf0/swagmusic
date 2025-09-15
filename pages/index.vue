@@ -1,11 +1,11 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import UiCarousel from "@/components/UiCarousel.vue";
-import type { TrackUI } from "@/types";
 
 const supabase = useSupabaseClient()
-const user = useSupabaseUser()
 
+const profileStore = useProfileStore()
+const { isLoggedIn, id } = storeToRefs(profileStore)
 const tracksStore = useTracksStore()
 const { feedItems, recentItems } = storeToRefs(tracksStore)
 
@@ -33,7 +33,7 @@ const fetchRecentPlays = async () => {
   isLoadingRecentTracks.value = true
   errorLoadingRecentTracks.value = false
   try {
-    await tracksStore.loadRecent({ userId: user.value.id })
+    await tracksStore.loadRecent({ userId: id.value })
     if (tracksStore.error) throw tracksStore.error
   }
   catch (e) {
@@ -47,7 +47,7 @@ const fetchRecentPlays = async () => {
 
 onMounted(() => {
   fetchTopTracks().catch(console.error)
-  fetchRecentPlays().catch(console.error)
+  if (isLoggedIn.value) fetchRecentPlays().catch(console.error)
 })
 
 onUnmounted(() => {
@@ -80,7 +80,7 @@ onUnmounted(() => {
     </section>
 
     <!-- Recent Listens -->
-    <section v-if="user?.value?.id">
+    <section v-if="isLoggedIn">
       <h2 class="text-2xl font-bold mb-4 ">🎧 Recently Listened</h2>
       <div v-if="isLoadingRecentTracks">
         <div class="flex gap-4 overflow-x-scroll scrollbar-hide">

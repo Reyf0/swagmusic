@@ -1,26 +1,8 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import type { SupabaseClient } from '@supabase/supabase-js'
-import type { Database, Tables } from '@/types/database.types'
+import type { Database, TrackWithAuthors } from '@/types'
 
-// Define proper TypeScript interfaces for search results
-export interface TrackWithAuthors {
-  id: string
-  title: string
-  album_id: string | null
-  audio_url: string | null
-  cover_url: string | null
-  created_at: string | null
-  duration_seconds: number | null
-  likes_count: number
-  user_id: string | null
-  track_authors?: Array<{
-    author_id: string
-    order_index: number | null
-    track_id: string
-    author?: Tables<'authors'> | null
-  }> | null
-}
 
 export const useSearchStore = defineStore('searchStore', () => {
   const query = ref('')
@@ -60,10 +42,7 @@ export const useSearchStore = defineStore('searchStore', () => {
         .from('tracks')
         .select(`
           *,
-          track_authors (
-            *,
-            author:authors(*)
-          )
+          authors:profiles(*)
         `)
 
       if (supabaseError) {

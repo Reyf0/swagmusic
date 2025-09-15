@@ -52,7 +52,7 @@ const isTrackPlaying = computed(() => currentTrack.value && isPlaying.value)
   <!-- Carousel variant - vertical compact card -->
   <div
     v-if="variant === 'carousel'"
-    class="flex-shrink-0 flex flex-col bg-gray-100 rounded shadow p-3 hover:shadow-md transition track-card"
+    class="dark:bg-old-neutral-950 flex-shrink-0 flex flex-col bg-gray-100 rounded shadow-lg p-3 hover:shadow-md transition track-card"
   >
     <div class="h-48 relative flex justify-center items-center aspect-square group grow overflow-hidden rounded shadow-md mb-3">
       <UIcon
@@ -145,7 +145,7 @@ const isTrackPlaying = computed(() => currentTrack.value && isPlaying.value)
 
 <style lang="postcss" scoped>
 .track-card .play-button {
-  @apply absolute bg-green-500 hover:bg-green-400 text-white rounded-full w-12 h-12 flex items-center justify-center shadow-lg opacity-0 group-hover:opacity-100;
+  @apply absolute  bg-green-500 hover:bg-green-400 text-white rounded-full w-12 h-12 flex items-center justify-center shadow-lg opacity-0 group-hover:opacity-100;
 }
 
 .track-card:hover .play-button {

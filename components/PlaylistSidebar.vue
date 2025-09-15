@@ -58,10 +58,13 @@ const navigateToPlaylist = (playlistId: string) => {
     :class="{ 'collapsed': isCollapsed }"
   >
     <!-- Header -->
-    <div class="flex items-center justify-between p-4 border-b border-gray-700">
+    <div
+        class="flex items-center p-4 border-b border-gray-700"
+        :class="isCollapsed ? 'justify-center' : 'justify-between'"
+    >
       <h2 v-if="!isCollapsed" class="text-lg font-semibold">Your Library</h2>
       <button
-        class="p-2 hover:bg-gray-800 rounded-full transition-colors"
+        class="flex items-center justify-center rounded-lg p-2 hover:bg-gray-800 transition-colors"
         :title="isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'"
         @click="emit('toggle-collapse')"
       >
@@ -95,7 +98,8 @@ const navigateToPlaylist = (playlistId: string) => {
           <div v-else-if="playlists.length === 0" class="text-center py-8 text-gray-400">
             <UIcon name="i-heroicons-musical-note" class="w-12 h-12 mx-auto mb-2 opacity-50" />
             <p class="text-sm">No playlists yet</p>
-            <p class="text-xs mt-1">Create your first playlist</p>
+            <p v-if="user?.value?.id" class="text-xs mt-1">Create your first playlist</p>
+            <NuxtLink v-else to="/login" class="text-xs mt-1 hover:underline">Create your first playlist</NuxtLink>
           </div>
 
           <div v-else class="space-y-1">
@@ -105,7 +109,7 @@ const navigateToPlaylist = (playlistId: string) => {
               class="flex items-center p-3 hover:bg-gray-800 rounded-lg cursor-pointer transition-colors group"
               @click="navigateToPlaylist(playlist.id)"
             >
-              <div class="w-12 h-12 bg-gray-700 rounded-lg flex items-center justify-center mr-3 flex-shrink-0">
+              <div class="size-12 bg-gray-700 rounded-lg flex items-center justify-center mr-3 flex-shrink-0">
                 <img
                   v-if="playlist.cover_url"
                   :src="playlist.cover_url"
@@ -127,9 +131,9 @@ const navigateToPlaylist = (playlistId: string) => {
 
       <!-- Collapsed state -->
       <template v-else>
-        <div class="p-2 space-y-2">
+        <div class="flex flex-col items-center justify-center p-2 space-y-2">
           <button
-            class="w-full p-3 hover:bg-gray-800 rounded-lg transition-colors"
+            class="flex items-center justify-center p-2.5 hover:bg-gray-800 rounded-lg transition-colors"
             title="Create Playlist"
             @click="navigateTo('/create-playlist')"
           >

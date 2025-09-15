@@ -44,10 +44,7 @@ const fetchPlaylist = async () => {
         *,
         track:tracks(
           *,
-          track_authors(
-            *,
-            author:authors(*)
-          )
+          author:profiles(*)
         )
       `)
       .eq('playlist_id', playlistId)

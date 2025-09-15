@@ -2,14 +2,15 @@
 import { usePlayerStore } from '@/stores/player'
 import { storeToRefs } from 'pinia'
 import type { SupabaseClient } from "@supabase/supabase-js";
-import type { Database } from '@/types/database.types'
-import type {Like, Track} from "@/types/global";
-import {usePlayTrack} from "@/composables/usePlayTrack";
+import type { Database, Like, Track } from '@/types'
+import { usePlayTrack } from "@/composables/usePlayTrack";
 import { formatDuration } from '@/utils/formatDuration'
 
 const supabase:SupabaseClient<Database> = useSupabaseClient()
 const user = useSupabaseUser()
+
 const playerStore = usePlayerStore()
+
 const { isPlaying } = storeToRefs(playerStore)
 const { playTrack, isCurrentTrack } = usePlayTrack()
 
@@ -56,7 +57,7 @@ const fetchLikedTracks = async () => {
     else {
       const { data, error: tracksError } = await supabase
           .from('tracks')
-          .select('*, track_authors(*, author:authors(*))')
+          .select('*, profiles(*)')
           .in('id', liked?.map(like => like.target_id) || [])
 
       if (tracksError) {
@@ -140,10 +141,7 @@ const fetchRecentlyPlayed = async () => {
         *,
         track:tracks(
           *,
-          track_authors(
-            *,
-            author:authors(*)
-          )
+          author:profiles(*)
         )
       `)
         .eq('user_id', user.value.id)
@@ -156,6 +154,16 @@ const fetchRecentlyPlayed = async () => {
   } catch (e) {
     console.error('Error fetching play history:', e)
   }
+}
+
+function formatDate(s: string) {
+  s = s.replace(/\D/g, ' ').split(' ', 3)
+  const dt = new Date(s[0], s[1] - 1, s[2]);
+  return dt.toLocaleString('en-CA', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric'
+  });
 }
 
 </script>
@@ -200,40 +208,42 @@ const fetchRecentlyPlayed = async () => {
 
         <div v-else>
           <!-- Liked tracks table -->
-          <div class="bg-white rounded-lg shadow overflow-hidden">
+          <div class="rounded-lg shadow overflow-hidden">
             <div class="grid grid-cols-12 gap-4 py-2 px-4 border-b text-sm font-medium text-gray-500">
               <div class="col-span-1">#</div>
               <div class="col-span-4">Title</div>
-              <div class="col-span-4">Artist</div>
-              <div class="col-span-1">Date added</div>
+              <div class="col-span-3">Artist</div>
+              <div class="col-span-2">Date added</div>
               <div class="col-span-2 text-right">Duration</div>
             </div>
 
             <div
               v-for="(track, index) in likedTracks"
               :key="track.id"
-              class="grid grid-cols-12 gap-4 py-3 px-4 hover:bg-gray-50 border-b items-center"
-              :class="{ 'bg-gray-50': isCurrentTrack(track) }"
+              class="grid grid-cols-12 rounded-lg gap-4 py-3 px-4 hover:bg-old-neutral-200 dark:hover:dark:bg-old-neutral-700 border-b items-center"
+              :class="{ 'bg-gray-200 dark:bg-old-neutral-600': isCurrentTrack(track) }"
+              @dblclick="playTrack(track, likedTracks)"
             >
               <!-- Track Number/Play Button -->
               <div class="col-span-1 flex items-center">
-                <span v-if="!isCurrentTrack(track) && !isPlaying" class="text-gray-400">{{ index + 1 }}</span>
                 <button
-                  v-else
-                  class="text-gray-600 hover:text-indigo-600"
-                  @click="playTrack(track, likedTracks);"
+                    class="text-gray-600 dark:*:text-old-neutral-300"
+                    @click="playTrack(track, likedTracks);"
                 >
                   <UIcon
-                    :name="isCurrentTrack(track) && isPlaying ? 'i-heroicons-pause' : 'i-heroicons-play'"
-                    class="w-5 h-5"
+                      v-if="isCurrentTrack(track)"
+                      :name="isCurrentTrack(track) && isPlaying ? 'i-heroicons-pause' : 'i-heroicons-play'"
+                      class="w-5 h-5"
                   />
+                  <span v-else class="text-gray-400">{{ index + 1 }}</span>
                 </button>
+
               </div>
 
               <!-- Track Title & Cover -->
               <div class="col-span-4 flex items-center">
                 <div class="w-10 h-10 mr-3 aspect-square rounded bg-gradient-to-br from-gray-200 to-gray-300 flex items-center justify-center">
-                  <UIcon v-if="!track.cover_url" name="i-heroicons-musical-note" class="w-16 h-16 text-gray-400" />
+                  <UIcon v-if="!track.cover_url" name="i-heroicons-musical-note" class="w-5 h-5 text-gray-400" />
                   <img
                       v-else
                       :src="track?.cover_url"
@@ -241,14 +251,14 @@ const fetchRecentlyPlayed = async () => {
                       alt="Cover">
                 </div>
                 <div>
-                  <div class="font-medium" :class="{ 'text-indigo-600': isCurrentTrack(track) }">
+                  <div class="font-medium" :class="{ 'text-[#4ade80]': isCurrentTrack(track) }">
                     {{ track.title }}
                   </div>
                 </div>
               </div>
 
               <!-- Artist -->
-              <div class="col-span-4 truncate">
+              <div class="col-span-3 truncate">
                 <span v-if="track.track_authors && track.track_authors.length">
                   <span v-for="(rel, idx) in track.track_authors" :key="rel.author.id">
                     {{ rel.author.name }}<span v-if="idx < track.track_authors.length - 1">, </span>
@@ -257,8 +267,9 @@ const fetchRecentlyPlayed = async () => {
                 <span v-else>Unknown Artist</span>
               </div>
               <!-- Date Added -->
-              <div class="col-span-1 text-gray-500">
-                <span>{{ }}</span>
+              <div class="col-span-2 text-gray-500">
+
+                <span> {{ formatDate(track.created_at) }} </span>
               </div>
 
               <!-- Duration -->
@@ -319,7 +330,7 @@ const fetchRecentlyPlayed = async () => {
           </div>
         </div>
 
-        <div v-if="playlists.length === 0" class="text-center py-6 bg-gray-50 rounded-lg">
+        <div v-if="playlists.length === 0" class="text-center py-6  rounded-lg">
           <p class="text-gray-500">You haven't created any playlists yet.</p>
         </div>
 
@@ -332,7 +343,7 @@ const fetchRecentlyPlayed = async () => {
           >
             <div class="playlist-cover relative overflow-hidden rounded-md shadow-md mb-3">
               <div class="aspect-square bg-gradient-to-br from-gray-200 to-gray-300 flex items-center justify-center">
-                <UIcon v-if="!playlist.cover_url" name="i-heroicons-musical-note" class="w-16 h-16 text-gray-400" />
+                <UIcon v-if="!playlist?.cover_url" name="i-heroicons-musical-note" class="w-16 h-16 text-gray-400" />
                 <img v-else :src="playlist.cover_url" class="w-full h-full object-cover" alt="Playlist cover" >
               </div>
 
@@ -355,7 +366,7 @@ const fetchRecentlyPlayed = async () => {
       <div class="mb-8">
         <h2 class="text-xl font-semibold mb-4">Recently Played</h2>
 
-        <div v-if="recentlyPlayed.length === 0" class="text-center py-6 bg-gray-50 rounded-lg">
+        <div v-if="recentlyPlayed.length === 0" class="text-center py-6 rounded-lg">
           <p class="text-gray-500">No recently played tracks.</p>
         </div>
 

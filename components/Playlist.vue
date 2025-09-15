@@ -128,7 +128,7 @@ const formatDuration = (seconds) => {
           <!-- Track Title & Cover -->
           <div class="col-span-5 flex items-center">
             <img 
-              :src="track.cover_url || 'https://via.placeholder.com/40x40?text=No+Cover'" 
+              :src="track?.cover_url"
               class="w-10 h-10 object-cover rounded mr-3"
               alt="Track cover"
             >
@@ -141,7 +141,7 @@ const formatDuration = (seconds) => {
 
           <!-- Artist -->
           <div class="col-span-4 truncate">
-            <span v-if="track.track_authors && track.track_authors.length">
+            <span v-if="track?.track_authors && track?.track_authors?.length">
               <span v-for="(rel, idx) in track.track_authors" :key="rel.author.id">
                 {{ rel.author.name }}<span v-if="idx < track.track_authors.length - 1">, </span>
               </span>

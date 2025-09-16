@@ -4,13 +4,25 @@
 
 
 
+
 :root {
-  --primary: #00c74f;
-  --ui-primary: rgba(0, 0, 0, 0);
-  --secondary: #f59e0b;
-  --accent: #ec4899;
-  --background: #f3f4f6;
-  --text: #111827;
+    --brand: #4ade80; /* цвет лого */
+    --ui-primary: rgba(0, 0, 0, 0);
+}
+
+@theme {
+    --color-brand: var(--brand);
+    --color-brand-dark: #22c55e; /* затемнённый */
+    --color-brand-light: #86efac; /* осветлённый */
+}
+
+.dark {
+    /* Dark preset (old-neutral) */
+    /*--ui-background: #171717;*/
+    /*--ui-foreground: #f9fafb;*/
+    /*--ui-border: #262626;*/
+    /*--ui-muted: #737373;*/
+    /*--ui-accent: #f472b6;*/
 }
 
 img {

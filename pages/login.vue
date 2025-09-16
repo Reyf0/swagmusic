@@ -1,5 +1,11 @@
 <script setup lang="ts">
-const supabase = useSupabaseClient();
+import type { SupabaseClient } from "@supabase/supabase-js";
+import { Database } from '@/types'
+definePageMeta({
+  layout: 'auth'
+})
+
+const supabase:SupabaseClient<Database> = useSupabaseClient();
 const email = ref('');
 const password = ref('');
 const router = useRouter();
@@ -62,7 +68,7 @@ async function signInWithGoogle(response) {
           placeholder="Enter your email" 
           type="email" 
           required
-          class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+          class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500"
         >
       </div>
 
@@ -74,7 +80,7 @@ async function signInWithGoogle(response) {
           placeholder="Enter your password" 
           type="password" 
           required
-          class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+          class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500"
         >
       </div>
 
@@ -85,7 +91,7 @@ async function signInWithGoogle(response) {
       <button 
         type="submit" 
         :disabled="isLoading"
-        class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50"
+        class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-500 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50"
         @click="signInWithEmail"
       >
         <span v-if="isLoading">Signing in...</span>
@@ -107,7 +113,7 @@ async function signInWithGoogle(response) {
       <div class="text-center mt-4">
         <p class="text-sm text-gray-600">
           Don't have an account? 
-          <NuxtLink to="/register" class="text-indigo-600 hover:text-indigo-500">
+          <NuxtLink to="/register" class="font-medium text-green-600 hover:text-green-500">
             Register
           </NuxtLink>
         </p>

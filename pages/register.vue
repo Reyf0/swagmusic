@@ -121,7 +121,7 @@ async function signUpNewUser() {
 
 <template>
   <div class="max-w-md mx-auto">
-    <h1 class="text-2xl font-semibold text-old-neutral-800 dark:text-old-neutral-100 mb-4 text-center">Создать аккаунт</h1>
+    <h1 class="text-2xl font-semibold text-old-neutral-800 dark:text-white mb-4 text-center">Создать аккаунт</h1>
 
     <!-- steps indicator -->
     <div class="flex items-center justify-between mb-6">
@@ -157,14 +157,14 @@ async function signUpNewUser() {
         <span class="text-sm font-medium">Продолжить через Google</span>
       </button>
 
-      <div class="my-4 text-center text-sm text-old-neutral-400 dark:text-old-neutral-400">— или —</div>
+      <div class="my-4 text-center text-sm text-old-neutral-400 dark:text-old-neutral-300">или</div>
 
       <!-- animated steps -->
       <div class="relative min-h-[220px]">
         <transition :name="direction === 'left' ? 'slide-left' : 'slide-right'" mode="out-in">
           <!-- STEP 1: email -->
           <div v-if="step === 1" key="step-1" class="space-y-4">
-            <label class="block text-sm font-medium text-old-neutral-700 dark:text-old-neutral-200">Email</label>
+            <label class="block text-sm font-medium text-old-neutral-700 dark:text-white">Email</label>
             <input
                 v-model="email"
                 type="email"
@@ -177,7 +177,7 @@ async function signUpNewUser() {
 
           <!-- STEP 2: username -->
           <div v-else-if="step === 2" key="step-2" class="space-y-4">
-            <label class="block text-sm font-medium text-old-neutral-700 dark:text-old-neutral-200">Имя пользователя</label>
+            <label class="block text-sm font-medium text-old-neutral-700 dark:text-white">Имя пользователя</label>
             <input
                 v-model="username"
                 type="text"
@@ -190,7 +190,7 @@ async function signUpNewUser() {
 
           <!-- STEP 3: password -->
           <div v-else key="step-3" class="space-y-4">
-            <label class="block text-sm font-medium text-old-neutral-700 dark:text-old-neutral-200">Пароль</label>
+            <label class="block text-sm font-medium text-old-neutral-700 dark:text-white">Пароль</label>
             <input
                 v-model="password"
                 type="password"
@@ -198,7 +198,7 @@ async function signUpNewUser() {
                 @keyup.enter="canNextStep ? signUpNewUser() : nextStep()"
                 class="w-full px-3 py-2 rounded-md dark:text-old-neutral-400 border border-old-neutral-200 dark:border-old-neutral-700 bg-white dark:bg-old-neutral-800 focus:outline-none focus:ring-2 focus:ring-green-500"
             />
-            <label class="block text-sm font-medium text-old-neutral-700 dark:text-old-neutral-200">Подтвердите пароль</label>
+            <label class="block text-sm font-medium text-old-neutral-700 dark:text-white">Подтвердите пароль</label>
             <input
                 v-model="confirmPassword"
                 type="password"
@@ -252,7 +252,7 @@ async function signUpNewUser() {
 
       <p class="mt-4 text-center text-sm text-old-neutral-500 dark:text-old-neutral-400">
         Уже есть аккаунт?
-        <NuxtLink to="/login" class="ml-1 font-medium text-green-600 hover:text-green-500">Войти</NuxtLink>
+        <NuxtLink to="/login" class="ml-1 font-medium text-green-500 hover:text-green-400">Войти</NuxtLink>
       </p>
     </div>
   </div>

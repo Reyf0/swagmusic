@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, watch, onUnmounted } from 'vue'
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from '@/types'
 
@@ -14,6 +14,22 @@ const username = ref<string>('')
 const password = ref<string>('')
 const confirmPassword = ref<string>('')
 
+const emailStatus = ref<'idle' | 'checking' | 'available' | 'taken'>('idle')
+
+// сброс статуса при редактировании email (чтобы индикатор не вводил в заблуждение)
+watch(email, () => {
+  emailStatus.value = 'idle'
+})
+
+const usernameStatus = ref<'idle' | 'checking' | 'available' | 'taken'>('idle')
+let usernameCheckTimer: ReturnType<typeof setTimeout> | null = null
+
+const infoMsg = ref('') // информационное уведомление после успеха
+
+// password policy подсчёт
+const passwordLengthOk = computed(() => password.value.length >= 6)
+const passwordsMatch = computed(() => password.value && password.value === confirmPassword.value)
+
 const step = ref<number>(1) // 1..3
 const isLoading = ref<boolean>(false)
 const errorMsg = ref<string>('')
@@ -26,15 +42,15 @@ const canNextStep = computed(() => {
     return email.value.trim().length > 0 && /\S+@\S+\.\S+/.test(email.value)
   }
   if (step.value === 2) {
-    return username.value.trim().length >= 3
+    return username.value.trim().length >= 3 && usernameStatus.value === 'available'
   }
   if (step.value === 3) {
-    return password.value.length >= 6 && password.value === confirmPassword.value
+    return passwordLengthOk.value && passwordsMatch.value
   }
   return false
 })
 
-function nextStep() {
+async function nextStep() {
   errorMsg.value = ''
   if (!canNextStep.value) {
     // показываем пользовательскую ошибку для текущего шага
@@ -46,9 +62,21 @@ function nextStep() {
     }
     return
   }
+
+  // если мы сейчас на шаге 1 - проверяем email перед переходом
+  if (step.value === 1) {
+    const ok = await checkEmailAvailable()
+    if (!ok) {
+      errorMsg.value = 'Этот email уже зарегистрирован'
+      return
+    }
+    // если ok - продолжаем (далее будут другие валидации)
+  }
+
   direction.value = 'left'
   if (step.value < 3) step.value += 1
 }
+
 
 function prevStep() {
   errorMsg.value = ''
@@ -96,6 +124,8 @@ async function signUpNewUser() {
     if (authError) throw authError
 
     if (authData?.user) {
+      infoMsg.value = 'Аккаунт успешно создан. Добро пожаловать в SwagMusic!'
+
       const { error } = await supabase.auth.signInWithPassword({
         email: email.value,
         password: password.value,
@@ -117,6 +147,81 @@ async function signUpNewUser() {
     isLoading.value = false
   }
 }
+
+async function checkEmailAvailable() {
+  const val = email.value?.trim()
+  if (!val || !/\S+@\S+\.\S+/.test(val)) {
+    emailStatus.value = 'idle'
+    return false
+  }
+
+  emailStatus.value = 'checking'
+  try {
+    // используем таблицу profiles (в твоей схеме там есть поле email)
+    const { data, error } = await supabase
+        .from('profiles')
+        .select('id', { count: 'exact' })
+        .eq('email', val)
+        .limit(1)
+
+    if (error) {
+      console.warn('email check error', error)
+      emailStatus.value = 'idle'
+      return false
+    }
+
+    const taken = Array.isArray(data) && data.length > 0
+    emailStatus.value = taken ? 'taken' : 'available'
+    return !taken
+  } catch (err) {
+    console.error(err)
+    emailStatus.value = 'idle'
+    return false
+  }
+}
+
+// Проверяет уникальность username (debounced)
+async function checkUsernameUnique() {
+  const val = username.value.trim()
+  if (val.length < 3) {
+    usernameStatus.value = 'idle'
+    return
+  }
+
+  usernameStatus.value = 'checking'
+  try {
+    const { data, error, count } = await supabase
+        .from('profiles')
+        .select('id', { head: false, count: 'exact' })
+        .eq('username', val)
+        .limit(1)
+
+    if (error) {
+      console.warn('username check error', error)
+      usernameStatus.value = 'idle'
+      return
+    }
+
+    // если есть запись — занято
+    usernameStatus.value = (data && data.length > 0) ? 'taken' : 'available'
+  } catch (e) {
+    console.error(e)
+    usernameStatus.value = 'idle'
+  }
+}
+
+// Debounced watch на username
+watch(username, () => {
+  if (usernameCheckTimer) clearTimeout(usernameCheckTimer)
+  usernameCheckTimer = setTimeout(() => {
+    checkUsernameUnique()
+  }, 500) // задержка 500ms
+})
+
+onUnmounted(() => {
+  if (usernameCheckTimer) clearTimeout(usernameCheckTimer)
+})
+
 </script>
 
 <template>
@@ -170,21 +275,46 @@ async function signUpNewUser() {
                 type="email"
                 placeholder="you@example.com"
                 @keyup.enter="nextStep"
-                class="w-full px-3 py-2 dark:text-old-neutral-400 rounded-md border border-old-neutral-200 dark:border-old-neutral-700 bg-white dark:bg-old-neutral-800 focus:outline-none focus:ring-2 focus:ring-brand"
+                class="w-full pr-28 px-3 py-2 dark:text-old-neutral-400 rounded-md border border-old-neutral-200 dark:border-old-neutral-700 bg-white dark:bg-old-neutral-800 focus:outline-none focus:ring-2 focus:ring-brand"
             />
+            <p class="text-xs mt-2">
+              <span v-if="emailStatus === 'checking'">Проверка email…</span>
+              <span v-else-if="emailStatus === 'available'" class="text-green-600">Email свободен</span>
+              <span v-else-if="emailStatus === 'taken'" class="text-red-600">Этот email уже зарегистрирован</span>
+            </p>
             <p class="text-xs text-old-neutral-500">Мы будем использовать этот email для входа и уведомлений.</p>
           </div>
 
           <!-- STEP 2: username -->
           <div v-else-if="step === 2" key="step-2" class="space-y-4">
             <label class="block text-sm font-medium text-old-neutral-700 dark:text-white">Имя пользователя</label>
-            <input
-                v-model="username"
-                type="text"
-                placeholder="Например SwagUser"
-                @keyup.enter="nextStep"
-                class="w-full px-3 py-2 rounded-md border border-old-neutral-200 dark:border-old-neutral-700 dark:text-old-neutral-400 bg-white dark:bg-old-neutral-800 focus:outline-none focus:ring-2 focus:ring-green-500"
-            />
+
+            <div class="relative">
+              <input
+                  v-model="username"
+                  type="text"
+                  placeholder="Например SwagUser"
+                  @keyup.enter="nextStep"
+                  class="w-full px-3 py-2 rounded-md border border-old-neutral-200 dark:border-old-neutral-700 dark:text-old-neutral-400 bg-white dark:bg-old-neutral-800 focus:outline-none focus:ring-2 focus:ring-green-500"
+              />
+              <!-- статус -->
+              <div class="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-2">
+                <template v-if="usernameStatus === 'checking'">
+                  <!-- spinner -->
+                  <svg class="w-5 h-5 animate-spin" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none" stroke-linecap="round"/></svg>
+                </template>
+
+                <template v-else-if="usernameStatus === 'available'">
+                  <span class="text-sm text-green-600">Свободно</span>
+                </template>
+
+                <template v-else-if="usernameStatus === 'taken'">
+                  <span class="text-sm text-red-600">Занято</span>
+                </template>
+              </div>
+
+            </div>
+
             <p class="text-xs text-old-neutral-500">Имя пользователя уникально и будет частью ссылки профиля.</p>
           </div>
 
@@ -206,7 +336,21 @@ async function signUpNewUser() {
                 @keyup.enter="canNextStep ? signUpNewUser() : nextStep()"
                 class="w-full px-3 py-2 rounded-md dark:text-old-neutral-400 border border-old-neutral-200 dark:border-old-neutral-700 bg-white dark:bg-old-neutral-800 focus:outline-none focus:ring-2 focus:ring-green-500"
             />
-            <p class="text-xs text-old-neutral-500">Пароль должен быть не короче 6 символов.</p>
+            <!-- Password policy hint -->
+            <div class="mt-2 text-sm">
+              <div class="flex items-center gap-2">
+                <svg v-if="passwordLengthOk" class="w-4 h-4 text-green-600" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5" fill="none" stroke="currentColor" stroke-width="2"/></svg>
+                <svg v-else class="w-4 h-4 text-slate-400" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2" fill="none"/></svg>
+                <span :class="passwordLengthOk ? 'text-green-600' : 'text-slate-500'">Минимум 6 символов</span>
+              </div>
+
+              <div class="flex items-center gap-2 mt-1">
+                <svg v-if="passwordsMatch" class="w-4 h-4 text-green-600" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5" fill="none" stroke="currentColor" stroke-width="2"/></svg>
+                <svg v-else class="w-4 h-4 text-slate-400" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2" fill="none"/></svg>
+                <span :class="passwordsMatch ? 'text-green-600' : 'text-slate-500'">Пароли совпадают</span>
+              </div>
+            </div>
+
           </div>
         </transition>
       </div>

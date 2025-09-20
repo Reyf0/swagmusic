@@ -38,7 +38,7 @@ const profileDropdownMenuItems = ref<DropdownMenuItem[][]>([
     [
       { label: 'Profile', to: '/profile' },
       { label: 'Upload', to: '/upload' },
-      { label: 'Settings' },
+      { label: 'Settings', to: '/settings' },
       { label: 'Studio', to: '/studio' }
     ],
     [
@@ -147,6 +147,8 @@ onMounted(() => {
                 <UButton><NuxtLink to="/library" class="hover:text-white text-gray-300">Library</NuxtLink></UButton>
                 <UDropdownMenu
                     :items="profileDropdownMenuItems"
+                    class="bg-old-neutral-800 cursor-pointer"
+                    :ui="{ content: 'bg-old-neutral-800' }"
                 >
                   <UTooltip :text="displayName">
                     <UAvatar :src="avatarUrl" :alt="displayName"/>
@@ -157,7 +159,7 @@ onMounted(() => {
                 <UButton><NuxtLink to="/register" class="hover:text-white text-gray-300">Register</NuxtLink></UButton>
                 <UButton class="has-[a.router-link-active]:bg-transparent border bg-white hover:*:text-white"><NuxtLink to="/login" class="text-black">Login</NuxtLink></UButton>
               </template>
-              <ColorModeButton class="text-white hover:bg-gray-800/50"/>
+              <ColorModeButton class="cursor-pointer text-white hover:bg-gray-800/50"/>
             </div>
 
           </div>

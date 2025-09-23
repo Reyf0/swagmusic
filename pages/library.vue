@@ -195,16 +195,16 @@ function formatDate(s: string) {
         </div>
 
         <div v-if="isLoading" class="flex justify-center items-center py-6">
-          <div class="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-indigo-500"/>
+          <div class="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-green-500"/>
         </div>
 
         <div v-else-if="error" class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
           <p>{{ error }}</p>
         </div>
 
-        <div v-else-if="likedTracks.length === 0" class="text-center py-6 bg-gray-50 rounded-lg">
+        <div v-else-if="likedTracks.length === 0" class="text-center py-6 rounded-lg">
           <p class="text-gray-500">You haven't added any favorites yet.</p>
-          <NuxtLink to="/tracks" class="text-indigo-600 hover:underline mt-2 inline-block">
+          <NuxtLink to="/tracks" class="text-green-600 hover:underline mt-2 inline-block">
             Browse tracks to add favorites
           </NuxtLink>
         </div>
@@ -223,7 +223,7 @@ function formatDate(s: string) {
             <div
               v-for="(track, index) in likedTracks"
               :key="track.id"
-              class="grid grid-cols-12 rounded-lg gap-4 py-3 px-4 hover:bg-old-neutral-200 dark:hover:dark:bg-old-neutral-700 border-b items-center"
+              class="grid grid-cols-12 rounded-lg gap-4 py-3 px-4 transition hover:bg-old-neutral-200 dark:hover:dark:bg-old-neutral-700 border-b items-center"
               :class="{ 'bg-gray-200 dark:bg-old-neutral-600': isCurrentTrack(track) }"
               @dblclick="playTrack(track, likedTracks)"
             >
@@ -310,7 +310,7 @@ function formatDate(s: string) {
                     v-model="newPlaylistName"
                     type="text"
                     placeholder="My Awesome Playlist"
-                    class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
                     @keyup.enter="createPlaylist"
                 >
               </div>
@@ -377,7 +377,7 @@ function formatDate(s: string) {
           <div
               v-for="track in recentlyPlayed"
               :key="track.id"
-              class="flex items-center p-2 hover:bg-gray-50 rounded"
+              class="flex items-center p-2 hover:bg-gray-50 transition rounded"
           >
             <div class="w-10 h-10 mr-3 aspect-square rounded bg-gradient-to-br from-gray-200 to-gray-300 flex items-center justify-center">
               <UIcon v-if="!track.cover_url" name="i-heroicons-musical-note" class="w-16 h-16 text-gray-400" />

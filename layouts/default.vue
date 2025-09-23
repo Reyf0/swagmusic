@@ -148,10 +148,10 @@ onMounted(() => {
                 <UDropdownMenu
                     :items="profileDropdownMenuItems"
                     class="bg-old-neutral-800 cursor-pointer"
-                    :ui="{ content: 'bg-old-neutral-800' }"
+                    :ui="{ content: 'dark:bg-old-neutral-800 dark:text-old-neutral-300 text-old-neutral-800' }"
                 >
                   <UTooltip :text="displayName">
-                    <UAvatar :src="avatarUrl" :alt="displayName"/>
+                    <UAvatar :src="avatarUrl" :alt="displayName" :ui="{ content:'text-white' }"/>
                   </UTooltip>
                 </UDropdownMenu>
               </template>

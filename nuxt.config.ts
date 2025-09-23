@@ -62,10 +62,6 @@ export default defineNuxtConfig({
         }
     },
 
-    colorMode: {
-        preference: 'light'
-    },
-
     icon: {
         cssLayer: 'icon',
     },

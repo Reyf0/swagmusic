@@ -1,30 +1,65 @@
-import { useSettingsStore } from '@/stores/settings'
 import { watch } from 'vue'
+import { useSettingsStore } from '@/stores/settings'
 
 export default defineNuxtPlugin(() => {
+    const store = useSettingsStore()
     const supabase = useSupabaseClient()
     const user = useSupabaseUser()
-    const settings = useSettingsStore()
 
-    // сначала применяем локальные настройки чтобы избежать FOUC
-    settings.initFromLocal()
-    applyTheme(settings.settings.theme)
+    // предыдущая инициализация (как было)
+    store.readLocalDirtyFromStorage?.()
+    store.initFromLocal()
+    store.applyDefaults()
 
-    // при смене пользователя — подтянуть настройки
+    if (!store.localThemeDirty) {
+        store.applySavedTheme()
+    }
+
     watch(user, (u) => {
-        settings.fetchFromSupabase(u?.value ?? null, supabase)
-            .then(() => applyTheme(settings.settings.theme))
+        store.fetchFromSupabase(u?.value ?? null, supabase).then(() => {
+            if (!store.localThemeDirty) {
+                store.applySavedTheme()
+            } else {
+                store.previewTheme(store.settings.theme)
+            }
+        })
     }, { immediate: true })
 
-    // когда локальные настройки меняются — немедленно применяем тему
-    watch(() => settings.settings.theme, (t) => applyTheme(t))
+    watch(() => store.settings.theme, (t) => {
+        if (!store.localThemeDirty) store.applySavedTheme()
+    })
 
-    function applyTheme(theme: 'light'|'dark'|'system') {
-        if (typeof document === 'undefined') return
-        if (theme === 'system') {
-            document.documentElement.removeAttribute('data-theme')
-        } else {
-            document.documentElement.setAttribute('data-theme', theme)
+    // ===== NEW: subscribe to useColorMode changes and sync to store =====
+    try {
+        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+        // @ts-ignore
+        const colorMode = typeof useColorMode !== 'undefined' ? useColorMode?.() : null
+        if (colorMode) {
+            // watch composable value / preference
+            watch(
+                () => (colorMode.preference ?? colorMode.value),
+                (newVal, oldVal) => {
+                    // если ничего не поменялось - skip
+                    if (newVal === oldVal) return
+
+                    // translate possible null => 'system'
+                    const normalized = (!newVal || newVal === 'null') ? 'system' : newVal
+
+                    // пометим, что пользователь сменил тему локально
+                    store.markLocalThemeDirty?.()
+
+                    // ОБНОВИМ store.settings.theme, чтобы другие страницы, зависящие от стора,
+                    // увидели изменение немедленно
+                    // (делаем минимальный merge, чтобы не терять другие настройки)
+                    store.settings = { ...store.settings, theme: normalized }
+
+                    // Не вызываем store.applySavedTheme() здесь - colorMode уже управляет визуалом.
+                    // Мы просто синхронизируем store с текущим состоянием colorMode.
+                },
+                { immediate: false }
+            )
         }
+    } catch (e) {
+        // noop - если useColorMode недоступен, ничего не делаем
     }
 })

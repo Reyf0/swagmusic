@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, watch, nextTick } from 'vue'
+import { ref, onMounted, watch, nextTick, computed } from 'vue'
 import { storeToRefs } from 'pinia'
 import { usePlayerStore } from '@/stores/player'
 import { useProfileStore } from '@/stores/useProfileStore'
@@ -37,6 +37,18 @@ const expandedDefaultWidth = 240
 const mobileMenuOpen = ref(false)
 const mobileSidebarOpen = ref(false)
 const mobileSearchOpen = ref(false)
+
+/* Drag / swipe state for mobileMenu */
+const menuTouching = ref(false)
+const menuStartX = ref(0)
+const menuDrag = ref(0) // negative when dragging left
+const MENU_CLOSE_THRESHOLD = -80 // px threshold to trigger close
+
+/* Drag / swipe state for mobileSidebar (playlist drawer) */
+const sidebarTouching = ref(false)
+const sidebarStartX = ref(0)
+const sidebarDrag = ref(0)
+const SIDEBAR_CLOSE_THRESHOLD = -80
 
 /* mounted flag to avoid SSR/client mismatches */
 const mounted = ref(false)
@@ -129,20 +141,75 @@ const toggleMobileMenu = () => {
   if (mobileMenuOpen.value) {
     mobileSearchOpen.value = false
     mobileSidebarOpen.value = false
+    // reset drag state
+    menuTouching.value = false
+    menuDrag.value = 0
   }
 }
 const openMobileSidebar = () => {
   mobileSidebarOpen.value = true
   mobileMenuOpen.value = false
   mobileSearchOpen.value = false
+  // reset drag for sidebar
+  sidebarTouching.value = false
+  sidebarDrag.value = 0
 }
-const closeMobileSidebar = () => { mobileSidebarOpen.value = false }
+const closeMobileSidebar = () => {
+  mobileSidebarOpen.value = false
+  sidebarTouching.value = false
+  sidebarDrag.value = 0
+}
 const openMobileSearch = () => {
   mobileSearchOpen.value = true
   mobileMenuOpen.value = false
   mobileSidebarOpen.value = false
 }
 const closeMobileSearch = () => { mobileSearchOpen.value = false }
+
+/* Swipe handlers for mobile menu (left drawer) */
+const onMenuTouchStart = (e: TouchEvent) => {
+  if (!mobileMenuOpen.value) return
+  menuTouching.value = true
+  menuStartX.value = e.touches[0].clientX
+  menuDrag.value = 0
+}
+const onMenuTouchMove = (e: TouchEvent) => {
+  if (!menuTouching.value) return
+  const currentX = e.touches[0].clientX
+  const delta = currentX - menuStartX.value // negative when swiping left
+  menuDrag.value = Math.min(0, delta) // only allow left dragging
+}
+const onMenuTouchEnd = () => {
+  if (!menuTouching.value) return
+  if (menuDrag.value <= MENU_CLOSE_THRESHOLD) {
+    mobileMenuOpen.value = false
+  }
+  // reset
+  menuTouching.value = false
+  menuDrag.value = 0
+}
+
+/* Swipe handlers for mobile playlist sidebar */
+const onSidebarTouchStart = (e: TouchEvent) => {
+  if (!mobileSidebarOpen.value) return
+  sidebarTouching.value = true
+  sidebarStartX.value = e.touches[0].clientX
+  sidebarDrag.value = 0
+}
+const onSidebarTouchMove = (e: TouchEvent) => {
+  if (!sidebarTouching.value) return
+  const currentX = e.touches[0].clientX
+  const delta = currentX - sidebarStartX.value
+  sidebarDrag.value = Math.min(0, delta) // only left drag to close
+}
+const onSidebarTouchEnd = () => {
+  if (!sidebarTouching.value) return
+  if (sidebarDrag.value <= SIDEBAR_CLOSE_THRESHOLD) {
+    mobileSidebarOpen.value = false
+  }
+  sidebarTouching.value = false
+  sidebarDrag.value = 0
+}
 
 watch(q, async () => {
   tracksStore.search()
@@ -152,9 +219,24 @@ onMounted(async () => {
   mounted.value = true
   // fetch profile only on client — avoids changing server HTML after hydration
   await fetchProfile()
-  // if you want to programmatically focus the search after opening, do it here via nextTick and only on client
 })
 
+/* computed inline styles used while dragging */
+const mobileMenuAsideStyle = computed(() => {
+  // when not open we won't render aside; when open:
+  if (menuTouching.value) {
+    // translate by the drag amount (negative value) — move left
+    return { transform: `translateX(${menuDrag.value}px)` }
+  }
+  return {}
+})
+
+const mobileSidebarAsideStyle = computed(() => {
+  if (sidebarTouching.value) {
+    return { transform: `translateX(${sidebarDrag.value}px)` }
+  }
+  return {}
+})
 </script>
 
 <template>
@@ -162,20 +244,20 @@ onMounted(async () => {
     <UApp>
       <div class="flex flex-col h-screen">
         <!-- NAVIGATION -->
-        <!-- Desktop nav: shell is always rendered (same node on server+client).
-             Internal parts that depend on client-only data are wrapped in ClientOnly. -->
         <nav class="bg-black p-4 hidden md:block">
           <div class="container mx-auto flex justify-between items-center">
-            <UButton>
-              <NuxtLink to="/" class="text-[#4ade80] text-xl font-bold">SwagMusic</NuxtLink>
-            </UButton>
+            <div>
+              <UButton>
+                <NuxtLink to="/" class="text-[#4ade80] text-xl font-bold">SwagMusic</NuxtLink>
+              </UButton>
+            </div>
 
             <div class="flex-1 mx-6">
               <input
                   v-model="q"
                   type="text"
                   placeholder="Search by title or artist"
-                  class="hover:bg-old-neutral-700 transition w-full px-4 py-1 border border-gray-500 text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-white"
+                  class="hover:bg-old-neutral-700 transition w-full px-4 py-1 dark:bg-old-neutral-800 text-white rounded-full focus:outline-none focus:ring-2 focus:ring-white"
                   @keydown.enter="handleSearch"
               />
             </div>
@@ -214,7 +296,7 @@ onMounted(async () => {
           </div>
         </nav>
 
-        <!-- Mobile nav (shell always present; interactive content client-only where needed) -->
+        <!-- Mobile nav -->
         <nav class="bg-black p-3 flex items-center justify-between md:hidden">
           <div class="flex items-center space-x-2">
             <button aria-label="Open menu" @click="toggleMobileMenu" class="p-2 rounded-md hover:bg-gray-800/50">
@@ -264,10 +346,18 @@ onMounted(async () => {
 
         <!-- Mobile menu drawer (client-only) -->
         <ClientOnly>
-          <transition name="fade">
+          <transition name="slide-in">
             <div v-if="mobileMenuOpen" class="fixed inset-0 z-40">
               <div class="absolute inset-0 bg-black/50" @click="mobileMenuOpen = false"></div>
-              <aside class="absolute left-0 top-0 bottom-0 w-72 bg-old-neutral-900 text-white p-4 overflow-y-auto shadow-lg">
+              <!-- aside: слушаем touch события для свайпа -->
+              <aside
+                  class="absolute left-0 top-0 bottom-0 w-72 bg-old-neutral-900 text-white p-4 overflow-y-auto shadow-lg"
+                  :class="{ 'no-transition': menuTouching }"
+                  :style="mobileMenuAsideStyle"
+                  @touchstart.passive="onMenuTouchStart"
+                  @touchmove.passive="onMenuTouchMove"
+                  @touchend.passive="onMenuTouchEnd"
+              >
                 <div class="flex items-center justify-between mb-4">
                   <UButton><NuxtLink to="/" class="text-[#4ade80] text-lg font-bold">SwagMusic</NuxtLink></UButton>
                   <button @click="mobileMenuOpen = false" class="p-2 rounded-md hover:bg-gray-800/50">
@@ -306,7 +396,7 @@ onMounted(async () => {
                             {{ item.label }}
                           </NuxtLink>
 
-                          <button v-else-if="item.slot === 'logOut'" @click="item.onSelect && item.onSelect()" class="text-left px-3 py-2 rounded-md hover:bg-old-neutral-800">
+                          <button v-else-if="isLoggedIn && item.slot === 'logOut'" @click="item.onSelect && item.onSelect()" class="text-left px-3 py-2 rounded-md hover:bg-old-neutral-800">
                             {{ item.label }}
                           </button>
 
@@ -327,7 +417,7 @@ onMounted(async () => {
           </transition>
         </ClientOnly>
 
-        <!-- Mobile search overlay (client-only). autofocus removed. -->
+        <!-- Mobile search overlay (client-only). -->
         <ClientOnly>
           <transition name="fade">
             <div v-if="mobileSearchOpen" class="fixed inset-0 z-50 flex items-start pt-8">
@@ -339,7 +429,7 @@ onMounted(async () => {
                         v-model="q"
                         type="text"
                         placeholder="Search by title or artist"
-                        class="w-full px-3 py-2 rounded-md bg-old-neutral-800 text-white focus:outline-none"
+                        class="w-full px-3 py-2  bg-old-neutral-800   rounded-full text-white focus:outline-none focus:ring-2 focus:ring-white"
                         @keydown.enter="handleSearch"
                     />
                     <button @click="handleSearch" class="ml-2 p-2 rounded-md hover:bg-gray-800/50">
@@ -356,7 +446,7 @@ onMounted(async () => {
 
         <!-- MAIN CONTENT -->
         <div class="flex dark:text-white dark:bg-old-neutral-900 flex-1 overflow-hidden">
-          <!-- Desktop Playlist Sidebar (shell present on both server and client to keep DOM order) -->
+          <!-- Desktop Playlist Sidebar -->
           <ResizablePanel
               class="shrink-0 hidden md:block"
               :width="sidebarWidth"
@@ -376,18 +466,16 @@ onMounted(async () => {
 
           <!-- Page Content -->
           <main class="flex-1 overflow-y-auto">
-            <!-- PlayerViews may change on client only; render client-side to avoid SSR differences -->
             <ClientOnly>
               <template #default>
                 <PlayerViews v-if="playerStore.getFullscreenView" :view="playerStore.getFullscreenView!" mode="fullscreen"/>
               </template>
             </ClientOnly>
 
-            <!-- Nuxt page (server-rendered) stays stable -->
             <NuxtPage />
           </main>
 
-          <!-- Right Sidebar (render client-only to avoid mismatch if it only appears on client) -->
+          <!-- Right Sidebar -->
           <ClientOnly>
             <template #default>
               <ResizablePanel
@@ -409,12 +497,19 @@ onMounted(async () => {
           </ClientOnly>
         </div>
 
-        <!-- Mobile Playlist Drawer (client-only) -->
+        <!-- Mobile Playlist Drawer (client-only) с свайпом -->
         <ClientOnly>
           <transition name="slide-left">
             <div v-if="mobileSidebarOpen" class="fixed inset-0 z-40 md:hidden">
               <div class="absolute inset-0 bg-black/50" @click="closeMobileSidebar"></div>
-              <aside class="absolute left-0 top-0 bottom-0 w-80 bg-old-neutral-900 text-white overflow-y-auto p-2">
+              <aside
+                  class="absolute left-0 top-0 bottom-0 w-80 bg-old-neutral-900 text-white overflow-y-auto p-2"
+                  :class="{ 'no-transition': sidebarTouching }"
+                  :style="mobileSidebarAsideStyle"
+                  @touchstart.passive="onSidebarTouchStart"
+                  @touchmove.passive="onSidebarTouchMove"
+                  @touchend.passive="onSidebarTouchEnd"
+              >
                 <div class="flex items-center justify-between p-2">
                   <div class="text-lg font-semibold text-[#4ade80]">Playlists</div>
                   <button @click="closeMobileSidebar" class="p-2 rounded-md hover:bg-gray-800/50">✕</button>
@@ -425,7 +520,7 @@ onMounted(async () => {
           </transition>
         </ClientOnly>
 
-        <!-- MINI PLAYER: render only on client to avoid SSR mismatch if currentTrack differs -->
+        <!-- MINI PLAYER -->
         <ClientOnly>
           <template #default>
             <MiniPlayer v-if="currentTrack" />
@@ -441,10 +536,22 @@ nav a.router-link-active {
   color: #4ade80;
 }
 
-/* transitions */
+/* fade (used for search overlay) */
 .fade-enter-active, .fade-leave-active { transition: opacity .2s ease; }
 .fade-enter-from, .fade-leave-to { opacity: 0; }
+
+/* slide-in (mobile nav) */
+.slide-in-enter-active, .slide-in-leave-active { transition: transform .25s ease; }
+.slide-in-enter-from, .slide-in-leave-to { transform: translateX(-100%); }
+.slide-in-enter-to, .slide-in-leave-from { transform: translateX(0); }
+
+/* slide-left (playlist drawer) */
 .slide-left-enter-active { transition: transform .25s ease; }
 .slide-left-enter-from { transform: translateX(-100%); }
 .slide-left-leave-to { transform: translateX(-100%); }
+
+/* during manual dragging we disable transition to make it 'live' */
+.no-transition {
+  transition: none !important;
+}
 </style>

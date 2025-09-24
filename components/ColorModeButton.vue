@@ -60,6 +60,7 @@ const isDark = computed<boolean>({
         color="neutral"
         variant="ghost"
         @click="isDark = !isDark"
+        class="text-white"
     />
 
     <template #fallback>

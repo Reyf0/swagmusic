@@ -56,14 +56,14 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="p-6 space-y-12">
+  <div class="py-6 space-y-12">
     <div class="p-6">
       <h1 class="text-3xl font-bold mb-6">Welcome to SwagMusic</h1>
       <p class="mb-4">Your ultimate music streaming platform.</p>
       <p class="mb-4">Discover new tracks, upload your own music, and connect with other music lovers.</p>
     </div>
     <!-- Top Tracks -->
-    <section>
+    <section class="pl-4">
       <h2 class="text-2xl font-bold mb-4">🔥 Top 10 Tracks</h2>
       <div v-if="isLoadingTopTracks">
         <div class="flex gap-4 overflow-x-scroll scrollbar-hide">
@@ -80,7 +80,7 @@ onUnmounted(() => {
     </section>
 
     <!-- Recent Listens -->
-    <section v-if="isLoggedIn">
+    <section v-if="isLoggedIn" class="pl-4">
       <h2 class="text-2xl font-bold mb-4 ">🎧 Recently Listened</h2>
       <div v-if="isLoadingRecentTracks">
         <div class="flex gap-4 overflow-x-scroll scrollbar-hide">

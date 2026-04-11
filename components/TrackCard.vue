@@ -1,10 +1,10 @@
 <script setup lang="ts">
-import type { AnyTrack } from '@/types'
+import type { TrackEntity } from '@/types'
 
 
 interface Props {
-  track: AnyTrack
-  tracks?: (AnyTrack)[]
+  track: TrackEntity
+  tracks?: (TrackEntity)[]
   variant?: 'carousel' | 'grid'
   showAddToPlaylist?: boolean
 }
@@ -16,7 +16,7 @@ const props = withDefaults(defineProps<Props>(), {
 })
 
 interface Emits {
-  (e: 'addToPlaylist', track: AnyTrack): void
+  (e: 'addToPlaylist', track: TrackEntity): void
 }
 
 const emit = defineEmits<Emits>()
@@ -34,7 +34,7 @@ const handleAddToPlaylist = () => {
 }
 
 // Get authors list with proper type checking
-const getAuthors = (track: AnyTrack) => {
+const getAuthors = (track: TrackEntity) => {
   if ('track_authors' in track && track.track_authors) {
     return track.track_authors
       .map(ta => ta.author?.name)

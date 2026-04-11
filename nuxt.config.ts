@@ -26,7 +26,9 @@ export default defineNuxtConfig({
         '@nuxtjs/tailwindcss',
         '@pinia/nuxt',
         'nuxt-auth-utils',
-        '@sentry/nuxt/module'
+        '@sentry/nuxt/module',
+        '@vueuse/motion/nuxt',
+        'hero-motion/nuxt'
     ],
 
     runtimeConfig: {

@@ -273,7 +273,7 @@ const mobileSidebarAsideStyle = computed(() => {
                     <UButton><NuxtLink to="/library" class="hover:text-white text-gray-300">Library</NuxtLink></UButton>
                     <UDropdownMenu
                         :items="profileDropdownMenuItems"
-                        class="bg-old-neutral-800 cursor-pointer"
+                        class="bg-old-neutral-800 cursor-pointer hover:scale-110 transition"
                         :ui="{ content: 'dark:bg-old-neutral-800 dark:text-old-neutral-300 text-old-neutral-800' }"
                     >
                       <UTooltip :text="displayName">
@@ -465,7 +465,7 @@ const mobileSidebarAsideStyle = computed(() => {
           </ResizablePanel>
 
           <!-- Page Content -->
-          <main class="flex-1 overflow-y-auto">
+          <main class="flex-1 overflow-y-auto overflow-x-hidden">
             <ClientOnly>
               <template #default>
                 <PlayerViews v-if="playerStore.getFullscreenView" :view="playerStore.getFullscreenView!" mode="fullscreen"/>
@@ -523,7 +523,9 @@ const mobileSidebarAsideStyle = computed(() => {
         <!-- MINI PLAYER -->
         <ClientOnly>
           <template #default>
-            <MiniPlayer v-if="currentTrack" />
+            <!-- <MiniPlayer v-if="currentTrack" /> -->
+            <PlayerDragFix v-if="currentTrack" />
+            <!-- <PlayerExpander v-if="currentTrack"/> -->
           </template>
         </ClientOnly>
       </div>

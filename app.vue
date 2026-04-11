@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-
+import { HeroProvider } from 'hero-motion'
 </script>
 
 <template>

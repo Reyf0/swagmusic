@@ -441,7 +441,22 @@ watch(isFullscreen, async (val) => {
 
           <!-- MAIN: cover + controls -->
           <div class="px-6 flex flex-col items-center">
-            <div class="flex items-center gap-3">
+            <div class="flex flex-col items-center gap-3">
+              <!-- Cover -->
+              <div class="h-48 relative flex justify-center items-center aspect-square group grow overflow-hidden rounded shadow-md mb-3">
+                <UIcon
+                    v-if="!currentTrack.cover_url"
+                    name="i-heroicons-musical-note"
+                    class="w-5 h-5 text-gray-400"
+                />
+                <img
+                    v-else
+                    :src="currentTrack.cover_url"
+                    :alt="`Cover for ${currentTrack.title}`"
+                    class="w-full object-cover rounded"
+                >
+              </div>
+
               <div>
                 <div class="font-semibold">{{ currentTrack?.title }}</div>
                 <div class="text-sm text-old-neutral-300 truncate max-w-[160px]">

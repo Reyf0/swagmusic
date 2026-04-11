@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
-import type { Track } from "@/types";
+import type { TrackUI } from "@/types";
 import { useDominantColorFromImg } from '@/composables/useDominantColorFromImg'
 
 defineProps<{ mode: 'sidebar' | 'fullscreen' }>()
@@ -8,7 +8,7 @@ const player = usePlayerStore()
 const { queue, currentTrackIndex } = storeToRefs(player)
 const track = computed(() => player.currentTrack)
 
-const nextTrack:Track = computed(() => {
+const nextTrack:TrackUI = computed(() => {
   if (!queue.value.length) return null
   const nextIndex = (currentTrackIndex.value + 1) % queue.value.length
   return queue.value[nextIndex]
@@ -161,7 +161,7 @@ watch(() => track.value.cover_url, () => {
     </main>
   </div>
   <!-- Sidebar -->
-  <div v-else class="h-full w-full flex flex-col text-white">
+  <div v-else class="group h-full w-full flex flex-col text-white">
     <!-- Верхняя панель -->
     <div
         class="sticky top-0 z-10 bg-old-neutral-900 px-4 py-3 flex items-center justify-between group"
@@ -173,13 +173,13 @@ watch(() => track.value.cover_url, () => {
             variant="ghost"
             color="white"
             size="sm"
-            class="transition-transform duration-200 hover:scale-110 hover:bg-white/10"
+            class="hidden transition-transform duration-200 group-hover:block hover:scale-110 hover:bg-white/10"
             @click="player.closeView('now')"
         />
 
         <!-- Автор -->
         <span class="font-medium text-sm hover:underline cursor-pointer">
-          {{ track?.title || 'No title' }}
+          {{ track?.track_authors?.map(a => a.author.name).join(', ') || 'Unknown Artist' }}
         </span>
       </div>
 
@@ -205,9 +205,9 @@ watch(() => track.value.cover_url, () => {
     <div
         class="flex-1 overflow-y-auto p-4 space-y-6"
     >
-      <!-- Обложка и инфо -->
-      <div class="flex items-center space-x-4">
-        <div class="w-24 h-24 flex justify-center items-center shadow-xl">
+      <!-- Обложка -->
+      <div class="flex items-center">
+        <div class="w-full aspect-square flex justify-center items-center shadow-xl">
           <img
               v-if="track?.cover_url"
               :src="track?.cover_url"
@@ -219,22 +219,23 @@ watch(() => track.value.cover_url, () => {
               class="w-5 h-5"
           />
         </div>
-        <div>
-          <h2 class="text-xl font-bold hover:underline cursor-pointer">
-            {{ track?.title || 'Untitled' }}
-          </h2>
-          <p class="text-sm text-gray-400 hover:underline cursor-pointer">
-            {{ track?.track_authors?.map(a => a.author.name).join(', ') || 'Unknown Artist' }}
-          </p>
-          <!-- Hover-действия -->
-          <div class="mt-2 flex space-x-3">
-            <UButton
-                icon="i-heroicons-link" size="xs" variant="ghost" color="white"
-                class="transition-transform duration-200 hover:scale-110 hover:bg-white/10"/>
-            <UButton
-                icon="i-heroicons-heart" size="xs" variant="ghost" color="white"
-                class="transition-transform duration-200 hover:scale-110 hover:bg-white/10"/>
-          </div>
+      </div>
+      <!-- Title + author -->
+      <div>
+        <h2 class="text-xl font-bold hover:underline cursor-pointer">
+          {{ track?.title || 'Untitled' }}
+        </h2>
+        <p class="text-sm text-gray-400 hover:underline cursor-pointer">
+          {{ track?.track_authors?.map(a => a.author.name).join(', ') || 'Unknown Artist' }}
+        </p>
+        <!-- Hover-действия -->
+        <div class="mt-2 flex space-x-3">
+          <UButton
+              icon="i-heroicons-link" size="xs" variant="ghost" color="white"
+              class="transition-transform duration-200 hover:scale-110 hover:bg-white/10"/>
+          <UButton
+              icon="i-heroicons-heart" size="xs" variant="ghost" color="white"
+              class="transition-transform duration-200 hover:scale-110 hover:bg-white/10"/>
         </div>
       </div>
 
@@ -247,8 +248,8 @@ watch(() => track.value.cover_url, () => {
       >
         <!-- Карточка: Об исполнителе -->
         <div class="p-4 shadow hover:shadow-lg transition hover:scale-[1.02]">
-          <h3 class="font-semibold mb-1">Об исполнителе</h3>
-          <p class="text-sm text-gray-400">Тут краткая биография, ссылки, жанры и т.п.</p>
+          <h3 class="font-semibold mb-1">Credits</h3>
+          <p class="text-sm text-gray-400">{{ track?.track_authors?.map(a => a.author.name).join(', ') || 'Unknown Artist' }}</p>
         </div>
 
         <!-- Карточка: Сведения о треке -->

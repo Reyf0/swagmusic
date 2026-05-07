@@ -523,8 +523,8 @@ const mobileSidebarAsideStyle = computed(() => {
         <!-- MINI PLAYER -->
         <ClientOnly>
           <template #default>
-            <!-- <MiniPlayer v-if="currentTrack" /> -->
-            <PlayerDragFix v-if="currentTrack" />
+            <MiniPlayer v-if="currentTrack" class="hidden md:block" />
+            <PlayerDragFix v-if="currentTrack" class="md:hidden" />
             <!-- <PlayerExpander v-if="currentTrack"/> -->
           </template>
         </ClientOnly>

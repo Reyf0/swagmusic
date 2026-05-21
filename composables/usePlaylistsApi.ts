@@ -27,6 +27,45 @@ export const usePlaylistsApi = () => {
     const isAbort = (err: any) =>
         err && (err.name === 'AbortError' || /aborted/i.test(String(err?.message ?? '')))
 
+    async function createPlaylist(params: {
+        name: string
+        description?: string
+        userId: string
+        cover_url?: string | null
+    }) {
+        const {
+            name,
+            description = '',
+            userId,
+            cover_url = null
+        } = params
+
+        lastError.value = null
+
+        try {
+            const { data, error } = await supabase
+                .from('playlists')
+                .insert([
+                    {
+                        name,
+                        description,
+                        user_id: userId,
+                        cover_url
+                    }
+                ] as any)
+                .select()
+                .single()
+
+            if (error) throw error
+
+            return data as Playlist
+        } catch (err: any) {
+            lastError.value = err
+            console.error('usePlaylistsApi.createPlaylist error', err)
+            return null
+        }
+    }
+
     async function getRecentPlaylists(params: { userId: string; limit?: number }) {
         const { userId, limit = 10 } = params
         if (!userId) return []
@@ -77,6 +116,7 @@ export const usePlaylistsApi = () => {
     return {
         getRecentPlaylists,
         getPlaylistsByIds,
+        createPlaylist,
         cancelRecentPlaylists,
         cancelPlaylistsByIds,
         lastError

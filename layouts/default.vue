@@ -9,6 +9,7 @@ import PlayerViews from '@/components/player/PlayerViews.vue'
 import ResizablePanel from '@/components/ResizablePanel.vue'
 import PlaylistSidebar from '@/components/PlaylistSidebar.vue'
 import type { DropdownMenuItem } from '@nuxt/ui'
+import PlayerDragFix from "@/components/player/PlayerDragFix.vue";
 
 const supabase = useSupabaseClient()
 
@@ -523,7 +524,9 @@ const mobileSidebarAsideStyle = computed(() => {
         <!-- MINI PLAYER -->
         <ClientOnly>
           <template #default>
-            <MiniPlayer v-if="currentTrack" class="hidden md:block" />
+            <div v-if="currentTrack" class="hidden md:block">
+              <MiniPlayer />
+            </div>
             <PlayerDragFix v-if="currentTrack" class="md:hidden" />
             <!-- <PlayerExpander v-if="currentTrack"/> -->
           </template>

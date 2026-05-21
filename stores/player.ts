@@ -10,7 +10,7 @@ type ViewMode = 'sidebar' | 'fullscreen'
 export const usePlayerStore = defineStore('player', () => {
     const nuxtApp = useNuxtApp()
 
-    const currentTrack = ref<Track>(null)
+    const currentTrack = ref<Track | null>(null)
     const sound = ref<Howl | null>(null)
     const isPlaying = ref(false)
     const currentTime = ref(0)
@@ -199,23 +199,37 @@ export const usePlayerStore = defineStore('player', () => {
 
         currentTrack.value = track
 
+        console.log('PLAY TRACK:', {
+            id: track.id,
+            title: track.title,
+            audio_url: track.audio_url,
+        })
+
         sound.value = new Howl({
+            // @ts-ignore
             src: [track.audio_url],
             html5: true,
             volume: volume.value,
-            onloaderror: (id, error) => {
-                console.error(id, error)
-                nuxtApp.callHook('app:error', {
-                    message: 'Howler load error',
-                    detail: error,
-                    id
+            onloaderror: (id, howlerError) => {
+                console.error('Howler load error', {
+                    id,
+                    howlerError,
+                    src: track.audio_url,
+                    track,
                 })
+
+                const err = new Error(`Howler load error: ${track.audio_url}`)
+                ;(err as any).howlerId = id
+                ;(err as any).howlerError = howlerError
+                ;(err as any).track = track
+
+                nuxtApp.callHook('app:error', err)
             },
             onplayerror: (id, error) => {
                 console.error(id, error)
                 nuxtApp.callHook('app:error', {
                     message: 'Howler play error',
-                    detail: error,
+                    error: error,
                     id
                 })
                 sound.value?.once('unlock', () => sound.value?.play())
@@ -336,9 +350,16 @@ export const usePlayerStore = defineStore('player', () => {
 
     const replaceQueue = (newQueue: Track[], startTrack?: Track) => {
         queue.value = [...newQueue]
+
         const index = startTrack
             ? newQueue.findIndex(t => t.id === startTrack.id)
             : 0
+
+        if (index < 0 || !newQueue[index]) {
+            stop()
+            return
+        }
+
         currentTrackIndex.value = index
         play(newQueue[index], newQueue)
     }

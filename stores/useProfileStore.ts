@@ -1,9 +1,9 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import type { SupabaseClient } from '@supabase/supabase-js'
-import type { Database } from '@/types/database.types'
-import { profileUpdateSchema } from '@/lib/schemas/profile'
-import type { ProfileUpdateInput } from '@/lib/schemas/profile'
+import type { Database } from '@@/types/database.types'
+import { profileUpdateSchema} from "@@/lib/schemas/profile";
+import type { ProfileUpdateInput} from "@@/lib/schemas/profile";
 
 // Типы
 type ProfilesRow = Database['public']['Tables']['profiles']['Row']

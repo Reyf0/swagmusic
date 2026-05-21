@@ -196,6 +196,7 @@ export type Database = {
       }
       playlists: {
         Row: {
+          cover_url: string | null
           created_at: string | null
           description: string | null
           id: string
@@ -205,6 +206,7 @@ export type Database = {
           user_id: string | null
         }
         Insert: {
+          cover_url?: string | null
           created_at?: string | null
           description?: string | null
           id?: string
@@ -214,6 +216,7 @@ export type Database = {
           user_id?: string | null
         }
         Update: {
+          cover_url?: string | null
           created_at?: string | null
           description?: string | null
           id?: string
@@ -240,6 +243,7 @@ export type Database = {
           full_name: string | null
           id: string
           is_admin: boolean | null
+          settings: Json | null
           slug: string | null
           updated_at: string | null
           username: string | null
@@ -252,6 +256,7 @@ export type Database = {
           full_name?: string | null
           id: string
           is_admin?: boolean | null
+          settings?: Json | null
           slug?: string | null
           updated_at?: string | null
           username?: string | null
@@ -264,6 +269,7 @@ export type Database = {
           full_name?: string | null
           id?: string
           is_admin?: boolean | null
+          settings?: Json | null
           slug?: string | null
           updated_at?: string | null
           username?: string | null
@@ -275,7 +281,7 @@ export type Database = {
         Row: {
           created_at: string | null
           id: number
-          ip: unknown | null
+          ip: unknown
           normalized_query: string | null
           query: string | null
           results_count: number | null
@@ -285,7 +291,7 @@ export type Database = {
         Insert: {
           created_at?: string | null
           id?: number
-          ip?: unknown | null
+          ip?: unknown
           normalized_query?: string | null
           query?: string | null
           results_count?: number | null
@@ -295,7 +301,7 @@ export type Database = {
         Update: {
           created_at?: string | null
           id?: number
-          ip?: unknown | null
+          ip?: unknown
           normalized_query?: string | null
           query?: string | null
           results_count?: number | null
@@ -454,11 +460,11 @@ export type Database = {
           language: string | null
           likes_count: number
           metadata: Json | null
-          search_vector: unknown | null
+          search_vector: unknown
           slug: string | null
           title: string
           title_normalized: string | null
-          tsv_multi: unknown | null
+          tsv_multi: unknown
           user_id: string | null
         }
         Insert: {
@@ -472,11 +478,11 @@ export type Database = {
           language?: string | null
           likes_count?: number
           metadata?: Json | null
-          search_vector?: unknown | null
+          search_vector?: unknown
           slug?: string | null
           title: string
           title_normalized?: string | null
-          tsv_multi?: unknown | null
+          tsv_multi?: unknown
           user_id?: string | null
         }
         Update: {
@@ -490,11 +496,11 @@ export type Database = {
           language?: string | null
           likes_count?: number
           metadata?: Json | null
-          search_vector?: unknown | null
+          search_vector?: unknown
           slug?: string | null
           title?: string
           title_normalized?: string | null
-          tsv_multi?: unknown | null
+          tsv_multi?: unknown
           user_id?: string | null
         }
         Relationships: [
@@ -596,10 +602,7 @@ export type Database = {
       }
     }
     Functions: {
-      _get_authors_for_track: {
-        Args: { _track_id: string }
-        Returns: Json
-      }
+      _get_authors_for_track: { Args: { _track_id: string }; Returns: Json }
       _track_has_genre: {
         Args: { p_genre_ids: string[]; p_track_id: string }
         Returns: boolean
@@ -613,7 +616,7 @@ export type Database = {
         }[]
       }
       get_listen_stats_by_day: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
           day: string
           total_listens: number

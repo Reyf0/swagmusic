@@ -17,6 +17,8 @@ const nextTrack:TrackUI = computed(() => {
 const imgEl = ref<HTMLImageElement | null>(null)
 const { color } = useDominantColorFromImg(imgEl, { sampleSize: 900, k: 3, saturationThreshold: 0.5 })
 
+const { addLike, deleteLike } = useLikesApi()
+
 watch(() => track.value.cover_url, () => {
   if (imgEl.value && imgEl.value.complete && imgEl.value.naturalWidth) {
     // пересчитать сразу
@@ -234,6 +236,7 @@ watch(() => track.value.cover_url, () => {
               icon="i-heroicons-link" size="xs" variant="ghost" color="white"
               class="transition-transform duration-200 hover:scale-110 hover:bg-white/10"/>
           <UButton
+              @click="addLike(track.value)"
               icon="i-heroicons-heart" size="xs" variant="ghost" color="white"
               class="transition-transform duration-200 hover:scale-110 hover:bg-white/10"/>
         </div>

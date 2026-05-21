@@ -30,46 +30,41 @@ onMounted(() => {
   }
 })
 
-watch(user, (newUser) => {
-  if (newUser) {
-    void fetchLikedTracks()
-    void fetchPlaylists()
-  } else {
-    likedTracks.value = []
-  }
-})
+const userId = computed(() => user.value?.id || user.value?.sub || null)
+
+
 
 // Fetch user's liked tracks
-const fetchLikedTracks = async () => {
-  // TODO Adapt this to use the new database structure
-  if (!user.value) return
-
+const fetchLikedTracks = async (userId: string) => {
   isLoading.value = true
   error.value = null
 
   try {
     const { data: liked, error: fetchError } = await supabase
         .from('likes')
-        .select(`target_id`)
-        .eq('user_id', user.value.id)
+        .select('target_id')
+        .eq('user_id', userId)
         .order('created_at', { ascending: false })
+
+    if (fetchError) throw fetchError
+
     likes.value = liked || []
-    if (fetchError) {
-      error.value = fetchError
-    }
-    else {
-      const { data, error: tracksError } = await supabase
-          .from('tracks')
-          .select('*, profiles(*)')
-          .in('id', liked?.map(like => like.target_id) || [])
 
-      if (tracksError) {
-        error.value = tracksError
-        return
-      }
-
-      likedTracks.value = data;
+    const trackIds = liked?.map(like => like.target_id) || []
+    if (trackIds.length === 0) {
+      likedTracks.value = []
+      return
     }
+
+    const { data, error: tracksError } = await supabase
+        .from('tracks')
+        .select('*, profiles(*)')
+        .in('id', trackIds)
+
+
+    if (tracksError) throw tracksError
+
+    likedTracks.value = data || []
   } catch (e) {
     console.error('Error fetching liked:', e)
     error.value = 'Failed to load your liked tracks'
@@ -83,25 +78,23 @@ const playlists = ref([])
 const newPlaylistName = ref('')
 const isCreatingPlaylist = ref(false)
 
-const fetchPlaylists = async () => {
-  if (!user.value) return
-
+const fetchPlaylists = async (userId: string) => {
   try {
     const { data, error: fetchError } = await supabase
-      .from('playlists')
-      .select(`
+        .from('playlists')
+        .select(`
         *,
         playlist_tracks(count)
       `)
-      .eq('user_id', user.value.id)
-      .order('created_at', { ascending: false })
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false })
 
     if (fetchError) throw fetchError
 
-    playlists.value = data.map(playlist => ({
+    playlists.value = (data || []).map(playlist => ({
       ...playlist,
-      track_count: playlist.playlist_tracks.length || 0
-    })) || []
+      track_count: playlist.playlist_tracks?.length || 0
+    }))
   } catch (e) {
     console.error('Error fetching playlists:', e)
   }
@@ -134,9 +127,7 @@ const createPlaylist = async () => {
 
 const recentlyPlayed = ref([])
 
-const fetchRecentlyPlayed = async () => {
-  if (!user.value) return
-
+const fetchRecentlyPlayed = async (userId: string) => {
   try {
     const { data, error: fetchError } = await supabase
         .from('play_history')
@@ -147,7 +138,7 @@ const fetchRecentlyPlayed = async () => {
           author:profiles(*)
         )
       `)
-        .eq('user_id', user.value.id)
+        .eq('user_id', userId)
         .order('played_at', { ascending: false })
         .limit(10)
 
@@ -168,6 +159,24 @@ function formatDate(s: string) {
     year: 'numeric'
   });
 }
+
+watch(
+    userId,
+    (id) => {
+      console.log(user.value.id)
+      if (!id) {
+        likedTracks.value = []
+        playlists.value = []
+        recentlyPlayed.value = []
+        return
+      }
+
+      void fetchLikedTracks(id)
+      void fetchPlaylists(id)
+      void fetchRecentlyPlayed(id)
+    },
+    { immediate: true }
+)
 
 </script>
 

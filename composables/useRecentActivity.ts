@@ -23,10 +23,6 @@ import type { Database, TrackUI, Playlist } from '@/types'
  * Отмена: tracksStore.cancelRecent() + api.cancel...
  */
 
-export type RecentTrackItem = TrackUI & {
-    last_played?: string
-    play_count?: number
-}
 
 export const useRecentActivity = () => {
     const user = useSupabaseUser()

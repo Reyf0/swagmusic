@@ -7,41 +7,57 @@ definePageMeta({
 })
 
 const supabase:SupabaseClient<Database> = useSupabaseClient();
+const user = useSupabaseUser()
 const email = ref('');
 const password = ref('');
 const router = useRouter();
 const errorMessage = ref('');
 const isLoading = ref(false);
 
+watchEffect(() => {
+  if (user.value) {
+    return navigateTo('/')
+  }
+})
+
 const signInWithEmail = async () => {
   if (!email.value || !password.value) {
-    errorMessage.value = 'Please enter both email and password';
-    return;
+    errorMessage.value = 'Please enter both email and password'
+    return
   }
 
-  errorMessage.value = '';
-  isLoading.value = true;
+  errorMessage.value = ''
+  isLoading.value = true
 
   try {
     const { data, error } = await supabase.auth.signInWithPassword({
       email: email.value,
       password: password.value,
-    });
+    })
 
     if (error) {
-      errorMessage.value = error.message || 'Failed to sign in';
-    } else {
-      await router.push('/');
+      errorMessage.value = error.message || 'Failed to sign in'
+      return
     }
 
-    const accessToken = data.session?.access_token;
-    await $fetch('/api/v1/auth/process', { method: 'POST', body: { access_token: accessToken}})
+    const accessToken = data.session?.access_token
 
+    if (!accessToken) {
+      errorMessage.value = 'No access token returned from Supabase'
+      return
+    }
+
+    await $fetch('/api/v1/auth/process', {
+      method: 'POST',
+      body: { access_token: accessToken },
+    })
+
+    await router.push('/')
   } catch (e) {
-    errorMessage.value = 'An unexpected error occurred';
-    console.error(e);
+    errorMessage.value = 'An unexpected error occurred'
+    console.error(e)
   } finally {
-    isLoading.value = false;
+    isLoading.value = false
   }
 }
 
@@ -49,9 +65,11 @@ async function signInWithGoogle(response) {
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: 'google',
     options: {
-      redirectTo: window.location.origin,
+      redirectTo: 'http://172.20.10.4:3000/auth/callback',
     }
   })
+
+  console.log(response)
 }
 
 </script>

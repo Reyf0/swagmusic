@@ -2,6 +2,7 @@
 import { ref, onMounted } from 'vue'
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/types/global"
+import CreatePlaylistModal from "@/components/modals/CreatePlaylistModal.vue";
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const props = defineProps<{
@@ -80,13 +81,7 @@ const navigateToPlaylist = (playlistId: string) => {
       <template v-if="!isCollapsed">
         <!-- Create Playlist Button -->
         <div class="p-4">
-          <UButton
-            class="w-full bg-old-neutral-800 hover:bg-old-neutral-700 text-white"
-            @click="navigateTo('/create-playlist')"
-          >
-            <UIcon name="i-heroicons-plus" class="w-4 h-4 mr-2" />
-            Create Playlist
-          </UButton>
+          <CreatePlaylistModal />
         </div>
 
         <!-- Playlists List -->

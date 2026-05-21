@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import {onMounted, ref } from 'vue'
 import { getAudioDurationFromFile } from '@/utils/getAudioDurationFromFile'
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { AuthorUI, Database } from '@/types'
+import { useRouter } from "vue-router";
 
 const supabase:SupabaseClient<Database> = useSupabaseClient()
 const user = useSupabaseUser()
@@ -140,11 +141,17 @@ const uploadTrack = async () => {
 
   try {
     // 1. Upload audio file
-    const audioFileName = `${Date.now()}_${title.value}_${trackAuthors.value.map(author => author.name).join('_')}`.toLowerCase()
+    const ext = audioFile.value.name.split('.').pop()?.toLowerCase() || 'mp3'
+    const audioFileName = `${Date.now()}_${title.value}_${trackAuthors.value
+        .map(author => author.name)
+        .join('_')
+        .toLowerCase()}.${ext}`
     const durationSeconds = await getAudioDurationFromFile(audioFile.value)
     const {error: audioError} = await supabase.storage
         .from('tracks')
-        .upload(audioFileName, audioFile.value)
+        .upload(audioFileName, audioFile.value, {
+          contentType: audioFile.value.type,
+        })
 
     if (audioError) console.error(`Error uploading audio: ${audioError.message}`)
     uploadProgress.value = 50

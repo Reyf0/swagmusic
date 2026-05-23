@@ -1,5 +1,5 @@
 import { readBody, createError } from 'h3'
-import { env } from '@/lib/env'
+import { env } from '@@/lib/env'
 
 export default defineEventHandler(async (event) => {
     const body = await readBody(event) as { access_token?: string }

@@ -1,8 +1,8 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js'
 
-
-const SUPABASE_URL = process.env.SUPABASE_URL!
-const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_KEY!
+const config = useRuntimeConfig()
+const SUPABASE_URL = process.env.NUXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL || config.public.SUPABASE_URL
+const SUPABASE_KEY = config.supabaseServiceRoleKey || config.supabase.serviceKey!
 // TODO use createServerClient
 declare global {
     // allow reusing the client across hot reloads in dev

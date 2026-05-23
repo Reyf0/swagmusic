@@ -1,6 +1,6 @@
 // https://nuxt.com/docs/api/configuration/nuxt-config
 
-import "./lib/env";
+
 
 export default defineNuxtConfig({
     compatibilityDate: '2025-05-15',
@@ -13,10 +13,17 @@ export default defineNuxtConfig({
         }
     },
 
+    debug: true,
+
     devServer: {
         host: '0.0.0.0',
         port: 3000
     },
+
+    plugins: [
+        '~/plugins/supabase.ts',
+        '~/plugins/supabase-auth.client.ts'
+    ],
 
     modules: [
         '@nuxt/content',
@@ -27,7 +34,6 @@ export default defineNuxtConfig({
         '@nuxt/scripts',
         '@nuxt/test-utils',
         '@nuxt/ui',
-        '@nuxtjs/supabase',
         '@nuxtjs/tailwindcss',
         '@pinia/nuxt',
         'nuxt-auth-utils',
@@ -38,12 +44,21 @@ export default defineNuxtConfig({
 
     runtimeConfig: {
         sentryDsn: process.env.SENTRY_DSN,
-        SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_API_SECRET_KEY,
+
+        supabaseServiceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_API_SECRET_KEY,
+        supabaseUrl: process.env.SUPABASE_URL,
+        supabaseKey: process.env.SUPABASE_KEY || process.env.NUXT_PUBLIC_SUPABASE_ANON_KEY,
+
 
         public: {
-            SUPABASE_URL: process.env.NUXT_PUBLIC_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL,
-            SUPABASE_ANON_KEY: process.env.NUXT_PUBLIC_SUPABASE_ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.SUPABASE_KEY,
-            errorLoggerEndpoint: process.env.ERROR_ENDPOINT || '/api/v1/error'
+            errorLoggerEndpoint: process.env.ERROR_ENDPOINT || '/api/v1/error',
+            supabaseUrl: process.env.NUXT_PUBLIC_SUPABASE_URL,
+            supabaseKey: process.env.NUXT_PUBLIC_SUPABASE_ANON_KEY,
+        },
+        supabase: {
+            serviceKey:
+                process.env.SUPABASE_SERVICE_ROLE_KEY ||
+                process.env.NUXT_SUPABASE_SECRET_KEY,
         }
     },
     routeRules: {
@@ -88,8 +103,7 @@ export default defineNuxtConfig({
 
     supabase: {
         redirect: false,
-        url: process.env.NUXT_PUBLIC_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL,
-        key: process.env.NUXT_PUBLIC_SUPABASE_ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.SUPABASE_KEY,
+
     },
 
     sentry: {

@@ -13,8 +13,6 @@ export default defineNuxtConfig({
         }
     },
 
-    debug: true,
-
     devServer: {
         host: '0.0.0.0',
         port: 3000
@@ -26,20 +24,22 @@ export default defineNuxtConfig({
     ],
 
     modules: [
-        '@nuxt/content',
-        '@nuxt/eslint',
-        '@nuxt/fonts',
-        '@nuxt/icon',
-        '@nuxt/image',
-        '@nuxt/scripts',
-        '@nuxt/test-utils',
-        '@nuxt/ui',
-        '@nuxtjs/tailwindcss',
-        '@pinia/nuxt',
-        'nuxt-auth-utils',
-        '@sentry/nuxt/module',
-        '@vueuse/motion/nuxt',
-        'hero-motion/nuxt'
+      '@nuxt/content',
+      '@nuxt/eslint',
+      '@nuxt/fonts',
+      '@nuxt/icon',
+      '@nuxt/image',
+      '@nuxt/test-utils',
+      '@nuxt/ui',
+      '@nuxtjs/tailwindcss',
+      '@pinia/nuxt',
+      'nuxt-auth-utils',
+      '@sentry/nuxt/module',
+      '@vueuse/motion/nuxt',
+      'hero-motion/nuxt',
+      '@nuxtjs/robots',
+      '@nuxtjs/seo',
+      '@nuxt/hints'
     ],
 
     runtimeConfig: {

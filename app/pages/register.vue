@@ -112,7 +112,7 @@ async function checkUsernameUnique() {
   const { data, error } = await supabase
     .from('profiles')
     .select('id')
-    .ilike('username', val.replace(/[\%_]/g, c => `\${c}`))
+    .ilike('username', escapeLike(val))
     .limit(1)
 
   if (username.value.trim() !== val) return // user kept typing
@@ -167,9 +167,9 @@ onUnmounted(() => {
     <div v-else class="bg-old-neutral-50 dark:bg-old-neutral-900 p-6 rounded-lg shadow-sm">
       <button
           type="button"
-          @click="onGoogleSignIn"
           class="w-full flex items-center justify-center cursor-pointer gap-3 py-2 px-4 border rounded-full shadow-sm mb-4 dark:text-white border-old-neutral-500 hover:border-old-neutral-900 dark:hover:border-white transition"
           aria-label="Sign up with Google"
+          @click="onGoogleSignIn"
       >
         <!-- simple Google icon -->
         <svg class="w-5 h-5" viewBox="0 0 533.5 544.3" xmlns="http://www.w3.org/2000/svg" aria-hidden>
@@ -193,9 +193,9 @@ onUnmounted(() => {
                 v-model="email"
                 type="email"
                 placeholder="you@example.com"
-                @keyup.enter="nextStep"
                 class="w-full pr-28 px-3 py-2 dark:text-old-neutral-400 rounded-md border border-old-neutral-200 dark:border-old-neutral-700 bg-white dark:bg-old-neutral-800 focus:outline-none focus:ring-2 focus:ring-brand"
-            />
+                @keyup.enter="nextStep"
+            >
             <p class="text-xs text-old-neutral-500">You will use this email to sign in.</p>
           </div>
 
@@ -208,9 +208,9 @@ onUnmounted(() => {
                   v-model="username"
                   type="text"
                   placeholder="e.g. SwagUser"
-                  @keyup.enter="nextStep"
                   class="w-full px-3 py-2 rounded-md border border-old-neutral-200 dark:border-old-neutral-700 dark:text-old-neutral-400 bg-white dark:bg-old-neutral-800 focus:outline-none focus:ring-2 focus:ring-green-500"
-              />
+                  @keyup.enter="nextStep"
+              >
               <!-- status -->
               <div class="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-2">
                 <template v-if="usernameStatus === 'checking'">
@@ -243,17 +243,17 @@ onUnmounted(() => {
                 v-model="password"
                 type="password"
                 placeholder="Enter a password"
-                @keyup.enter="canNextStep ? signUpNewUser() : nextStep()"
                 class="w-full px-3 py-2 rounded-md dark:text-old-neutral-400 border border-old-neutral-200 dark:border-old-neutral-700 bg-white dark:bg-old-neutral-800 focus:outline-none focus:ring-2 focus:ring-green-500"
-            />
+                @keyup.enter="canNextStep ? signUpNewUser() : nextStep()"
+            >
             <label class="block text-sm font-medium text-old-neutral-700 dark:text-white">Confirm password</label>
             <input
                 v-model="confirmPassword"
                 type="password"
                 placeholder="Repeat the password"
-                @keyup.enter="canNextStep ? signUpNewUser() : nextStep()"
                 class="w-full px-3 py-2 rounded-md dark:text-old-neutral-400 border border-old-neutral-200 dark:border-old-neutral-700 bg-white dark:bg-old-neutral-800 focus:outline-none focus:ring-2 focus:ring-green-500"
-            />
+                @keyup.enter="canNextStep ? signUpNewUser() : nextStep()"
+            >
             <!-- Password policy hint -->
             <div class="mt-2 text-sm">
               <div class="flex items-center gap-2">
@@ -281,9 +281,9 @@ onUnmounted(() => {
       <div class="mt-6 flex items-center justify-between">
         <button
             type="button"
-            @click="prevStep"
             :disabled="step === 1 || isLoading"
             class="text-old-neutral-300 font-medium disabled:text-old-neutral-500 not-disabled:cursor-pointer inline-flex items-center gap-2 px-4 py-2 rounded-full border text-sm disabled:opacity-50"
+            @click="prevStep"
         >
           Back
         </button>
@@ -292,9 +292,9 @@ onUnmounted(() => {
           <button
               v-if="step < 3"
               type="button"
-              @click="nextStep"
               :disabled="!canNextStep || isLoading"
               class="px-4 py-2 rounded-full font-medium text-sm cursor-pointer bg-green-500 text-white hover:bg-green-700 disabled:opacity-50"
+              @click="nextStep"
           >
             Next
           </button>
@@ -302,9 +302,9 @@ onUnmounted(() => {
           <button
               v-else
               type="button"
-              @click="signUpNewUser"
               :disabled="isLoading"
               class="px-4 py-2 rounded-full font-medium text-sm cursor-pointer bg-green-600 text-white hover:bg-green-700 disabled:opacity-50"
+              @click="signUpNewUser"
           >
             <span v-if="isLoading">Creating...</span>
             <span v-else>Sign up</span>

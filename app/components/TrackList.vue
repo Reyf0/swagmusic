@@ -3,7 +3,7 @@ import type { DropdownMenuItem } from '@nuxt/ui'
 import type { Track } from '#shared/types'
 
 // Numbered track table. Clicking a row plays it with the whole list as the queue.
-const props = withDefaults(defineProps<{
+withDefaults(defineProps<{
   tracks: (Track & { added_at?: string | null })[]
   loading?: boolean
   emptyText?: string
@@ -15,6 +15,7 @@ const props = withDefaults(defineProps<{
   loading: false,
   emptyText: 'No tracks here yet.',
   showAdded: false,
+  rowItems: undefined,
 })
 
 const { playTrack, isCurrentTrack, isTrackPlaying } = usePlayTrack()

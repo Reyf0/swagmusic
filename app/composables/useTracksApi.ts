@@ -92,7 +92,7 @@ export const useTracksApi = () => {
 
     function cancel(kind: Kind) {
         controllers[kind]?.abort()
-        delete controllers[kind]
+        controllers[kind] = undefined
     }
 
     function cancelAll() {

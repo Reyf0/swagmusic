@@ -1,6 +1,6 @@
-const FALLBACK = '#D3D3D3'
-
 import { ref, onMounted, watch, nextTick } from 'vue'
+
+const FALLBACK = '#D3D3D3'
 
 type Options = {
     sampleSize?: number // max число пикселей для кластеризации (по умолчанию 900)
@@ -50,7 +50,7 @@ function kmeans(samples: number[][], k = 3, iterations = 8) {
         centroids.push(samples[idx].slice())
     }
 
-    let assignments = new Array(samples.length).fill(0)
+    const assignments = new Array(samples.length).fill(0)
     for (let iter = 0; iter < iterations; iter++) {
         // assign
         for (let i = 0; i < samples.length; i++) {
@@ -79,7 +79,7 @@ function kmeans(samples: number[][], k = 3, iterations = 8) {
         }
     }
     // produce clusters
-    const clusters = centroids.map((c, idx) => ({ centroid: c, size: 0 }))
+    const clusters = centroids.map(c => ({ centroid: c, size: 0 }))
     for (let i = 0; i < assignments.length; i++) clusters[assignments[i]].size++
     return clusters
 }

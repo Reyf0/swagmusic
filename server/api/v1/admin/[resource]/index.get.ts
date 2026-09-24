@@ -6,31 +6,29 @@ const querySchema = z.object({
     offset: z.coerce.number().int().min(0).default(0),
 })
 
-/** Admin: list profiles, optionally filtered by username / name / email. */
+/** Admin: list tracks / albums / playlists, newest first, optionally searched. */
 export default defineEventHandler(async (event) => {
     await requireAdmin(event)
+    const resource = getAdminResource(event)
+    const config = ADMIN_RESOURCES[resource]
 
     const parsed = querySchema.safeParse(getQuery(event))
-    if (!parsed.success) {
-        throw createError({ statusCode: 400, statusMessage: 'Invalid query' })
-    }
+    if (!parsed.success) throw createError({ statusCode: 400, statusMessage: 'Invalid query' })
     const { q, limit, offset } = parsed.data
 
     let query = useSupabaseAdmin()
-        .from('profiles')
-        .select('id, username, full_name, email, avatar_url, is_admin, created_at', { count: 'exact' })
+        .from(resource)
+        .select(config.select, { count: 'exact' })
         .order('created_at', { ascending: false })
         .range(offset, offset + limit - 1)
 
     if (q) {
         const pattern = orIlikePattern(q)
-        query = query.or(`username.ilike.${pattern},full_name.ilike.${pattern},email.ilike.${pattern}`)
+        query = query.or(config.search.map(col => `${col}.ilike.${pattern}`).join(','))
     }
 
     const { data, error, count } = await query
-    if (error) {
-        throw createError({ statusCode: 500, statusMessage: error.message })
-    }
+    if (error) throw createError({ statusCode: 500, statusMessage: error.message })
 
-    return { users: data, total: count ?? 0 }
+    return { items: data ?? [], total: count ?? 0 }
 })

@@ -10,7 +10,7 @@ const messages: Record<Locale, Record<string, any>> = {
     en: {
         error: {
             title: 'Something went wrong',
-            description: "We're sorry — an unexpected error occurred. Try refreshing the page or send a report so we can investigate.",
+            description: "We're sorry — an unexpected error occurred. It has been reported automatically; try again in a moment.",
             tryAgain: 'Try Again',
             goHome: 'Go to Home',
             sendReport: 'Send Report',

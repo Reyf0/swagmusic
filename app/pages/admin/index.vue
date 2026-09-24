@@ -1,288 +1,68 @@
-<template>
-  <div>
-    <h1 class="text-2xl font-bold mb-6">Admin Dashboard</h1>
-
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-      <!-- Stats Cards -->
-      <UCard>
-        <template #header>
-          <div class="flex items-center">
-            <div class="p-2 rounded-full bg-blue-100 mr-3">
-              <UIcon name="i-heroicons-users" class="text-blue-500 w-6 h-6" />
-            </div>
-            <h3 class="text-lg font-medium">Users</h3>
-          </div>
-        </template>
-        <div class="text-3xl font-bold">{{ stats.users }}</div>
-        <template #footer>
-          <UButton to="/admin/users" size="sm" color="blue" variant="ghost" class="w-full">
-            Manage Users
-          </UButton>
-        </template>
-      </UCard>
-
-      <UCard>
-        <template #header>
-          <div class="flex items-center">
-            <div class="p-2 rounded-full bg-purple-100 mr-3">
-              <UIcon name="i-heroicons-musical-note" class="text-purple-500 w-6 h-6" />
-            </div>
-            <h3 class="text-lg font-medium">Tracks</h3>
-          </div>
-        </template>
-        <div class="text-3xl font-bold">{{ stats.tracks }}</div>
-        <template #footer>
-          <UButton to="/admin/tracks" size="sm" color="purple" variant="ghost" class="w-full">
-            Manage Tracks
-          </UButton>
-        </template>
-      </UCard>
-
-      <UCard>
-        <template #header>
-          <div class="flex items-center">
-            <div class="p-2 rounded-full bg-green-100 mr-3">
-              <UIcon name="i-heroicons-queue-list" class="text-green-500 w-6 h-6" />
-            </div>
-            <h3 class="text-lg font-medium">Playlists</h3>
-          </div>
-        </template>
-        <div class="text-3xl font-bold">{{ stats.playlists }}</div>
-        <template #footer>
-          <UButton to="/admin/playlists" size="sm" color="green" variant="ghost" class="w-full">
-            Manage Playlists
-          </UButton>
-        </template>
-      </UCard>
-
-      <UCard>
-        <template #header>
-          <div class="flex items-center">
-            <div class="p-2 rounded-full bg-orange-100 mr-3">
-              <UIcon name="i-heroicons-rectangle-stack" class="text-orange-500 w-6 h-6" />
-            </div>
-            <h3 class="text-lg font-medium">Albums</h3>
-          </div>
-        </template>
-        <div class="text-3xl font-bold">{{ stats.albums }}</div>
-        <template #footer>
-          <UButton to="/admin/albums" size="sm" color="orange" variant="ghost" class="w-full">
-            Manage Albums
-          </UButton>
-        </template>
-      </UCard>
-    </div>
-
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-      <!-- Recent Users -->
-      <UCard>
-        <template #header>
-          <div class="flex justify-between items-center">
-            <h3 class="text-lg font-medium">Recent Users</h3>
-            <UButton to="/admin/users" size="xs" color="gray" variant="ghost">
-              View All
-            </UButton>
-          </div>
-        </template>
-        <div v-if="loading.users" class="py-4 text-center">
-          <UIcon name="i-heroicons-arrow-path" class="animate-spin h-6 w-6 mx-auto text-gray-400" />
-        </div>
-        <div v-else-if="recentUsers.length === 0" class="py-4 text-center text-gray-500">
-          No users found
-        </div>
-        <UTable v-else :columns="userColumns" :rows="recentUsers" />
-      </UCard>
-
-      <!-- Recent Tracks -->
-      <UCard>
-        <template #header>
-          <div class="flex justify-between items-center">
-            <h3 class="text-lg font-medium">Recent Tracks</h3>
-            <UButton to="/admin/tracks" size="xs" color="gray" variant="ghost">
-              View All
-            </UButton>
-          </div>
-        </template>
-        <div v-if="loading.tracks" class="py-4 text-center">
-          <UIcon name="i-heroicons-arrow-path" class="animate-spin h-6 w-6 mx-auto text-gray-400" />
-        </div>
-        <div v-else-if="recentTracks.length === 0" class="py-4 text-center text-gray-500">
-          No tracks found
-        </div>
-        <UTable v-else :columns="trackColumns" :rows="recentTracks" />
-      </UCard>
-    </div>
-  </div>
-</template>
-
-<script setup>
+<script setup lang="ts">
 definePageMeta({
   layout: 'admin',
   middleware: ['admin']
-});
+})
 
-const supabase = useSupabase();
-const toast = useToast();
+type Stats = {
+  users: number
+  tracks: number
+  albums: number
+  playlists: number
+  plays: number
+  playsByDay: { day: string; total_listens: number }[]
+}
 
-// Stats data
-const stats = ref({
-  users: 0,
-  tracks: 0,
-  playlists: 0,
-  albums: 0
-});
+const { data: stats, pending, error, refresh } = await useFetch<Stats>('/api/v1/admin/stats', { server: false })
 
-// Loading states
-const loading = ref({
-  stats: true,
-  users: true,
-  tracks: true
-});
+const cards = computed(() => [
+  { label: 'Users', value: stats.value?.users, icon: 'i-heroicons-users', to: '/admin/users' },
+  { label: 'Tracks', value: stats.value?.tracks, icon: 'i-heroicons-musical-note', to: '/admin/tracks' },
+  { label: 'Albums', value: stats.value?.albums, icon: 'i-lucide-disc-3', to: '/admin/albums' },
+  { label: 'Playlists', value: stats.value?.playlists, icon: 'i-heroicons-queue-list', to: '/admin/playlists' },
+  { label: 'Plays', value: stats.value?.plays, icon: 'i-heroicons-play' },
+])
 
-// Recent users and tracks
-const recentUsers = ref([]);
-const recentTracks = ref([]);
+const maxPlays = computed(() => Math.max(1, ...(stats.value?.playsByDay ?? []).map(d => d.total_listens)))
 
-// Table columns
-const userColumns = [
-  { key: 'username', label: 'Username', id: 'username' },
-  { key: 'email', label: 'Email', id: 'email' },
-  { key: 'created_at', label: 'Joined', id: 'created_at' }
-];
-
-const trackColumns = [
-  { key: 'title', label: 'Title', id: 'title' },
-  { key: 'artist', label: 'Artist', id: 'artist' },
-  { key: 'created_at', label: 'Uploaded', id: 'created_at' }
-];
-
-
-// Fetch dashboard data
-onMounted(async () => {
-  await Promise.all([
-    fetchStats(),
-    fetchRecentUsers(),
-    fetchRecentTracks()
-  ]);
-});
-
-// Fetch stats
-const fetchStats = async () => {
-  loading.value.stats = true;
-
-  try {
-    // Get users count
-    const { count: usersCount, error: usersError } = await supabase
-      .from('profiles')
-      .select('*', { count: 'exact', head: true });
-
-    if (usersError) throw usersError;
-
-    // Get tracks count
-    const { count: tracksCount, error: tracksError } = await supabase
-      .from('tracks')
-      .select('*', { count: 'exact', head: true });
-
-    if (tracksError) throw tracksError;
-
-    // Get playlists count
-    const { count: playlistsCount, error: playlistsError } = await supabase
-      .from('playlists')
-      .select('*', { count: 'exact', head: true });
-
-    if (playlistsError) throw playlistsError;
-
-    // Get albums count
-    const { count: albumsCount, error: albumsError } = await supabase
-      .from('albums')
-      .select('*', { count: 'exact', head: true });
-
-    if (albumsError) throw albumsError;
-
-    // Update stats
-    stats.value = {
-      users: usersCount || 0,
-      tracks: tracksCount || 0,
-      playlists: playlistsCount || 0,
-      albums: albumsCount || 0
-    };
-  } catch (err) {
-    console.error('Error fetching stats:', err);
-    toast.add({
-      title: 'Error',
-      description: 'Failed to load dashboard statistics',
-      color: 'error'
-    });
-  } finally {
-    loading.value.stats = false;
-  }
-};
-
-// Fetch recent users
-const fetchRecentUsers = async () => {
-  loading.value.users = true;
-
-  try {
-    const { data, error } = await supabase
-      .from('profiles')
-      .select('id, username, created_at')
-      .order('created_at', { ascending: false })
-      .limit(5);
-
-    if (error) throw error;
-
-    recentUsers.value = data.map(user => ({
-      id: user.id,
-      username: user.username || 'No username',
-      email: user.auth_users?.[0]?.email || 'No email',
-      created_at: new Date(user.created_at).toLocaleDateString()
-    }));
-  } catch (err) {
-    console.error('Error fetching recent users:', err);
-    toast.add({
-      title: 'Error',
-      description: 'Failed to load recent users',
-      color: 'error'
-    });
-  } finally {
-    loading.value.users = false;
-  }
-};
-
-// Fetch recent tracks
-const fetchRecentTracks = async () => {
-  loading.value.tracks = true;
-
-  try {
-    const { data, error } = await supabase
-      .from('tracks')
-      .select('id, title, created_at')
-      .order('created_at', { ascending: false })
-      .limit(5);
-
-    if (error) throw error;
-
-    recentTracks.value = data.map(track => ({
-      id: track.id,
-      title: track.title || 'Untitled',
-      artist: track.artist || 'Unknown Artist',
-      created_at: new Date(track.created_at).toLocaleDateString()
-    }));
-  } catch (err) {
-    console.error('Error fetching recent tracks:', err);
-    toast.add({
-      title: 'Error',
-      description: 'Failed to load recent tracks',
-      color: 'error'
-    });
-  } finally {
-    loading.value.tracks = false;
-  }
-};
+useSeoMeta({ title: 'Admin · SwagMusic' })
 </script>
 
-<style scoped>
+<template>
+  <div>
+    <h1 class="text-2xl font-bold mb-6">Dashboard</h1>
 
+    <UAlert v-if="error" color="error" variant="soft" title="Could not load stats" :description="error.message" :actions="[{ label: 'Retry', onClick: () => refresh() }]" class="mb-6" />
 
+    <div class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-4 mb-8">
+      <NuxtLink
+        v-for="card in cards"
+        :key="card.label"
+        :to="card.to ?? '/admin'"
+        class="rounded-xl bg-white dark:bg-old-neutral-900 p-4 shadow-sm hover:shadow transition"
+      >
+        <div class="flex items-center gap-2 text-sm text-old-neutral-500 mb-1">
+          <UIcon :name="card.icon" class="size-4" />{{ card.label }}
+        </div>
+        <div class="text-3xl font-bold tabular-nums">
+          <USkeleton v-if="pending" class="h-8 w-16" />
+          <template v-else>{{ card.value ?? '—' }}</template>
+        </div>
+      </NuxtLink>
+    </div>
 
-</style>
+    <section class="rounded-xl bg-white dark:bg-old-neutral-900 p-4 shadow-sm">
+      <h2 class="font-semibold mb-4">Plays per day (last 30 days with activity)</h2>
+      <p v-if="!pending && !stats?.playsByDay.length" class="text-sm text-old-neutral-500">No plays yet.</p>
+      <div v-else class="flex items-end gap-1 h-40" role="img" aria-label="Plays per day">
+        <div
+          v-for="d in stats?.playsByDay ?? []"
+          :key="d.day"
+          class="flex-1 bg-green-500/80 hover:bg-green-500 rounded-t min-h-0.5"
+          :style="{ height: `${(d.total_listens / maxPlays) * 100}%` }"
+          :title="`${new Date(d.day).toLocaleDateString()}: ${d.total_listens}`"
+        />
+      </div>
+    </section>
+  </div>
+</template>

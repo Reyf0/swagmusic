@@ -30,7 +30,7 @@ async function save() {
     const patch: Record<string, string | null> = {}
     if (form.username !== (profile.value.username ?? '')) {
       const username = form.username.trim()
-      const { data: taken } = await supabase.from('profiles').select('id').ilike('username', username.replace(/[\\%_]/g, c => `\\${c}`)).neq('id', profile.value.id).limit(1)
+      const { data: taken } = await supabase.from('profiles').select('id').ilike('username', escapeLike(username)).neq('id', profile.value.id).limit(1)
       if (taken?.length) throw new Error('This username is already taken')
       patch.username = username
     }

@@ -8,7 +8,9 @@ export async function getAudioDurationFromFile(file: File, timeoutMs = 7000): Pr
         const cleanup = () => {
             try {
                 audio.pause()
-            } catch {}
+            } catch {
+                // already stopped
+            }
             audio.src = ''
             URL.revokeObjectURL(objectUrl)
             audio.removeEventListener('loadedmetadata', onLoaded)

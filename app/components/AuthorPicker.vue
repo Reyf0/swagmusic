@@ -26,7 +26,7 @@ const search = useDebounceFn(async (term: string) => {
   const { data, error } = await supabase
     .from('profiles')
     .select('id, username')
-    .ilike('username', `%${q.replace(/[\\%_]/g, c => `\\${c}`)}%`)
+    .ilike('username', `%${escapeLike(q)}%`)
     .not('username', 'is', null)
     .limit(10)
   loading.value = false

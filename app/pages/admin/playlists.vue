@@ -1,7 +1,7 @@
 <script lang="ts" setup>
 import { ref, onMounted } from 'vue';
 import type { TableColumn } from '@nuxt/ui'
-import type { Playlist } from '@/types'
+import type { Playlist } from '#shared/types'
 
 definePageMeta({
   layout: 'admin',

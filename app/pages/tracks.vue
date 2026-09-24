@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { storeToRefs } from 'pinia';
 import { useWindowSize } from '@vueuse/core';
-import type { TrackUI } from "@/types";
+import type { TrackUI } from "#shared/types";
 
 const supabase = useSupabase()
 const user = useSupabaseUser()
@@ -252,7 +252,7 @@ onMounted(() => {
 
 
 <style scoped>
-@reference "tailwindcss";
+@reference "~/assets/css/main.css";
 
 @media (max-width: 500px) {
   .track-card {

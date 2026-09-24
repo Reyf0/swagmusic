@@ -1,6 +1,6 @@
 import { usePlayerStore } from '@/stores/player'
 import { storeToRefs } from 'pinia'
-import type {Track} from "@/types/global";
+import type {Track} from "#shared/types";
 
 export const usePlayTrack = () => {
     const playerStore = usePlayerStore()

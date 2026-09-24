@@ -1,6 +1,6 @@
 import { ref } from 'vue'
 import type { SupabaseClient } from '@supabase/supabase-js'
-import type { Database, TrackEntityUI } from '@/types'
+import type { Database, TrackEntityUI } from '#shared/types'
 import { useSupabase } from "@/composables/useSupabase";
 
 export const useTracksApi = () => {

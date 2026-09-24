@@ -388,7 +388,7 @@
 
 <script setup lang="ts">
 import { useUserSearchStore } from '~/stores/userSearchStore';
-import type {Profile} from "@/types/global";
+import type {Profile} from "#shared/types";
 
 definePageMeta({
   layout: 'admin',

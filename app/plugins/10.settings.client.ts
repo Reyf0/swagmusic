@@ -16,7 +16,7 @@ export default defineNuxtPlugin(() => {
     }
 
     watch(user, (u) => {
-        store.fetchFromSupabase(u?.value ?? null, supabase).then(() => {
+        store.fetchFromSupabase(u ?? null, supabase).then(() => {
             if (!store.localThemeDirty) {
                 store.applySavedTheme()
             } else {

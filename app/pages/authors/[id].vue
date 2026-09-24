@@ -51,7 +51,7 @@
 <script setup lang="ts">
 
 import type {SupabaseClient} from "@supabase/supabase-js";
-import type {Author, TrackUI} from "@/types/global";
+import type {Author, TrackUI} from "#shared/types";
 
 const route = useRoute()
 const supabase: SupabaseClient<Database> = useSupabase()

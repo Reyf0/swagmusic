@@ -1,24 +1,18 @@
+// Pages anyone can open. Everything else requires a signed-in user.
+const PUBLIC_EXACT = ['/', '/tracks', '/search', '/login', '/register', '/confirm', '/reset-password', '/albums']
+const PUBLIC_PREFIXES = ['/playlist/', '/authors/', '/albums/']
+const GUEST_ONLY = ['/login', '/register']
 
-
-export default defineNuxtRouteMiddleware( async (to) => {
+export default defineNuxtRouteMiddleware((to) => {
     const user = useSupabaseUser()
 
+    const isPublic = PUBLIC_EXACT.includes(to.path) || PUBLIC_PREFIXES.some(prefix => to.path.startsWith(prefix))
 
-    const publicRoutes = [
-    '/login',
-    '/register',
-    '/',
-    '/tracks',
-    '/search',
-    '/auth/callback',
-    '/auth/auth-code-error',
-    ]
-
-    if (!user.value && !publicRoutes.includes(to.path)) {
-    return navigateTo('/login')
+    if (!user.value && !isPublic) {
+        return navigateTo({ path: '/login', query: { redirect: to.fullPath } })
     }
 
-    if (user.value && (to.path === '/login' || to.path === '/register')) {
-    return navigateTo('/')
+    if (user.value && GUEST_ONLY.includes(to.path)) {
+        return navigateTo('/')
     }
 })

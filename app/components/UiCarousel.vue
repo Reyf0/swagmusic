@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { Track } from "@/types/global";
+import type { Track } from "#shared/types";
 
 const props = defineProps<{
   tracks: Track[]
@@ -44,6 +44,7 @@ const scrollCarousel = (direction: 'left' | 'right') => {
 </template>
 
 <style lang="postcss" scoped>
+@reference "~/assets/css/main.css";
 .carousel-container {
   position: relative;
 }

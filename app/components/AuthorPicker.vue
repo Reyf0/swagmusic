@@ -4,7 +4,7 @@ import { Combobox, ComboboxInput, ComboboxOptions, ComboboxOption } from '@headl
 import { useDebounceFn } from '@vueuse/core'
 import Draggable from 'vuedraggable'
 import type { SupabaseClient } from '@supabase/supabase-js'
-import type { Author } from "@/types/global";
+import type { Author } from "#shared/types";
 import { useSupabase } from "@/composables/useSupabase";
 
 const supabase: SupabaseClient<Database> = useSupabase()

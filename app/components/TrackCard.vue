@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { TrackEntity } from '@/types'
+import type { TrackEntity } from '#shared/types'
 
 
 interface Props {
@@ -144,6 +144,7 @@ const isTrackPlaying = computed(() => currentTrack.value && isPlaying.value)
 </template>
 
 <style lang="postcss" scoped>
+@reference "~/assets/css/main.css";
 .track-card .play-button {
   @apply absolute  bg-green-500 hover:bg-green-400 text-white rounded-full w-12 h-12 flex items-center justify-center shadow-lg opacity-0 group-hover:opacity-100;
 }

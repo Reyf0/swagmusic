@@ -83,7 +83,6 @@ export const useSettingsStore = defineStore('settings', {
                     .select('settings')
                     .eq('id', user.id)
                     .single()
-                console.log(data)
                 if (error && error.code) console.warn('fetchFromSupabase warning:', error)
                 const remote = data?.settings ?? {}
                 const merged = { ...DEFAULTS, ...remote }
@@ -179,7 +178,8 @@ export const useSettingsStore = defineStore('settings', {
             try {
                 const { error } = await supabase
                     .from('profiles')
-                    .upsert({ id: user.id, settings: this.settings }, { returning: 'minimal' })
+                    .update({ settings: this.settings })
+                    .eq('id', user.id)
 
                 if (error) {
                     console.error('Supabase upsert error:', error)

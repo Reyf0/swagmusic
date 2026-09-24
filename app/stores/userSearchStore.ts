@@ -1,8 +1,8 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import type { SupabaseClient } from '@supabase/supabase-js'
-import type { Database } from '@/types/database.types'
-import type { Profile } from "@/types/global";
+import type { Database } from '#shared/types'
+import type { Profile } from "#shared/types";
 
 export const useUserSearchStore = defineStore('userSearchStore', () => {
   const query = ref('')

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
-import type { TrackUI } from "@/types";
+import type { TrackUI } from "#shared/types";
 
 defineProps<{ mode: 'sidebar' | 'fullscreen' }>()
 const player = usePlayerStore()

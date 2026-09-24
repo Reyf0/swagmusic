@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import AuthorPicker from "@/components/AuthorPicker.vue";
 import type { SupabaseClient } from '@supabase/supabase-js';
-import type { Database, Track } from '@/types'
+import type { Database, Track } from '#shared/types'
 
 definePageMeta({
   layout: 'admin',

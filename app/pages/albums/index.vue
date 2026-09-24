@@ -31,7 +31,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import type {Album} from "@/types/global";
+import type {Album} from "#shared/types";
 
 const supabase = useSupabase()
 const router = useRouter()

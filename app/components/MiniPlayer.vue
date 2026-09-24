@@ -3,7 +3,7 @@ import { ref, computed, onMounted, onUnmounted, nextTick, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { usePlayerStore } from '@/stores/player'
 import { useLikesStore } from '@/stores/likes'
-import type { TrackUI } from '@/types'
+import type { TrackUI } from '#shared/types'
 
 const player = usePlayerStore()
 const likesStore = useLikesStore()

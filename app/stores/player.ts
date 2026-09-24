@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import { Howl } from 'howler'
 import { ref, computed, watch, onUnmounted } from 'vue'
-import type { Track, Database } from '@/types'
+import type { Track, Database } from '#shared/types'
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { useSupabase } from "@/composables/useSupabase";
 

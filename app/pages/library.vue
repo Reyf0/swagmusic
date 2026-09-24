@@ -1,7 +1,7 @@
 <script setup lang="ts">
 
 import { storeToRefs } from 'pinia'
-import type { Like, Track } from '@@/types'
+import type { Like, Track } from '#shared/types'
 
 
 import { ref } from "vue";

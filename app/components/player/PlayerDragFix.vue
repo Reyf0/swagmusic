@@ -4,7 +4,7 @@ import { animate } from 'motion'
 import { usePlayerStore } from "@/stores/player";
 import { useLikesStore } from "@/stores/likes";
 import { storeToRefs } from "pinia";
-import type { TrackUI } from "@/types";
+import type { TrackUI } from "#shared/types";
 
 
 const player = usePlayerStore()

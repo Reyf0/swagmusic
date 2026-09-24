@@ -86,7 +86,6 @@ const user = useSupabaseUser()
 const toast = useToast()
 
 definePageMeta({
-  middleware: ['auth']
 })
 
 const profile = ref(null)

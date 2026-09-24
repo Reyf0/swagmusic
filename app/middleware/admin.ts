@@ -1,48 +1,16 @@
-import type { SupabaseClient } from "@supabase/supabase-js";
-import type { Database } from "@/types";
-import {ref} from "vue";
-import { useSupabase } from "@/composables/useSupabase";
-
 export default defineNuxtRouteMiddleware(async () => {
-    const supabase:SupabaseClient<Database> = useSupabase()
-    const {
-        data: { user: currentUser }
-    } = await supabase.auth.getUser()
+    const user = useSupabaseUser()
+    if (!user.value) return navigateTo('/login')
 
-    const user = ref(currentUser)
-    const toast = useToast();
+    const profileStore = useProfileStore()
+    if (profileStore.profile?.id !== user.value.id) await profileStore.loadProfile(user.value.id)
 
-    // If user is not logged in, redirect to log in
-    if (!user.value) {
-    return navigateTo('/login');
+    if (!profileStore.isAdmin) {
+        useToast().add({
+            title: 'Access denied',
+            description: 'You do not have permission to access the admin area',
+            color: 'error',
+        })
+        return navigateTo('/')
     }
-
-    try {
-    // Check if user has admin role in profiles table
-        const { data, error } = await supabase
-          .from('profiles')
-          .select('is_admin')
-          .eq('id', user.value.id)
-          .single();
-
-    if (error) throw error;
-
-    // If user is not an admin, redirect to home page
-    if (!data || !data.is_admin) {
-      toast.add({
-        title: 'Access Denied',
-        description: 'You do not have permission to access the admin area',
-        color: 'error',
-      });
-      return navigateTo('/');
-    }
-    } catch (err) {
-    console.error('Error checking admin status:', err);
-    toast.add({
-      title: 'Error',
-      description: 'Failed to verify admin privileges',
-      color: 'error',
-    });
-    return navigateTo('/');
-    }
-});
+})

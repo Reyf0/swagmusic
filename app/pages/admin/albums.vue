@@ -362,7 +362,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue';
-import type {Album} from "@/types/global";
+import type {Album} from "#shared/types";
 
 definePageMeta({
   layout: 'admin',

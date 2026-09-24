@@ -1,9 +1,9 @@
 import { defineStore } from 'pinia'
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import type { SupabaseClient } from '@supabase/supabase-js'
-import type { Database } from '@@/types/database.types'
-import { profileUpdateSchema } from "@@/lib/schemas/profile";
-import type { ProfileUpdateInput } from "@@/lib/schemas/profile";
+import type { Database } from '#shared/types'
+import { profileUpdateSchema } from "#shared/schemas/profile";
+import type { ProfileUpdateInput } from "#shared/schemas/profile";
 import { useSupabase } from "@/composables/useSupabase";
 
 // Типы
@@ -30,29 +30,21 @@ export const useProfileStore = defineStore('profile', () => {
 
   // Actions
 
-  // init — call once during app startup (client). Subscribes to auth events and loads profile if available.
+  let watchingAuth = false
+
+  // init — called once by the supabase plugin (server and client). Loads the profile of the
+  // signed-in user and, on the client, keeps it in sync when the user signs in/out.
   async function init() {
-    if (isHydrated.value) return
-    console.log(authUser.value)
-    // If authUser is already present, load profile
-    if (authUser.value?.id) {
-      await loadProfile(authUser.value.id)
-    }
-    // subscribe to onAuthStateChange to load/clear profile
-    try {
-      const { data } = supabase.auth.onAuthStateChange(async (event, session) => {
-        if (event === 'SIGNED_OUT') {
-          clearProfile()
-        } else if (event === 'SIGNED_IN' || event === 'USER_UPDATED') {
-          // load profile for new user
-          const uid = session?.user?.id
-          if (uid) await loadProfile(uid)
-        }
+    const uid = authUser.value?.id
+    if (uid && profile.value?.id !== uid) await loadProfile(uid)
+    if (!uid) clearProfile()
+
+    if (import.meta.client && !watchingAuth) {
+      watchingAuth = true
+      watch(() => authUser.value?.id, (newId) => {
+        if (newId) loadProfile(newId)
+        else clearProfile()
       })
-      // You may want to save `data.subscription` to unsubscribe later. We intentionally do not auto-unsubscribe.
-    } catch (err) {
-      // some runtimes may not support onAuthStateChange in the same way — ignore if not available
-      console.warn('profile.init: onAuthStateChange not available', err)
     }
 
     isHydrated.value = true

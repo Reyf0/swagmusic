@@ -1,5 +1,5 @@
 import type { SupabaseClient, Session, User } from '@supabase/supabase-js'
-import type { Database } from '@/types/database.types'
+import type { Database } from '#shared/types'
 
 export const useSupabase = () => {
     const { $supabase } = useNuxtApp()

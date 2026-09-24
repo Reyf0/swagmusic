@@ -45,7 +45,8 @@ export default defineNuxtConfig({
     runtimeConfig: {
         sentryDsn: process.env.SENTRY_DSN,
 
-        supabaseServiceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_API_SECRET_KEY,
+        // Prefer the new secret key (sb_secret_…): legacy service_role JWTs can be disabled per project.
+        supabaseServiceRoleKey: process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_API_SECRET_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY,
         supabaseUrl: process.env.SUPABASE_URL,
         supabaseKey: process.env.SUPABASE_KEY || process.env.NUXT_PUBLIC_SUPABASE_ANON_KEY,
 

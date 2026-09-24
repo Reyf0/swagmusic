@@ -1,41 +1,23 @@
-import { usePlayerStore } from '@/stores/player'
-import { storeToRefs } from 'pinia'
-import type {Track} from "#shared/types";
+import type { Track } from '#shared/types'
 
+/**
+ * Play button behaviour for track lists: clicking the current track toggles
+ * play/pause, clicking another one starts it with `trackList` as the queue.
+ */
 export const usePlayTrack = () => {
     const playerStore = usePlayerStore()
-    const { currentTrack, isPlaying, queue } = storeToRefs(playerStore)
+    const { currentTrack, isPlaying } = storeToRefs(playerStore)
 
-    const isCurrentTrack = (track: Track): boolean => {
-        return currentTrack.value?.id === track.id
-    }
+    const isCurrentTrack = (track: Pick<Track, 'id'>) => currentTrack.value?.id === track.id
+    const isTrackPlaying = (track: Pick<Track, 'id'>) => isCurrentTrack(track) && isPlaying.value
 
-    const playTrack = (track: Track, trackList: Track[] = []) => {
-        // Если клик по текущему треку — ставим на паузу или продолжаем
+    function playTrack(track: Track, trackList: Track[] = []) {
         if (isCurrentTrack(track)) {
-            if (isPlaying.value) {
-                playerStore.pause()
-            } else {
-                playerStore.resume()
-            }
+            playerStore.togglePlay()
             return
         }
-
-        const isSameQueue =
-            queue.value.length === trackList.length &&
-            queue.value.every((t, i) => t.id === trackList[i].id)
-
-        if (isSameQueue) {
-            // Если очередь та же, просто найди индекс и воспроизведи
-            const index = trackList.findIndex(t => t.id === track.id)
-            if (index !== -1) {
-                playerStore.play(trackList[index], trackList)
-            }
-        } else {
-            // Иначе заменяем очередь
-            playerStore.replaceQueue(trackList, track)
-        }
+        playerStore.play(track, trackList.length ? trackList : [track])
     }
 
-    return { playTrack, isCurrentTrack }
+    return { playTrack, isCurrentTrack, isTrackPlaying }
 }

@@ -1,248 +1,103 @@
-import { ref } from 'vue'
-import type { SupabaseClient } from '@supabase/supabase-js'
-import type { Database, TrackEntityUI } from '#shared/types'
-import { useSupabase } from "@/composables/useSupabase";
+import type { Track } from '#shared/types'
 
+type Kind = 'search' | 'feed' | 'recent' | 'popular'
+
+function isAbort(err: any) {
+    return err?.name === 'AbortError' || /aborted/i.test(String(err?.message ?? ''))
+}
+
+/**
+ * Track queries. Every function returns normalized `Track`s (with `authors`).
+ * A new call of the same kind aborts the previous in-flight request.
+ */
 export const useTracksApi = () => {
-    const supabase: SupabaseClient<Database> = useSupabase()
+    const supabase = useSupabase()
     const lastError = ref<Error | null>(null)
+    const controllers: Partial<Record<Kind, AbortController>> = {}
 
-    // Отдельные AbortController'ы для разных типов запросов
-    let searchController: AbortController | null = null
-    let autocompleteController: AbortController | null = null
-    let feedController: AbortController | null = null
-    let trackController: AbortController | null = null
-    let recentController: AbortController | null = null
-
-    // Утилита для безопасного распознавания Abort
-    function isAbort(err: any) {
-        return err && (err.name === 'AbortError' || err.message === 'The user aborted a request.' || /aborted/i.test(String(err?.message ?? '')))
+    function nextSignal(kind: Kind) {
+        controllers[kind]?.abort()
+        const c = new AbortController()
+        controllers[kind] = c
+        return c.signal
     }
 
-    /**
-     * Search tracks using RPC get_tracks_search
-     * options:
-     *  - q: string | null
-     *  - language: 'russian' | 'english' | null
-     *  - genreIds: string[] | null
-     *  - limit: number
-     *  - offset: number
-     */
-    async function searchTracks(options: {
-        q?: string | null
-        language?: string | null
-        genreIds?: string[] | null
-        limit?: number
-        offset?: number
-    } = {}): Promise<TrackViewRow[]> {
-        // abort previous
-        if (searchController) {
-            try { searchController.abort() } catch (_) {}
-            searchController = null
-        }
-        searchController = new AbortController()
+    async function run<T>(kind: Kind, fn: (signal: AbortSignal) => PromiseLike<{ data: any; error: any }>, map: (data: any) => T, empty: T): Promise<T> {
         lastError.value = null
+        try {
+            const { data, error } = await fn(nextSignal(kind))
+            if (error) throw error
+            return map(data)
+        } catch (err: any) {
+            if (isAbort(err)) return empty
+            lastError.value = err
+            console.error(`useTracksApi.${kind} error`, err)
+            return empty
+        }
+    }
 
+    /** Full-text search (RPC get_tracks_search). */
+    function searchTracks(options: { q?: string | null; language?: string | null; genreIds?: string[] | null; limit?: number; offset?: number } = {}) {
         const { q = null, language = null, genreIds = null, limit = 20, offset = 0 } = options
-
-        try {
-            // supabase.rpc(..., { signal: searchController.signal }) — если ваша версия клиента поддерживает signal
-            // Если не поддерживает, запрос всё равно будет выполнен, но мы ловим Abort через внешний fetch (см. комментарий ниже).
-            const rpcBuilder = supabase.rpc('get_tracks_search', {
-                p_q: q,
-                p_language: language,
-                p_genre_ids: genreIds,
-                p_limit: limit,
-                p_offset: offset
-            })
-            // attach signal then execute
-            const { data, error } = await rpcBuilder.abortSignal(searchController.signal)
-            if (error) throw error
-            return (data ?? []) as TrackEntityUI[]
-        } catch (err: any) {
-            if (isAbort(err)) {
-                // запрос был отменён — не считаем это ошибкой
-                return []
-            }
-            lastError.value = err
-            console.error('useTracksApi.searchTracks error', err)
-            return []
-        } finally {
-            // очистим controller если текущий - наш
-            if (searchController) {
-                try { searchController = null } catch (_) {}
-            }
-        }
+        return run('search', signal => supabase
+            .rpc('get_tracks_search', { p_q: q ?? undefined, p_language: language ?? undefined, p_genre_ids: genreIds ?? undefined, p_limit: limit, p_offset: offset })
+            .abortSignal(signal), toTracks, [] as Track[])
     }
 
-    /**
-     * Autocomplete for titles (RPC autocomplete_tracks)
-     * returns array of { id, title, score }
-     */
-    async function autocomplete(q: string, limit = 8) {
-        // abort previous
-        if (autocompleteController) {
-            try { autocompleteController.abort() } catch (_) {}
-            autocompleteController = null
-        }
-        autocompleteController = new AbortController()
-        lastError.value = null
-
-        if (!q || q.trim().length === 0) return []
-
-        try {
-            const rpcBuilder = supabase.rpc('autocomplete_tracks', { p_q: q, p_limit: limit })
-            const { data, error } = await rpcBuilder.abortSignal(autocompleteController.signal)
-            if (error) throw error
-            return (data ?? []) as Array<{ id: string; title: string; score: number }>
-        } catch (err: any) {
-            if (isAbort(err)) return []
-            lastError.value = err
-            console.error('useTracksApi.autocomplete error', err)
-            return []
-        } finally {
-            if (autocompleteController) {
-                try { autocompleteController = null } catch (_) {}
-            }
-        }
-    }
-
-    /**
-     * Keyset feed (get_tracks_feed)
-     * afterCreatedAt: ISO string or null
-     * afterId: uuid or null
-     */
-    async function getFeed(params: { limit?: number; afterCreatedAt?: string | null; afterId?: string | null } = {}) {
-        if (feedController) {
-            try { feedController.abort() } catch (_) {}
-            feedController = null
-        }
-        feedController = new AbortController()
-        lastError.value = null
-
+    /** Newest tracks, keyset-paginated by (created_at, id). */
+    function getFeed(params: { limit?: number; afterCreatedAt?: string | null; afterId?: string | null } = {}) {
         const { limit = 20, afterCreatedAt = null, afterId = null } = params
-        try {
-            const rpcBuilder = supabase.rpc('get_tracks_feed', {
-                p_limit: limit,
-                p_after_created_at: afterCreatedAt,
-                p_after_id: afterId
-            })
-            const { data, error } = await rpcBuilder.abortSignal(feedController.signal)
-            if (error) throw error
-            return (data ?? []) as Array<any>
-        } catch (err: any) {
-            if (isAbort(err)) return []
-            lastError.value = err
-            console.error('useTracksApi.getFeed error', err)
+        return run('feed', (signal) => {
+            let query = supabase
+                .from('tracks_with_authors')
+                .select('*')
+                .order('created_at', { ascending: false })
+                .order('id', { ascending: false })
+                .limit(limit)
+            if (afterCreatedAt && afterId) {
+                query = query.or(`created_at.lt."${afterCreatedAt}",and(created_at.eq."${afterCreatedAt}",id.lt.${afterId})`)
+            }
+            return query.abortSignal(signal)
+        }, toTracks, [] as Track[])
+    }
+
+    /** Tracks by id, returned in the order of `ids`. */
+    async function getTracksByIds(ids: string[]) {
+        if (!ids.length) return []
+        const { data, error } = await supabase.from('tracks_with_authors').select('*').in('id', ids)
+        if (error) {
+            lastError.value = error as any
+            console.error('useTracksApi.getTracksByIds error', error)
             return []
-        } finally {
-            if (feedController) {
-                try { feedController = null } catch (_) {}
-            }
         }
+        const byId = new Map(toTracks(data).map(t => [t.id, t]))
+        return ids.map(id => byId.get(id)).filter((t): t is Track => !!t)
     }
 
-    /**
-     * Get single track with authors (from view)
-     */
-    async function getTrackById(id: string) {
-        if (trackController) {
-            try { trackController.abort() } catch (_) {}
-            trackController = null
-        }
-        trackController = new AbortController()
-        lastError.value = null
-
-        try {
-            // for .from().select() supabase-js may accept { signal } option similarly
-            const builder = supabase.from('tracks_with_authors').select('*').eq('id', id).limit(1).single()
-            const { data, error } = await builder.abortSignal(trackController.signal)
-            if (error) throw error
-            return data as TrackEntityUI
-        } catch (err: any) {
-            if (isAbort(err)) return null
-            lastError.value = err
-            console.error('useTracksApi.getTrackById error', err)
-            return null
-        } finally {
-            if (trackController) {
-                try { trackController = null } catch (_) {}
-            }
-        }
+    /** Most played tracks (RPC get_popular_tracks). */
+    async function getPopular(limit = 10) {
+        const ids = await run('popular', signal => supabase
+            .rpc('get_popular_tracks', { p_limit: limit })
+            .abortSignal(signal), (data: { track_id: string }[]) => (data ?? []).map(r => r.track_id), [] as string[])
+        return getTracksByIds(ids)
     }
 
-    /**
-     * New: get recent tracks enriched (RPC get_user_recent_tracks_full)
-     * Returns TrackEntityUI[] where each row contains track fields + authors JSON + last_played + play_count
-     */
-    async function getRecentTracksFull(params: { userId: string; limit?: number; after?: string | null }) {
-        if (recentController) { try { recentController.abort() } catch (_) {} recentController = null }
-        recentController = new AbortController()
-        lastError.value = null
-
+    /** Recently played by the user (RPC get_user_recent_tracks_full), newest first. */
+    function getRecentTracksFull(params: { userId: string; limit?: number; after?: string | null }) {
         const { userId, limit = 50, after = null } = params
-        try {
-            const rpcBuilder = supabase.rpc('get_user_recent_tracks_full', {
-                p_user_id: userId,
-                p_limit: limit,
-                p_after: after
-            })
-            const { data, error } = await rpcBuilder.abortSignal(recentController.signal)
-            if (error) throw error
-            return (data ?? []) as TrackEntityUI[]
-        } catch (err: any) {
-            if (isAbort(err)) return []
-            lastError.value = err
-            console.error('useTracksApi.getRecentTracksFull error', err)
-            return []
-        } finally {
-            recentController = null
-        }
+        return run('recent', signal => supabase
+            .rpc('get_user_recent_tracks_full', { p_user_id: userId, p_limit: limit, p_after: after ?? undefined })
+            .abortSignal(signal), (data: any[]) => (data ?? []).map(row => ({ ...toTrack(row), last_played: row.last_played as string })), [] as (Track & { last_played: string })[])
     }
 
-    /**
-     * Optional: cancel all pending requests (useful on component unmount)
-     */
-    function cancelSearch() {
-        try { if (searchController) searchController.abort() } catch (_) {}
-        searchController = null
+    function cancel(kind: Kind) {
+        controllers[kind]?.abort()
+        delete controllers[kind]
     }
-    function cancelAutocomplete() {
-        try { if (autocompleteController) autocompleteController.abort() } catch (_) {}
-        autocompleteController = null
-    }
-    function cancelFeed() {
-        try { if (feedController) feedController.abort() } catch (_) {}
-        feedController = null
-    }
-    function cancelTrack() {
-        try { if (trackController) trackController.abort() } catch (_) {}
-        trackController = null
-    }
-    function cancelRecent() {
-        try { if (recentController) recentController.abort() } catch (_) {}
-        recentController = null
-    }
+
     function cancelAll() {
-        cancelSearch()
-        cancelAutocomplete()
-        cancelFeed()
-        cancelTrack()
-        cancelRecent()
+        for (const kind of Object.keys(controllers) as Kind[]) cancel(kind)
     }
 
-    return {
-        searchTracks,
-        autocomplete,
-        getFeed,
-        getTrackById,
-        getRecentTracksFull,
-        cancelSearch,
-        cancelAutocomplete,
-        cancelFeed,
-        cancelTrack,
-        cancelRecent,
-        cancelAll,
-        lastError
-    }
+    return { searchTracks, getFeed, getTracksByIds, getPopular, getRecentTracksFull, cancel, cancelAll, lastError }
 }

@@ -1,405 +1,401 @@
 import { defineStore } from 'pinia'
 import { Howl } from 'howler'
-import { ref, computed, watch, onUnmounted } from 'vue'
-import type { Track, Database } from '#shared/types'
-import type { SupabaseClient } from "@supabase/supabase-js";
-import { useSupabase } from "@/composables/useSupabase";
+import type { Track } from '#shared/types'
 
 type ViewName = 'now' | 'queue' | 'lyrics'
 type ViewMode = 'sidebar' | 'fullscreen'
+export type RepeatMode = 'off' | 'all' | 'one'
+
+const VOLUME_KEY = 'swagmusic:volume'
 
 export const usePlayerStore = defineStore('player', () => {
-    const nuxtApp = useNuxtApp()
+    const supabase = useSupabase()
+    const user = useSupabaseUser()
 
     const currentTrack = ref<Track | null>(null)
-    const sound = ref<Howl | null>(null)
     const isPlaying = ref(false)
+    const isLoading = ref(false)
     const currentTime = ref(0)
     const duration = ref(0)
     const volume = ref(1)
     const queue = ref<Track[]>([])
     const currentTrackIndex = ref(-1)
-    const isRepeat = ref(false)
+    const repeatMode = ref<RepeatMode>('off')
     const isShuffle = ref(false)
+
+    // The Howl instance is not reactive state (and must not be serialized into the SSR payload).
+    let sound: Howl | null = null
+    let progressTimer: ReturnType<typeof setInterval> | null = null
+
+    // ───────────── Views (now playing / queue / lyrics panels) ─────────────
 
     const viewModes: Record<ViewName, { sidebar: boolean; fullscreen: boolean }> = {
         now: { sidebar: true, fullscreen: true },
         queue: { sidebar: true, fullscreen: false },
         lyrics: { sidebar: false, fullscreen: true }
     }
-    // Храним режим каждого активного view
-    const activeViews = ref<Record<ViewName, ViewMode | null>>({
-        now: null,
-        queue: null,
-        lyrics: null
-    })
-    // Получить текущие active views
-    const getSidebarView = computed<ViewName | null>(() =>
-        (Object.entries(activeViews.value) as [ViewName, ViewMode | null][])
-            .find(([, mode]) => mode === 'sidebar')?.[0] || null
-    )
-    const getFullscreenView = computed<ViewName | null>(() =>
-        (Object.entries(activeViews.value) as [ViewName, ViewMode | null][])
-            .find(([, mode]) => mode === 'fullscreen')?.[0] || null
-    )
+    const activeViews = ref<Record<ViewName, ViewMode | null>>({ now: null, queue: null, lyrics: null })
+
+    const findView = (mode: ViewMode) =>
+        (Object.entries(activeViews.value) as [ViewName, ViewMode | null][]).find(([, m]) => m === mode)?.[0] ?? null
+    const getSidebarView = computed<ViewName | null>(() => findView('sidebar'))
+    const getFullscreenView = computed<ViewName | null>(() => findView('fullscreen'))
     const isFullScreenMode = computed(() => getFullscreenView.value !== null)
     const isViewOpen = (view: ViewName) => activeViews.value[view] !== null
-    
-    const openView = (view: ViewName) => {
-        const supports = viewModes[view]
-        const sidebar = getSidebarView.value
-        const fullscreen = getFullscreenView.value
 
-        // Если уже открыт — ничего не делаем
+    function openView(view: ViewName) {
         if (activeViews.value[view]) return
-
-        // 1. Если поддерживается sidebar — открываем в sidebar
+        const supports = viewModes[view]
         if (supports.sidebar) {
-            // Заменяем предыдущий sidebar view, если есть
+            const sidebar = getSidebarView.value
             if (sidebar) activeViews.value[sidebar] = null
             activeViews.value[view] = 'sidebar'
-            return
-        }
-
-        // 2. Если поддерживается fullscreen — открываем туда
-        if (supports.fullscreen) {
+        } else if (supports.fullscreen) {
+            const fullscreen = getFullscreenView.value
             if (fullscreen) activeViews.value[fullscreen] = null
             activeViews.value[view] = 'fullscreen'
-            return
         }
-
-        // 3. Невозможно открыть (должно быть исключением)
-        console.warn(`View "${view}" не поддерживает ни sidebar, ни fullscreen`)
     }
 
-    const closeView = (view: ViewName) => {
+    function closeView(view: ViewName) {
         activeViews.value[view] = null
     }
 
-    const switchViewMode = (view: ViewName) => {
+    function toggleView(view: ViewName) {
+        if (isViewOpen(view)) closeView(view)
+        else openView(view)
+    }
+
+    function switchViewMode(view: ViewName) {
         const currentMode = activeViews.value[view]
+        if (!currentMode) return
         const supported = viewModes[view]
-
-        if (!currentMode) return // View не открыт
-
-        // Переключаем режим
         const newMode: ViewMode | null =
             currentMode === 'sidebar' && supported.fullscreen ? 'fullscreen'
                 : currentMode === 'fullscreen' && supported.sidebar ? 'sidebar'
                     : null
+        if (!newMode) return
 
-        if (!newMode) return // Нельзя переключить
-
-        // Закрываем старый режим
         activeViews.value[view] = null
-
-        // Закрываем другой View, если новый режим занят
-        if (newMode === 'sidebar') {
-            const currentSidebar = getSidebarView.value
-            if (currentSidebar) activeViews.value[currentSidebar] = null
-        }
-
-        if (newMode === 'fullscreen') {
-            const currentFullscreen = getFullscreenView.value
-            if (currentFullscreen) activeViews.value[currentFullscreen] = null
-        }
-
-        // Включаем новый режим
+        const occupant = findView(newMode)
+        if (occupant) activeViews.value[occupant] = null
         activeViews.value[view] = newMode
     }
 
-    const checkIfNoActiveViews = () => {
-        for (const view in activeViews.value) {
-            if (activeViews.value[view] != null) {
-                return false
-            }
+    const hasNoActiveViews = () => Object.values(activeViews.value).every(mode => mode === null)
+
+    // ───────────── Playback ─────────────
+
+    function startProgress() {
+        stopProgress()
+        progressTimer = setInterval(() => {
+            if (sound && isPlaying.value) currentTime.value = Number(sound.seek()) || 0
+        }, 250)
+    }
+
+    function stopProgress() {
+        if (progressTimer) clearInterval(progressTimer)
+        progressTimer = null
+    }
+
+    function unloadSound() {
+        stopProgress()
+        if (!sound) return
+        try {
+            sound.off()
+            sound.stop()
+            sound.unload()
+        } catch (e) {
+            console.warn('Error unloading previous sound', e)
         }
-        return true
+        sound = null
     }
 
-
-    // ───────────── Player Logic ─────────────
-
-    const supabase:SupabaseClient<Database> = useSupabase()
-    const user = useSupabaseUser()
-    const lastListenedTrackId = ref<string | null>(null)
-
-    const setCurrentTrack = (track: Track | null) => {
-        currentTrack.value = track
+    async function recordListen(trackId: string) {
+        if (!user.value) return
+        const { error } = await supabase.from('play_history').insert({ user_id: user.value.id, track_id: trackId })
+        if (error) console.warn('Could not record listen', error.message)
     }
 
-    const recordListen = async () => {
-        const trackId = currentTrack.value?.id
-        if (!user.value || !trackId) return
-        if (lastListenedTrackId.value === trackId) return
-
-        const { data: lastListen, error: lastError } = await supabase
-            .from('play_history')
-            .select('track_id, played_at')
-            .eq('user_id', user.value.id)
-            .order('played_at', { ascending: false })
-            .limit(1)
-            .maybeSingle()
-
-        if (lastError) return
-
-        const lastTrackId = lastListen?.track_id
-        const lastPlayedAt = lastListen?.played_at ? new Date(lastListen.played_at) : null
-        const now = new Date()
-        const timeSinceLast = lastPlayedAt ? (now.getTime() - lastPlayedAt.getTime()) / 1000 : Infinity
-
-        if (lastTrackId === trackId && timeSinceLast < 1000) return
-
-        const { error: insertError } = await supabase.from('play_history').insert({
-            user_id: user.value.id,
-            track_id: trackId
-        })
-
-        if (!insertError) lastListenedTrackId.value = trackId
-    }
-
-    let progressInterval: number = null
-    const startProgressTracking = () => {
-        stopProgressTracking()
-        progressInterval = setInterval(() => {
-            if (sound.value && isPlaying.value) {
-                currentTime.value = sound.value.seek()
-            }
-        }, 1000)
-    }
-
-    const stopProgressTracking = () => {
-        if (progressInterval) {
-            clearInterval(progressInterval)
-            progressInterval = null
-        }
-    }
-
-    const play = (track: Track, trackList: Track[] = []) => {
-        if (sound.value && currentTrack.value?.id === track.id) {
-            sound.value?.play()
-            isPlaying.value = true
-            return
-        }
-
-        if (sound.value) {
-            try {
-                sound.value.stop()
-                sound.value.unload()
-            } catch (e) {
-                console.warn('Error unloading previous sound', e)
-            } finally {
-                sound.value = null
-            }
-        }
-
-        if (trackList.length > 0) {
+    /** Loads `track` and starts playback. Optionally replaces the queue with `trackList`. */
+    function play(track: Track, trackList?: Track[]) {
+        if (trackList?.length) {
             queue.value = [...trackList]
             currentTrackIndex.value = queue.value.findIndex(t => t.id === track.id)
         }
+        if (currentTrackIndex.value < 0 || queue.value[currentTrackIndex.value]?.id !== track.id) {
+            // not part of the current queue: play it on its own
+            queue.value = [track]
+            currentTrackIndex.value = 0
+        }
 
+        if (sound && currentTrack.value?.id === track.id) {
+            sound.play()
+            return
+        }
+
+        unloadSound()
         currentTrack.value = track
+        currentTime.value = 0
+        duration.value = track.duration_seconds ?? 0
 
-        console.log('PLAY TRACK:', {
-            id: track.id,
-            title: track.title,
-            audio_url: track.audio_url,
-        })
+        if (!track.audio_url) {
+            useToast().add({ title: 'This track has no audio file', description: track.title, color: 'error' })
+            return
+        }
 
-        sound.value = new Howl({
-            // @ts-ignore
+        isLoading.value = true
+        const howl = new Howl({
             src: [track.audio_url],
             html5: true,
             volume: volume.value,
-            onloaderror: (id, howlerError) => {
-                console.error('Howler load error', {
-                    id,
-                    howlerError,
-                    src: track.audio_url,
-                    track,
-                })
-
-                const err = new Error(`Howler load error: ${track.audio_url}`)
-                ;(err as any).howlerId = id
-                ;(err as any).howlerError = howlerError
-                ;(err as any).track = track
-
-                nuxtApp.callHook('app:error', err)
-            },
-            onplayerror: (id, error) => {
-                console.error(id, error)
-                nuxtApp.callHook('app:error', {
-                    message: 'Howler play error',
-                    error: error,
-                    id
-                })
-                sound.value?.once('unlock', () => sound.value?.play())
-            },
-            onend: () => {
-                if (isRepeat.value) sound.value?.play()
-                else playNext()
-            },
             onload: () => {
-                duration.value = sound.value?.duration() || 0
+                isLoading.value = false
+                duration.value = howl.duration() || duration.value
+            },
+            onloaderror: (_id, err) => {
+                isLoading.value = false
+                isPlaying.value = false
+                console.error('Howler load error', { err, src: track.audio_url })
+                useToast().add({ title: 'Could not load track', description: track.title, color: 'error' })
+                // skip to the next track, unless this was the only one
+                if (queue.value.length > 1) playNext()
+            },
+            onplayerror: () => {
+                // Autoplay was blocked: wait for the browser to unlock audio, then retry.
+                isPlaying.value = false
+                howl.once('unlock', () => howl.play())
             },
             onplay: () => {
-                startProgressTracking()
+                isLoading.value = false
                 isPlaying.value = true
+                startProgress()
+                updateMediaSession()
             },
             onpause: () => {
-                stopProgressTracking()
                 isPlaying.value = false
+                stopProgress()
             },
             onstop: () => {
-                stopProgressTracking()
                 isPlaying.value = false
-                currentTime.value = 0
-            }
+                stopProgress()
+            },
+            onend: () => {
+                if (repeatMode.value === 'one') {
+                    howl.play()
+                    return
+                }
+                playNext(true)
+            },
         })
-        if (checkIfNoActiveViews()) {
-            openView('now')
-        }
+        sound = howl
 
-        sound.value.play()
-        isPlaying.value = true
+        if (hasNoActiveViews() && import.meta.client && window.matchMedia('(min-width: 768px)').matches) openView('now')
+
+        howl.play()
+        recordListen(track.id)
     }
 
-    watch(currentTrack, async () => {
-        if (currentTrack.value) await recordListen()
-    })
-
-    const pause = () => {
-        sound.value?.pause()
-        isPlaying.value = false
+    function pause() {
+        sound?.pause()
     }
 
-    const resume = () => {
-        sound.value?.play()
-        isPlaying.value = true
+    function resume() {
+        if (sound) sound.play()
+        else if (currentTrack.value) play(currentTrack.value)
     }
 
-    const stop = () => {
-        sound.value?.stop()
-        isPlaying.value = false
+    function togglePlay() {
+        if (isPlaying.value) pause()
+        else resume()
+    }
+
+    function stop() {
+        sound?.stop()
         currentTime.value = 0
     }
 
-    const seek = (position: number) => {
-        if (sound.value) {
-            sound.value.seek(position)
-            currentTime.value = position
-        }
+    function seek(position: number) {
+        const target = Math.max(0, Math.min(position, duration.value || position))
+        if (sound) sound.seek(target)
+        currentTime.value = target
+        updatePositionState()
     }
 
-    const setVolume = (newVolume: number) => {
+    function setVolume(newVolume: number) {
         volume.value = Math.max(0, Math.min(1, newVolume))
-        if (sound.value) {
-            sound.value.volume(volume.value)
+        sound?.volume(volume.value)
+        if (import.meta.client) {
+            try { localStorage.setItem(VOLUME_KEY, String(volume.value)) } catch { /* storage unavailable */ }
         }
     }
 
-    const toggleRepeat = () => {
-        isRepeat.value = !isRepeat.value
+    function cycleRepeat() {
+        repeatMode.value = repeatMode.value === 'off' ? 'all' : repeatMode.value === 'all' ? 'one' : 'off'
     }
 
-    const toggleShuffle = () => {
+    function toggleShuffle() {
         isShuffle.value = !isShuffle.value
     }
 
-    const playNext = () => {
-        if (queue.value.length === 0 || currentTrackIndex.value === -1) return stop()
-
-        let nextIndex = -1
-        if (isShuffle.value) {
-            const indices = queue.value.map((_, i) => i).filter(i => i !== currentTrackIndex.value)
-            nextIndex = indices.length > 0 ? indices[Math.floor(Math.random() * indices.length)] : -1
-        } else {
-            nextIndex = (currentTrackIndex.value + 1) % queue.value.length
-        }
-
-        if (nextIndex !== -1) {
-            currentTrackIndex.value = nextIndex
-            play(queue.value[nextIndex], queue.value)
-        } else {
-            stop()
-        }
+    function randomOtherIndex() {
+        const indices = queue.value.map((_, i) => i).filter(i => i !== currentTrackIndex.value)
+        return indices.length ? indices[Math.floor(Math.random() * indices.length)]! : -1
     }
 
-    const playPrevious = () => {
-        if (queue.value.length === 0 || currentTrackIndex.value === -1) return stop()
+    /** @param auto true when called because the current track ended */
+    function playNext(auto = false) {
+        if (!queue.value.length) return stop()
 
+        let nextIndex: number
+        if (isShuffle.value) {
+            nextIndex = randomOtherIndex()
+        } else {
+            nextIndex = currentTrackIndex.value + 1
+            if (nextIndex >= queue.value.length) nextIndex = repeatMode.value === 'all' || !auto ? 0 : -1
+        }
+
+        if (nextIndex < 0) {
+            // end of the queue
+            stop()
+            return
+        }
+        playAt(nextIndex)
+    }
+
+    function playPrevious() {
+        if (!queue.value.length) return
         if (currentTime.value > 3) {
             seek(0)
             return
         }
-
-        let prevIndex = -1
-        if (isShuffle.value) {
-            const indices = queue.value.map((_, i) => i).filter(i => i !== currentTrackIndex.value)
-            prevIndex = indices.length > 0 ? indices[Math.floor(Math.random() * indices.length)] : -1
-        } else {
-            prevIndex = (currentTrackIndex.value - 1 + queue.value.length) % queue.value.length
-        }
-
-        if (prevIndex !== -1) {
-            currentTrackIndex.value = prevIndex
-            play(queue.value[prevIndex], queue.value)
-        } else {
-            stop()
-        }
+        const prevIndex = isShuffle.value
+            ? randomOtherIndex()
+            : (currentTrackIndex.value - 1 + queue.value.length) % queue.value.length
+        if (prevIndex >= 0) playAt(prevIndex)
     }
 
-    const replaceQueue = (newQueue: Track[], startTrack?: Track) => {
-        queue.value = [...newQueue]
-
-        const index = startTrack
-            ? newQueue.findIndex(t => t.id === startTrack.id)
-            : 0
-
-        if (index < 0 || !newQueue[index]) {
-            stop()
-            return
-        }
-
+    function playAt(index: number) {
+        const track = queue.value[index]
+        if (!track) return
         currentTrackIndex.value = index
-        play(newQueue[index], newQueue)
+        play(track)
     }
 
-    onUnmounted(() => stopProgressTracking())
+    function replaceQueue(newQueue: Track[], startTrack?: Track) {
+        if (!newQueue.length) return
+        const index = startTrack ? newQueue.findIndex(t => t.id === startTrack.id) : 0
+        queue.value = [...newQueue]
+        playAt(Math.max(0, index))
+    }
+
+    /** Inserts `track` right after the current one. */
+    function playNextInQueue(track: Track) {
+        if (!currentTrack.value) return play(track)
+        const existing = queue.value.findIndex((t, i) => t.id === track.id && i !== currentTrackIndex.value)
+        if (existing >= 0) removeFromQueue(existing)
+        queue.value.splice(currentTrackIndex.value + 1, 0, track)
+        useToast().add({ title: 'Plays next', description: track.title, color: 'success' })
+    }
+
+    function addToQueue(track: Track) {
+        if (!currentTrack.value) return play(track)
+        queue.value.push(track)
+        useToast().add({ title: 'Added to queue', description: track.title, color: 'success' })
+    }
+
+    function removeFromQueue(index: number) {
+        if (index === currentTrackIndex.value || index < 0 || index >= queue.value.length) return
+        queue.value.splice(index, 1)
+        if (index < currentTrackIndex.value) currentTrackIndex.value -= 1
+    }
+
+    // ───────────── Media Session (lock screen / hardware keys) ─────────────
+
+    function updateMediaSession() {
+        if (!import.meta.client || !('mediaSession' in navigator) || !currentTrack.value) return
+        const t = currentTrack.value
+        navigator.mediaSession.metadata = new MediaMetadata({
+            title: t.title,
+            artist: artistNames(t, ''),
+            artwork: t.cover_url ? [{ src: t.cover_url, sizes: '512x512' }] : [],
+        })
+        updatePositionState()
+    }
+
+    function updatePositionState() {
+        if (!import.meta.client || !('mediaSession' in navigator) || !duration.value) return
+        try {
+            navigator.mediaSession.setPositionState({
+                duration: duration.value,
+                position: Math.min(currentTime.value, duration.value),
+                playbackRate: 1,
+            })
+        } catch { /* unsupported */ }
+    }
+
+    if (import.meta.client) {
+        try {
+            const raw = localStorage.getItem(VOLUME_KEY)
+            const saved = Number(raw)
+            if (raw !== null && Number.isFinite(saved)) volume.value = Math.max(0, Math.min(1, saved))
+        } catch { /* storage unavailable */ }
+
+        if ('mediaSession' in navigator) {
+            const ms = navigator.mediaSession
+            const handlers: [MediaSessionAction, MediaSessionActionHandler][] = [
+                ['play', () => resume()],
+                ['pause', () => pause()],
+                ['previoustrack', () => playPrevious()],
+                ['nexttrack', () => playNext()],
+                ['seekto', (details) => { if (details.seekTime != null) seek(details.seekTime) }],
+            ]
+            for (const [action, handler] of handlers) {
+                try { ms.setActionHandler(action, handler) } catch { /* unsupported action */ }
+            }
+            watch(isPlaying, (playing) => { ms.playbackState = playing ? 'playing' : 'paused' })
+        }
+    }
 
     return {
         currentTrack,
         isPlaying,
+        isLoading,
         currentTime,
         duration,
         volume,
         queue,
         currentTrackIndex,
-        isRepeat,
+        repeatMode,
         isShuffle,
         viewModes,
         activeViews,
         isFullScreenMode,
         getSidebarView,
         getFullscreenView,
-        
+
         // Playback
         play,
         pause,
         resume,
+        togglePlay,
         stop,
         seek,
         setVolume,
         playNext,
         playPrevious,
-        toggleRepeat,
+        playAt,
+        cycleRepeat,
         toggleShuffle,
         replaceQueue,
-        setCurrentTrack,
+        playNextInQueue,
+        addToQueue,
+        removeFromQueue,
 
         // View logic
         openView,
         closeView,
+        toggleView,
         isViewOpen,
         switchViewMode
     }

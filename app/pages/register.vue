@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { USERNAME_PATTERN as USERNAME_RE } from '#shared/schemas/profile'
+
 definePageMeta({
   layout: 'auth'
 })
@@ -16,7 +18,6 @@ let usernameCheckTimer: ReturnType<typeof setTimeout> | null = null
 // Set when the project requires email confirmation: signUp returns no session.
 const awaitingConfirmation = ref(false)
 
-const USERNAME_RE = /^[a-zA-Z0-9._-]{3,30}$/
 const emailValid = computed(() => /\S+@\S+\.\S+/.test(email.value.trim()))
 const passwordLengthOk = computed(() => password.value.length >= 6)
 const passwordsMatch = computed(() => !!password.value && password.value === confirmPassword.value)
@@ -41,7 +42,7 @@ function nextStep() {
     if (step.value === 2) {
       errorMsg.value = usernameStatus.value === 'taken'
         ? 'This username is already taken'
-        : 'Username must be 3–30 characters: letters, digits, dots, dashes or underscores'
+        : 'Username must be 3–30 characters: letters, digits, spaces, dots, dashes or underscores'
     }
     if (step.value === 3) {
       errorMsg.value = passwordLengthOk.value ? 'Passwords do not match' : 'Password must be at least 6 characters long'

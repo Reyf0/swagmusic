@@ -16,7 +16,6 @@
     "gen:types": "supabase gen types typescript --project-id ofdlecccivsirfsaghac > shared/types/generated/database.types.ts"
   },
   "dependencies": {
-    "@headlessui/vue": "^1.7.23",
     "@nuxt/fonts": "^0.14.0",
     "@nuxt/hints": "^1.1.2",
     "@nuxt/icon": "^2.2.2",
@@ -30,11 +29,9 @@
     "@vueuse/core": "^14.3.0",
     "howler": "^2.2.4",
     "ipx": "3.1.1",
-    "motion": "^12.40.0",
     "nuxt": "^4.4.6",
     "tailwind-scrollbar-hide": "^4.0.0",
     "vue": "^3.5.34",
-    "vuedraggable": "^4.1.0",
     "zod": "^4.1.0"
   },
   "devDependencies": {

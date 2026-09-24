@@ -1,138 +1,81 @@
 <script setup lang="ts">
-import { reactive, ref, watch, onMounted, onBeforeUnmount } from 'vue'
-import { useSettingsStore } from '@/stores/settings'
+import type { ThemePreference } from '@/stores/settings'
 
-const store = useSettingsStore()
 const supabase = useSupabase()
 const user = useSupabaseUser()
+const toast = useToast()
+const settingsStore = useSettingsStore()
+const profileStore = useProfileStore()
 
-const local = reactive({
-  theme: 'system' as 'system'|'light'|'dark',
-  locale: 'ru',
-  notifications: { email: true, push: false }
+const themeItems = [
+  { label: 'System', value: 'system', icon: 'i-lucide-monitor' },
+  { label: 'Light', value: 'light', icon: 'i-lucide-sun' },
+  { label: 'Dark', value: 'dark', icon: 'i-lucide-moon' },
+]
+
+const theme = computed({
+  get: () => settingsStore.theme,
+  set: (v: ThemePreference) => { settingsStore.setTheme(v) },
 })
 
-const isSaving = ref(false)
-const errorMessage = ref('')
-const successMessage = ref('')
-const savedSuccessfully = ref(false)
+/* password change */
+const newPassword = ref('')
+const confirmPassword = ref('')
+const savingPassword = ref(false)
+const passwordError = ref('')
 
-// безопасно прочитать значение из useColorMode()
-function readColorModeSafe(): string | null {
-  try {
-    // @ts-ignore
-    const colorMode = typeof useColorMode !== 'undefined' ? useColorMode?.() : null
-    if (colorMode) {
-      // @ts-ignore
-      return (colorMode.preference ?? colorMode.value ?? null) as string | null
-    }
-  } catch (e) { }
-  return null
+async function changePassword() {
+  passwordError.value = ''
+  if (newPassword.value.length < 6) return void (passwordError.value = 'Password must be at least 6 characters long')
+  if (newPassword.value !== confirmPassword.value) return void (passwordError.value = 'Passwords do not match')
+
+  savingPassword.value = true
+  const { error } = await supabase.auth.updateUser({ password: newPassword.value })
+  savingPassword.value = false
+  if (error) return void (passwordError.value = error.message)
+
+  newPassword.value = ''
+  confirmPassword.value = ''
+  toast.add({ title: 'Password updated', color: 'success' })
 }
 
-// при монтировании: приоритет — useColorMode(), затем store
-onMounted(() => {
-  const cm = readColorModeSafe()
-  if (cm) {
-    local.theme = cm === 'null' ? 'system' : (cm as any)
-  } else {
-    local.theme = store.settings.theme ?? 'system'
-  }
-  local.locale = store.settings.locale ?? 'ru'
-  local.notifications = { ...store.settings.notifications }
-
-  // применим предпросмотр сразу
-  store.previewTheme(local.theme)
-})
-
-// если кто-то (кнопка) меняет useColorMode() в другом месте — обновим селект
-try {
-  // @ts-ignore
-  const colorMode = typeof useColorMode !== 'undefined' ? useColorMode?.() : null
-  if (colorMode) {
-    watch(
-        () => (colorMode.preference ?? colorMode.value),
-        (val) => {
-          if (val) local.theme = val === 'null' ? 'system' : val
-        }
-    )
-  }
-} catch (e) { /* ignore */ }
-
-// при изменении селекта — предпросмотр (независимо от сохранения)
-watch(() => local.theme, (t) => {
-  store.previewTheme(t)
-})
-
-// onBeforeUnmount: откат, если не сохранили
-onBeforeUnmount(() => {
-  if (!savedSuccessfully.value) {
-    store.restoreTheme()
-  }
-})
-
-async function save() {
-  isSaving.value = true
-  errorMessage.value = ''
-  successMessage.value = ''
-  try {
-    await store.saveSettings({ ...local }, user.value, supabase)
-    savedSuccessfully.value = true
-    successMessage.value = 'Saved successfully'
-  } catch (e) {
-    console.error(e)
-    errorMessage.value = 'Failed to save settings'
-  } finally {
-    isSaving.value = false
-  }
+async function signOut() {
+  await profileStore.signOut()
+  await navigateTo('/')
 }
 
-function cancel() {
-  local.theme = store.settings.theme ?? 'system'
-  local.locale = store.settings.locale ?? 'ru'
-  local.notifications = { ...store.settings.notifications }
-  store.restoreTheme()
-}
+useSeoMeta({ title: 'Settings · SwagMusic' })
 </script>
 
 <template>
-  <div class="bg-old-neutral-50 dark:bg-old-neutral-900 max-w-md mx-auto p-6 rounded-lg shadow-md mt-10">
-    <h1 class="dark:text-white text-2xl font-bold mb-6 text-center">Settings</h1>
+  <div class="p-4 md:p-6 max-w-2xl mx-auto space-y-8">
+    <h1 class="text-2xl font-bold">Settings</h1>
 
-    <div class="space-y-4">
-      <div>
-        <label for="theme" class="block text-sm font-medium dark:text-white">Theme</label>
-        <select
-            id="theme"
-            v-model="local.theme"
-            class="mt-1 block w-full px-3 py-2 rounded-md shadow-sm dark:text-old-neutral-400 border border-old-neutral-200 dark:border-old-neutral-700 bg-white dark:bg-old-neutral-800 focus:outline-none focus:ring-2 focus:ring-green-500"
-        >
-          <option value="system">System</option>
-          <option value="light">Light</option>
-          <option value="dark">Dark</option>
-        </select>
-      </div>
+    <section class="space-y-3">
+      <h2 class="text-lg font-semibold">Appearance</h2>
+      <UFormField label="Theme" help="Saved to your account and applied on all your devices.">
+        <URadioGroup v-model="theme" :items="themeItems" orientation="horizontal" variant="card" />
+      </UFormField>
+    </section>
 
-      <!-- notifications -->
-      <div>
-        <label class="block text-sm font-medium dark:text-white mb-1">Email notifications</label>
-        <div class="flex items-center gap-2 px-3 py-2 rounded-md shadow-sm border border-old-neutral-200 dark:border-old-neutral-700 bg-white dark:bg-old-neutral-800">
-          <input id="notif-email" type="checkbox" v-model="local.notifications.email" class="h-4 w-4 text-green-500 focus:ring-green-500 border-gray-300 rounded" />
-          <label for="notif-email" class="text-sm dark:text-old-neutral-400 select-none">Receive updates by email</label>
-        </div>
-      </div>
+    <section class="space-y-3">
+      <h2 class="text-lg font-semibold">Account</h2>
+      <p class="text-sm text-old-neutral-500">Signed in as <b>{{ user?.email }}</b></p>
 
-      <div class="flex gap-3 mt-6">
-        <button @click="save" :disabled="isSaving" class="flex-1 py-2 px-4 rounded-full shadow-sm text-sm font-medium text-white bg-green-500 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50">
-          <span v-if="isSaving">Saving...</span><span v-else>Save</span>
-        </button>
-        <button @click="cancel" class="flex-1 py-2 px-4 rounded-full shadow-sm text-sm font-medium border border-old-neutral-300 dark:border-old-neutral-600 bg-white dark:bg-old-neutral-800 dark:text-white hover:bg-old-neutral-100 dark:hover:bg-old-neutral-700">
-          Cancel
-        </button>
-      </div>
+      <form class="space-y-3 max-w-sm" @submit.prevent="changePassword">
+        <UFormField label="New password">
+          <UInput v-model="newPassword" type="password" autocomplete="new-password" class="w-full" />
+        </UFormField>
+        <UFormField label="Repeat new password">
+          <UInput v-model="confirmPassword" type="password" autocomplete="new-password" class="w-full" />
+        </UFormField>
+        <p v-if="passwordError" class="text-sm text-red-500" role="alert">{{ passwordError }}</p>
+        <UButton type="submit" :loading="savingPassword" :disabled="!newPassword">Change password</UButton>
+      </form>
+    </section>
 
-      <div v-if="errorMessage" class="text-red-500 text-sm">{{ errorMessage }}</div>
-      <div v-if="successMessage" class="text-green-500 text-sm">{{ successMessage }}</div>
-    </div>
+    <section>
+      <UButton color="error" variant="soft" icon="i-lucide-log-out" @click="signOut">Sign out</UButton>
+    </section>
   </div>
 </template>

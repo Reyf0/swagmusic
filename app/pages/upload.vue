@@ -1,385 +1,231 @@
 <script setup lang="ts">
-import {onMounted, ref } from 'vue'
-import { getAudioDurationFromFile } from '@/utils/getAudioDurationFromFile'
-import type { SupabaseClient } from "@supabase/supabase-js";
-import type { AuthorUI, Database } from '#shared/types'
-import { useRouter } from "vue-router";
+import type { PickedAuthor } from '@/components/AuthorPicker.vue'
 
-const supabase:SupabaseClient<Database> = useSupabase()
+const supabase = useSupabase()
 const user = useSupabaseUser()
-
-const router = useRouter()
 const toast = useToast()
-const { handleError } = useErrorHandler()
+const storage = useStorageUpload()
+const studioStore = useStudioStore()
+const { albums } = storeToRefs(studioStore)
 
 // Form data
 const title = ref('')
+const coAuthors = ref<PickedAuthor[]>([])
+const NO_ALBUM = 'none'
+const albumId = ref<string>(NO_ALBUM)
+const lyrics = ref('')
 const audioFile = ref<File | null>(null)
 const coverFile = ref<File | null>(null)
 const audioPreview = ref('')
 const coverPreview = ref('')
-const albumId = ref<string | null>(null)
-const albums = ref<any[]>([])
-const newAlbumTitle = ref('')
-const authorId = ref<string | null>(null)
-const trackAuthors = ref<AuthorUI[]>([])
 
-// UI states
+// Inline album creation
+const newAlbumOpen = ref(false)
+const newAlbumTitle = ref('')
+const creatingAlbum = ref(false)
+
+// UI state
 const isUploading = ref(false)
+const step = ref('')
 const uploadProgress = ref(0)
 const errorMsg = ref('')
-const successMsg = ref('')
 
-// Redirect if not logged in
 onMounted(() => {
-  if (!user.value) {
-    router.push('/login')
-  }
+  if (user.value) studioStore.loadAlbums().catch(e => console.error('Failed to load albums', e))
 })
 
-const fetchAlbumsForAuthor = async (authorId: string) => {
-  const {data, error} = await supabase
-      .from('albums')
-      .select('*')
-      .eq('author_id', authorId)
-      .order('created_at', {ascending: false})
+const albumItems = computed(() => [
+  { label: 'No album', value: NO_ALBUM },
+  ...albums.value.map(a => ({ label: a.title, value: a.id })),
+])
 
-  if (!error) {
-    albums.value = data
+function pickFile(e: Event, kind: 'audio' | 'cover') {
+  const file = (e.target as HTMLInputElement).files?.[0] ?? null
+  errorMsg.value = ''
+  if (!file) return
+
+  if (kind === 'audio') {
+    if (!file.type.startsWith('audio/')) return void (errorMsg.value = 'Please choose an audio file (MP3, WAV, OGG, …)')
+    if (file.size > MAX_AUDIO_BYTES) return void (errorMsg.value = 'Audio files can be at most 50 MB')
+    if (audioPreview.value) URL.revokeObjectURL(audioPreview.value)
+    audioFile.value = file
+    audioPreview.value = URL.createObjectURL(file)
+    if (!title.value) title.value = file.name.replace(/\.[^.]+$/, '').replace(/[_]+/g, ' ').trim()
   } else {
-    console.error('Error fetching albums:', error)
+    if (!file.type.startsWith('image/')) return void (errorMsg.value = 'Please choose an image for the cover')
+    if (file.size > MAX_IMAGE_BYTES) return void (errorMsg.value = 'Cover images can be at most 5 MB')
+    if (coverPreview.value) URL.revokeObjectURL(coverPreview.value)
+    coverFile.value = file
+    coverPreview.value = URL.createObjectURL(file)
   }
 }
 
+onBeforeUnmount(() => {
+  if (audioPreview.value) URL.revokeObjectURL(audioPreview.value)
+  if (coverPreview.value) URL.revokeObjectURL(coverPreview.value)
+})
 
-// Handle audio file selection
-const onAudioChange = (event: Event) => {
-  const target = event.target as HTMLInputElement
-  if (target.files && target.files.length > 0) {
-    audioFile.value = target.files[0]
-
-    // Create audio preview URL
-    if (audioPreview.value) {
-      URL.revokeObjectURL(audioPreview.value)
-    }
-    audioPreview.value = URL.createObjectURL(audioFile.value)
+async function createAlbum() {
+  const t = newAlbumTitle.value.trim()
+  if (!t) return
+  creatingAlbum.value = true
+  try {
+    const album = await studioStore.createAlbum({ title: t })
+    albumId.value = album.id
+    newAlbumTitle.value = ''
+    newAlbumOpen.value = false
+    toast.add({ title: 'Album created', description: t, color: 'success' })
+  } catch (e: any) {
+    toast.add({ title: 'Could not create album', description: e?.message, color: 'error' })
+  } finally {
+    creatingAlbum.value = false
   }
 }
 
-// Handle cover image selection
-const onCoverChange = (event: Event) => {
-  const target = event.target as HTMLInputElement
-  if (target.files && target.files.length > 0) {
-    coverFile.value = target.files[0]
-
-    // Create image preview URL
-    if (coverPreview.value) {
-      URL.revokeObjectURL(coverPreview.value)
-    }
-    coverPreview.value = URL.createObjectURL(coverFile.value)
-  }
-}
-
-const createAlbum = async (albumTitle: string) => {
-  if (!authorId.value) {
-    toast.add({title: 'Сначала укажите артиста', color: 'warning'})
-    return
-  }
-
-  let coverUrl = null
-  if (coverFile.value) {
-    const coverFileName = `${Date.now()}_${coverFile.value.name}`
-    const {error: coverError} = await supabase.storage
-        .from('covers')
-        .upload(coverFileName, coverFile.value)
-
-    if (coverError) {
-      toast.add({title: 'Ошибка при загрузке обложки', description: coverError.message, color: 'error'})
-      return
-    }
-
-    const {data: coverData} = supabase.storage
-        .from('covers')
-        .getPublicUrl(coverFileName)
-
-    coverUrl = coverData.publicUrl
-  }
-
-  const {data, error} = await supabase
-      .from('albums')
-      .insert({
-        title: albumTitle,
-        author_id: authorId.value,
-        cover_url: coverUrl
-      })
-      .select('*')
-      .single()
-
-  if (error) {
-    toast.add({title: 'Ошибка при создании альбома', description: error.message, color: 'error'})
-    return
-  }
-
-  albums.value.unshift(data)
-  albumId.value = data.id
-  toast.add({title: 'Альбом создан', color: 'success'})
-}
-
-
-// Upload track to Supabase
-const uploadTrack = async () => {
-  // Validate form
-  if (!title.value || !trackAuthors.value || !audioFile.value) {
-    errorMsg.value = 'Please fill in all required fields and upload an audio file'
-    return
-  }
+async function uploadTrack() {
+  const uploaderId = user.value?.id
+  if (!uploaderId) return navigateTo('/login')
+  if (!title.value.trim()) return void (errorMsg.value = 'Enter a track title')
+  if (!audioFile.value) return void (errorMsg.value = 'Choose an audio file')
 
   errorMsg.value = ''
-  successMsg.value = ''
   isUploading.value = true
   uploadProgress.value = 0
 
+  // Everything created so far, so a failure can be rolled back.
+  let audioPath: string | null = null
+  let coverPath: string | null = null
+  let trackId: string | null = null
+
   try {
-    // 1. Upload audio file
-    const ext = audioFile.value.name.split('.').pop()?.toLowerCase() || 'mp3'
-    const audioFileName = `${Date.now()}_${title.value}_${trackAuthors.value
-        .map(author => author.name)
-        .join('_')
-        .toLowerCase()}.${ext}`
+    step.value = 'Reading audio…'
     const durationSeconds = await getAudioDurationFromFile(audioFile.value)
-    const {error: audioError} = await supabase.storage
-        .from('tracks')
-        .upload(audioFileName, audioFile.value, {
-          contentType: audioFile.value.type,
-        })
+    uploadProgress.value = 10
 
-    if (audioError) console.error(`Error uploading audio: ${audioError.message}`)
-    uploadProgress.value = 50
+    step.value = 'Uploading audio…'
+    const audio = await storage.uploadPublic('tracks', audioFile.value)
+    audioPath = audio.path
+    uploadProgress.value = 60
 
-    // Get public URL for audio
-    const {data: audioData} = supabase.storage
-        .from('tracks')
-        .getPublicUrl(audioFileName)
-
-    // 2. Upload cover image if provided
-    let coverUrl = null
+    let coverUrl: string | null = null
     if (coverFile.value) {
-      const coverFileName = `${Date.now()}_${title.value}_cover`
-      const {error: coverError} = await supabase.storage
-          .from('covers')
-          .upload(coverFileName, coverFile.value)
-
-      if (coverError) handleError(coverError, 'Error uploading cover')
-
-      // Get public URL for cover
-      const {data: coverData} = supabase.storage
-          .from('covers')
-          .getPublicUrl(coverFileName)
-
-      coverUrl = coverData.publicUrl
+      step.value = 'Uploading cover…'
+      const cover = await storage.uploadPublic('covers', coverFile.value)
+      coverPath = cover.path
+      coverUrl = cover.publicUrl
     }
     uploadProgress.value = 75
 
-    // TODO Add multiple authors support for albums fetch
-    // Создание альбома, если указан новый
-    if (newAlbumTitle.value && !albumId.value) {
-      await createAlbum(newAlbumTitle.value)
-    }
+    step.value = 'Saving track…'
+    const track = await createTrackWithUniqueSlug(supabase, {
+      title: title.value.trim(),
+      audio_url: audio.publicUrl,
+      cover_url: coverUrl,
+      user_id: uploaderId,
+      album_id: albumId.value === NO_ALBUM ? null : albumId.value,
+      duration_seconds: durationSeconds,
+      ...(lyrics.value.trim() && { lyrics: lyrics.value.trim() }),
+    } as any)
+    trackId = track.id
+    uploadProgress.value = 90
 
-    // 3. Create a track record
-    const {data: track, error: trackError} = await supabase
-        .from('tracks')
-        .insert({
-          title: title.value,
-          audio_url: audioData.publicUrl,
-          cover_url: coverUrl,
-          user_id: user.value?.id,
-          album_id: albumId.value,
-          duration_seconds: durationSeconds
-        })
-        .select('id')
-        .single()
-
-    if (trackError) console.error(`Error creating track: ${trackError.message}`)
-
-    // 4. Create a track-author relationship
-    // TODO Add restriction to prevent duplicates
-    const relations = trackAuthors.value.map((author, idx) => ({
-      track_id: track.id,
-      profile_id: author.id,
-      order_index: idx + 1,
-      status: 'pending' // New authors need to be approved
-    }))
-    relations.unshift({
-      track_id: track.id,
-      profile_id: user.value?.id,
-      order_index: 0,
-      status: 'approved'
-    }) // Add uploader as first author
-    const { error: relationError } = await supabase
-        .from('track_authors')
-        .insert(relations)
-
-    if (relationError) handleError(relationError, 'Error linking author')
+    // The uploader is credited right away; co-authors get an invite to accept in their Studio.
+    const credits = [
+      { track_id: track.id, profile_id: uploaderId, order_index: 0, status: 'approved' },
+      ...coAuthors.value.map((a, i) => ({
+        track_id: track.id,
+        profile_id: a.id,
+        order_index: i + 1,
+        status: 'pending',
+        invited_by: uploaderId,
+        invited_at: new Date().toISOString(),
+      })),
+    ]
+    const { error: creditsError } = await supabase.from('track_authors').insert(credits)
+    if (creditsError) throw creditsError
     uploadProgress.value = 100
-    successMsg.value = 'Track uploaded successfully!'
 
-    // Reset form
-    title.value = ''
-    audioFile.value = null
-    coverFile.value = null
-    trackAuthors.value = []
-    if (audioPreview.value) {
-      URL.revokeObjectURL(audioPreview.value)
-      audioPreview.value = ''
-    }
-    if (coverPreview.value) {
-      URL.revokeObjectURL(coverPreview.value)
-      coverPreview.value = ''
-    }
-
-    // Redirect to tracks' page after a short delay
-    setTimeout(() => {
-      router.push('/tracks')
-    }, 2000)
-
-  } catch (error: any) {
-    console.error('Upload error:', error)
-    errorMsg.value = error.message || 'An error occurred during upload'
+    toast.add({
+      title: 'Track uploaded',
+      description: coAuthors.value.length ? 'Co-authors will be credited once they accept the invite.' : title.value,
+      color: 'success',
+    })
+    await navigateTo('/studio')
+  } catch (e: any) {
+    console.error('Upload error:', e)
+    errorMsg.value = e?.message || 'Upload failed'
+    // roll back
+    if (trackId) await supabase.from('tracks').delete().eq('id', trackId)
+    await Promise.all([storage.remove('tracks', audioPath), storage.remove('covers', coverPath)])
   } finally {
     isUploading.value = false
+    step.value = ''
   }
 }
+
+useSeoMeta({ title: 'Upload · SwagMusic' })
 </script>
 
 <template>
-  <div class="p-6 max-w-2xl mx-auto">
-    <h1 class="text-2xl font-bold mb-6">Upload Track</h1>
+  <div class="p-4 md:p-6 max-w-2xl mx-auto">
+    <h1 class="text-2xl font-bold mb-6">Upload a track</h1>
 
-    <div v-if="!user" class="bg-yellow-100 border border-yellow-400 text-yellow-700 px-4 py-3 rounded mb-4">
-      <p>Please
-        <NuxtLink to="/login" class="font-bold underline">login</NuxtLink>
-        to upload tracks.
-      </p>
-    </div>
+    <form class="space-y-6" @submit.prevent="uploadTrack">
+      <UAlert v-if="errorMsg" color="error" variant="soft" :title="errorMsg" icon="i-heroicons-exclamation-triangle" />
 
-    <form v-else class="space-y-6" @submit.prevent="uploadTrack">
-      <!-- Success message -->
-      <div v-if="successMsg" class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded">
-        <p>{{ successMsg }}</p>
-      </div>
-
-      <!-- Error message -->
-      <div v-if="errorMsg" class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
-        <p>{{ errorMsg }}</p>
-      </div>
-
-      <!-- Track title -->
-      <div>
-        <label for="title" class="block text-sm font-medium text-gray-700">Track Title <span
-            class="text-red-500">*</span></label>
+      <UFormField label="Audio file" required help="MP3, WAV, OGG or FLAC, up to 50 MB">
         <input
-            id="title"
-            v-model="title"
-            type="text"
-            required
-            class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-            placeholder="Enter track title"
+          type="file"
+          accept="audio/*"
+          class="block w-full text-sm file:mr-4 file:rounded-full file:border-0 file:bg-green-500 file:px-4 file:py-2 file:text-white hover:file:bg-green-600"
+          :disabled="isUploading"
+          @change="pickFile($event, 'audio')"
         >
-      </div>
+        <audio v-if="audioPreview" controls class="w-full mt-2" :src="audioPreview" />
+      </UFormField>
 
-      <!-- Artist name -->
-      <div>
-        <label class="block text-sm font-medium text-gray-700">Other authors</label>
-        <AuthorPicker
-            v-model="trackAuthors"
-        />
-      </div>
-      <!-- TODO Fix upload modal: albums -->
-      <!-- Album selection -->
-      <div v-if="albums.length > 0">
-        <label for="album" class="block text-sm font-medium text-gray-700">Album</label>
-        <select
-            id="album"
-            v-model="albumId"
-            class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-        >
-          <option value="">No album</option>
-          <option v-for="album in albums" :key="album.id" :value="album.id">{{ album.title }}</option>
-        </select>
+      <UFormField label="Title" required>
+        <UInput v-model="title" placeholder="Track title" class="w-full" maxlength="200" :disabled="isUploading" />
+      </UFormField>
 
+      <UFormField label="Co-authors" help="You are credited automatically. Co-authors are credited after they accept the invite in their Studio.">
+        <AuthorPicker v-model="coAuthors" :exclude="user ? [user.id] : []" />
+      </UFormField>
 
-      </div>
-      <!-- Новый альбом -->
-      <div v-else class="mt-2">
-        <label for="artist" class="block text-sm font-medium text-gray-700">Album</label>
-        <UInput v-model="newAlbumTitle" placeholder="Новый альбом"/>
-        <UButton
-            class="ml-2 mt-2"
-            :disabled="!newAlbumTitle"
-            @click="createAlbum(newAlbumTitle)"
-        >
-          Создать альбом
-        </UButton>
-      </div>
+      <UFormField label="Album">
+        <div class="flex gap-2">
+          <USelect v-model="albumId" :items="albumItems" class="flex-1" :disabled="isUploading" />
+          <UButton icon="i-heroicons-plus" variant="soft" color="neutral" :disabled="isUploading" @click="newAlbumOpen = !newAlbumOpen">New album</UButton>
+        </div>
+        <div v-if="newAlbumOpen" class="flex gap-2 mt-2">
+          <UInput v-model="newAlbumTitle" placeholder="Album title" class="flex-1" maxlength="200" @keydown.enter.prevent="createAlbum" />
+          <UButton :loading="creatingAlbum" :disabled="!newAlbumTitle.trim()" @click="createAlbum">Create</UButton>
+        </div>
+      </UFormField>
 
-
-      <!-- Audio file upload -->
-      <div>
-        <label for="audio" class="block text-sm font-medium text-gray-700">Audio File (MP3, WAV)<span
-            class="text-red-500">*</span></label>
+      <UFormField label="Cover image" help="JPG, PNG or WebP, up to 5 MB">
         <input
-            id="audio"
-            type="file"
-            accept="audio/mp3,audio/wav,audio/mpeg"
-            class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-            @change="onAudioChange"
+          type="file"
+          accept="image/*"
+          class="block w-full text-sm file:mr-4 file:rounded-full file:border-0 file:bg-old-neutral-200 dark:file:bg-old-neutral-700 file:px-4 file:py-2"
+          :disabled="isUploading"
+          @change="pickFile($event, 'cover')"
         >
+        <img v-if="coverPreview" :src="coverPreview" alt="Cover preview" class="mt-2 size-40 object-cover rounded-md">
+      </UFormField>
 
-        <!-- Audio preview -->
-        <div v-if="audioPreview" class="mt-2">
-          <p class="text-sm text-gray-500 mb-1">Preview:</p>
-          <audio controls class="w-full" :src="audioPreview"/>
-        </div>
+      <UFormField label="Lyrics">
+        <UTextarea v-model="lyrics" :rows="6" autoresize placeholder="Optional" class="w-full" :disabled="isUploading" />
+      </UFormField>
+
+      <div v-if="isUploading" class="space-y-1">
+        <UProgress v-model="uploadProgress" />
+        <p class="text-sm text-old-neutral-500">{{ step }}</p>
       </div>
 
-      <!-- Cover image upload -->
-      <div>
-        <label for="cover" class="block text-sm font-medium text-gray-700">Cover Image</label>
-        <input
-            id="cover"
-            type="file"
-            accept="image/jpeg,image/png,image/gif"
-            class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-            @change="onCoverChange"
-        >
-
-        <!-- Image preview -->
-        <div v-if="coverPreview" class="mt-2">
-          <p class="text-sm text-gray-500 mb-1">Preview:</p>
-          <img :src="coverPreview" alt="Cover preview" class="h-40 w-40 object-cover rounded">
-        </div>
-      </div>
-
-      <!-- Upload progress -->
-      <div v-if="isUploading" class="mt-4">
-        <div class="w-full bg-gray-200 rounded-full h-2.5">
-          <div class="bg-indigo-600 h-2.5 rounded-full" :style="{ width: `${uploadProgress}%` }"/>
-        </div>
-        <p class="text-sm text-gray-600 mt-1">Uploading: {{ uploadProgress }}%</p>
-      </div>
-
-      <!-- Submit button -->
-      <div>
-        <button
-            type="submit"
-            :disabled="isUploading"
-            class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50"
-        >
-          <span v-if="isUploading">Uploading...</span>
-          <span v-else>Upload Track</span>
-        </button>
-      </div>
+      <UButton type="submit" block size="lg" :loading="isUploading" :disabled="!audioFile || !title.trim()">
+        Upload track
+      </UButton>
     </form>
   </div>
 </template>

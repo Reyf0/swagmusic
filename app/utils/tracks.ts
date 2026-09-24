@@ -28,9 +28,7 @@ export function extractArtists(row: any): TrackArtist[] {
     let list: any[] = []
 
     if (Array.isArray(row?.track_authors)) {
-        list = [...row.track_authors]
-            .filter(ta => !ta?.status || ta.status === 'approved')
-            .sort((a, b) => (a?.order_index ?? 0) - (b?.order_index ?? 0))
+        list = row.track_authors
     } else if (Array.isArray(row?.authors)) {
         list = row.authors
     } else if (typeof row?.authors === 'string') {
@@ -41,6 +39,11 @@ export function extractArtists(row: any): TrackArtist[] {
             // not JSON — ignore
         }
     }
+
+    // Credits carry status/order_index (both the embed and the RPC json); pending invites are hidden.
+    list = list
+        .filter(item => !item?.status || item.status === 'approved')
+        .sort((a, b) => (a?.order_index ?? 0) - (b?.order_index ?? 0))
 
     const seen = new Set<string>()
     const out: TrackArtist[] = []

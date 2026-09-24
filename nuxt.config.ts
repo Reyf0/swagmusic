@@ -30,15 +30,15 @@ export default defineNuxtConfig({
         '@nuxt/hints'
     ],
 
-    // Canonical names are NUXT_PUBLIC_SUPABASE_URL / NUXT_PUBLIC_SUPABASE_ANON_KEY /
-    // SUPABASE_SERVICE_ROLE_KEY; the rest are fallbacks for names used by existing
-    // deployments (Vercel Supabase integration, older .env files).
+    // Canonical names: NUXT_PUBLIC_SUPABASE_URL, NUXT_PUBLIC_SUPABASE_KEY (publishable key,
+    // sb_publishable_…) and SUPABASE_SECRET_KEY (sb_secret_…). The rest are fallbacks for names
+    // used by older .env files / the Vercel integration (legacy anon / service_role JWTs).
     runtimeConfig: {
-        supabaseServiceRoleKey: env.SUPABASE_SERVICE_ROLE_KEY || env.SUPABASE_API_SECRET_KEY,
+        supabaseSecretKey: env.SUPABASE_SECRET_KEY || env.SUPABASE_API_SECRET_KEY || env.SUPABASE_SERVICE_ROLE_KEY,
 
         public: {
             supabaseUrl: env.NUXT_PUBLIC_SUPABASE_URL || env.SUPABASE_URL || env.NEXT_PUBLIC_SUPABASE_URL,
-            supabaseKey: env.NUXT_PUBLIC_SUPABASE_ANON_KEY || env.SUPABASE_KEY || env.SUPABASE_ANON_KEY || env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+            supabaseKey: env.NUXT_PUBLIC_SUPABASE_KEY || env.SUPABASE_PUBLISHABLE_KEY || env.NUXT_PUBLIC_SUPABASE_ANON_KEY || env.SUPABASE_KEY || env.SUPABASE_ANON_KEY || env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
             sentryDsn: env.NUXT_PUBLIC_SENTRY_DSN || env.SENTRY_DSN || ''
         }
     },

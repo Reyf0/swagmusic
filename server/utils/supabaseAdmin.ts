@@ -4,15 +4,15 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 let client: SupabaseClient | undefined
 
 /**
- * Service-role Supabase client. Bypasses RLS — use only after the caller
+ * Supabase client authenticated with the secret (service-role) key. Bypasses RLS — use only after the caller
  * has been authorized (see requireAdmin).
  */
 export function useSupabaseAdmin(): SupabaseClient {
     if (client) return client
 
     const config = useRuntimeConfig()
-    const url = config.supabaseUrl || config.public.supabaseUrl
-    const key = config.supabaseServiceRoleKey || config.supabase?.serviceKey
+    const url = config.public.supabaseUrl
+    const key = config.supabaseSecretKey
 
     if (!url || !key) {
         throw createError({ statusCode: 500, statusMessage: 'Supabase admin client is not configured' })

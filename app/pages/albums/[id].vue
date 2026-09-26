@@ -6,7 +6,6 @@ type AlbumRow = Album & { author: { id: string; username: string | null; avatar_
 const route = useRoute()
 const supabase = useSupabase()
 const likesStore = useLikesStore()
-const { playTrack } = usePlayTrack()
 
 const albumId = computed(() => String(route.params.id))
 const album = ref<AlbumRow | null>(null)
@@ -76,14 +75,7 @@ useSeoMeta({ title: () => (album.value ? `${album.value.title} · SwagMusic` : '
         </div>
       </header>
 
-      <UButton
-        icon="i-heroicons-play-solid"
-        size="xl"
-        class="rounded-full mb-4"
-        :disabled="!tracks.length"
-        aria-label="Play album"
-        @click="tracks[0] && playTrack(tracks[0], tracks)"
-      />
+      <PlayAllButton :tracks="tracks" label="Play album" class="mb-4" />
 
       <TrackList :tracks="tracks" empty-text="This album has no tracks yet." />
     </template>

@@ -30,6 +30,7 @@ class FakeHowl {
 vi.mock('howler', () => ({ Howl: FakeHowl }))
 
 const { usePlayerStore, audioFormat } = await import('~/stores/player')
+const { usePlayTrack } = await import('~/composables/usePlayTrack')
 
 const track = (id: string): Track => ({
     id,
@@ -155,5 +156,39 @@ describe('audioFormat', () => {
     it('falls back to mp3 for extension-less uploads', () => {
         expect(audioFormat('https://x.supabase.co/storage/v1/object/public/tracks/1756659047987_hdmi_')).toBe('mp3')
         expect(audioFormat('https://x.supabase.co/tracks/1758098623929_kissing%20the%20shadows_')).toBe('mp3')
+    })
+})
+
+describe('usePlayTrack: play-all button', () => {
+    beforeEach(() => {
+        setActivePinia(createPinia())
+        howls.length = 0
+    })
+
+    it('shows the list as playing once started from it, and toggles pause', () => {
+        const { playList, isListPlaying } = usePlayTrack()
+        expect(isListPlaying(list)).toBe(false)
+        playList(list)
+        expect(current()).toBe('a')
+        expect(isListPlaying(list)).toBe(true)
+        playList(list) // same button again pauses
+        expect(isListPlaying(list)).toBe(false)
+        expect(current()).toBe('a')
+    })
+
+    it('stays active for the list when a row further down is played', () => {
+        const { playTrack, isListPlaying } = usePlayTrack()
+        playTrack(list[2]!, list)
+        expect(isListPlaying(list)).toBe(true)
+    })
+
+    it('is not active for another list, and starts it from the top', () => {
+        const other = ['x', 'y'].map(track)
+        const { playTrack, playList, isListPlaying } = usePlayTrack()
+        playTrack(list[0]!, list)
+        expect(isListPlaying(other)).toBe(false)
+        playList(other)
+        expect(current()).toBe('x')
+        expect(isListPlaying(list)).toBe(false)
     })
 })

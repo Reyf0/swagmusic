@@ -5,7 +5,6 @@ import type { Album, Profile, Track } from '#shared/types'
 const route = useRoute()
 const supabase = useSupabase()
 const likesStore = useLikesStore()
-const { playTrack } = usePlayTrack()
 
 const artistId = computed(() => String(route.params.id))
 const artist = ref<Pick<Profile, 'id' | 'username' | 'full_name' | 'avatar_url' | 'website'> | null>(null)
@@ -76,14 +75,7 @@ useSeoMeta({ title: () => `${displayName.value} · SwagMusic` })
         </div>
       </header>
 
-      <UButton
-        icon="i-heroicons-play-solid"
-        size="xl"
-        class="rounded-full mb-6"
-        :disabled="!tracks.length"
-        aria-label="Play all tracks"
-        @click="tracks[0] && playTrack(tracks[0], tracks)"
-      />
+      <PlayAllButton :tracks="tracks" label="Play all tracks" class="mb-6" />
 
       <section class="mb-10">
         <h2 class="text-xl font-bold mb-3">Tracks</h2>

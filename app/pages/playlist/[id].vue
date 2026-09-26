@@ -9,7 +9,6 @@ const user = useSupabaseUser()
 const api = usePlaylistsApi()
 const playlistsStore = usePlaylistsStore()
 const likesStore = useLikesStore()
-const { playTrack } = usePlayTrack()
 
 const playlistId = computed(() => String(route.params.id))
 const playlist = ref<PlaylistWithMeta | null>(null)
@@ -144,14 +143,7 @@ async function copyLink() {
       </header>
 
       <div class="flex items-center gap-2 mb-4">
-        <UButton
-          icon="i-heroicons-play-solid"
-          size="xl"
-          class="rounded-full"
-          :disabled="!tracks.length"
-          aria-label="Play playlist"
-          @click="tracks[0] && playTrack(tracks[0], tracks)"
-        />
+        <PlayAllButton :tracks="tracks" label="Play playlist" />
         <UButton icon="i-lucide-link" variant="ghost" color="neutral" aria-label="Copy link" title="Copy link" @click="copyLink" />
         <UDropdownMenu v-if="isOwner" :items="headerMenu">
           <UButton icon="i-heroicons-ellipsis-horizontal" variant="ghost" color="neutral" aria-label="Playlist options" />

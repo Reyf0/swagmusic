@@ -1,15 +1,23 @@
-import type { Tables } from './generated/database.types'
+import type { Database, Json, Tables } from './generated/database.types'
 
 export type { Database, Json, Tables, TablesInsert, TablesUpdate } from './generated/database.types'
 
-export type Album = Tables<'albums'>
-export type Profile = Tables<'profiles'>
-export type Like = Tables<'likes'>
-export type PlayHistory = Tables<'play_history'>
-export type Playlist = Tables<'playlists'>
-export type PlaylistTrack = Tables<'playlist_tracks'>
-export type TrackRow = Tables<'tracks'>
-export type TrackAuthorRow = Tables<'track_authors'>
+/**
+ * Row type with jsonb columns typed as `unknown`. The recursive `Json` type makes Vue's
+ * UnwrapRef blow up ("type instantiation is excessively deep") when rows are kept in refs.
+ */
+export type Row<T extends keyof Database['public']['Tables']> = {
+    [K in keyof Tables<T>]: Json extends Tables<T>[K] ? unknown : Tables<T>[K]
+}
+
+export type Album = Row<'albums'>
+export type Profile = Row<'profiles'>
+export type Like = Row<'likes'>
+export type PlayHistory = Row<'play_history'>
+export type Playlist = Row<'playlists'>
+export type PlaylistTrack = Row<'playlist_tracks'>
+export type TrackRow = Row<'tracks'>
+export type TrackAuthorRow = Row<'track_authors'>
 
 /** A profile credited as an author of a track. */
 export interface TrackArtist {

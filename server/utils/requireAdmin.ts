@@ -1,6 +1,8 @@
-import type { H3Event } from 'h3'
 import type { User } from '@supabase/supabase-js'
 import { createServerClient } from '@supabase/ssr'
+
+// h3's own H3Event type would come from the hoisted h3 v2; take Nitro's (v1) from its helpers instead.
+type H3Event = Parameters<typeof getHeader>[0]
 
 /** The signed-in user of the request: from `Authorization: Bearer <jwt>` or the session cookies. */
 async function getRequestUser(event: H3Event): Promise<User | null> {

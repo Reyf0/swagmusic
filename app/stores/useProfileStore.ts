@@ -1,13 +1,13 @@
 import { defineStore } from 'pinia'
 import { ref, computed, watch } from 'vue'
 import type { SupabaseClient } from '@supabase/supabase-js'
-import type { Database } from '#shared/types'
+import type { Database, Profile } from '#shared/types'
 import { profileUpdateSchema } from "#shared/schemas/profile";
 import type { ProfileUpdateInput } from "#shared/schemas/profile";
 import { useSupabase } from "@/composables/useSupabase";
 
-// Типы
-type ProfilesRow = Database['public']['Tables']['profiles']['Row']
+
+type ProfilesRow = Profile
 
 export const useProfileStore = defineStore('profile', () => {
   const supabase: SupabaseClient<Database> = useSupabase()

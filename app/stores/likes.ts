@@ -34,7 +34,7 @@ export const useLikesStore = defineStore('likes', () => {
 
         if (!user.value) {
             toast.add({ title: 'Sign in to like tracks', color: 'warning' })
-            return navigateTo({ path: '/login', query: { redirect: useRoute().fullPath } }).then(() => {})
+            return Promise.resolve(navigateTo({ path: '/login', query: { redirect: useRoute().fullPath } })).then(() => {})
         }
 
         const wasLiked = !!likes.value[id]

@@ -42,6 +42,7 @@ export default defineEventHandler(async (event) => {
         throw createError({ statusCode: 500, statusMessage: `User created, but the profile could not be saved: ${profileError.message}` })
     }
 
-    setResponseStatus(event, 201)
+    // Not setResponseStatus(): its auto-import type clashes with Nuxt's app composable of the same name.
+    event.node.res.statusCode = 201
     return { user: data.user }
 })

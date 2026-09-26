@@ -1,4 +1,4 @@
-import { createBrowserClient, createServerClient } from '@supabase/ssr'
+import { createBrowserClient, createServerClient, parseCookieHeader } from '@supabase/ssr'
 import type { Database } from '#shared/types'
 
 /**
@@ -8,29 +8,32 @@ import type { Database } from '#shared/types'
 export default defineNuxtPlugin(async (nuxtApp) => {
     const { supabaseUrl, supabaseKey } = useRuntimeConfig().public
     if (!supabaseUrl || !supabaseKey) {
-        throw new Error('Supabase is not configured: set NUXT_PUBLIC_SUPABASE_URL and NUXT_PUBLIC_SUPABASE_ANON_KEY')
+        throw new Error('Supabase is not configured: set NUXT_PUBLIC_SUPABASE_URL and NUXT_PUBLIC_SUPABASE_KEY')
     }
 
     const user = useSupabaseUser()
     const session = useSupabaseSession()
 
     if (import.meta.server) {
-        const event = useRequestEvent()!
-        const cookies = parseCookies(event)
+        // Nuxt's own cookie helpers (no direct h3 dependency).
+        const cookies = parseCookieHeader(useRequestHeaders(['cookie']).cookie ?? '')
+            .map(({ name, value }) => ({ name, value: value ?? '' }))
 
         const supabase = createServerClient<Database>(supabaseUrl, supabaseKey, {
             cookies: {
-                getAll: () => Object.entries(parseCookies(event)).map(([name, value]) => ({ name, value })),
+                getAll: () => cookies,
                 setAll: (toSet) => {
-                    if (event.node.res.headersSent) return
-                    for (const { name, value, options } of toSet) setCookie(event, name, value, options)
+                    for (const { name, value, options } of toSet) {
+                        const cookie = useCookie(name, { ...options, encode: (v: string) => v, decode: (v: string) => v } as any)
+                        cookie.value = value
+                    }
                 },
             },
         })
         nuxtApp.provide('supabase', supabase)
 
         // Only hit the auth server when an auth cookie is present.
-        const hasAuthCookie = Object.keys(cookies).some(name => name.startsWith('sb-') && name.includes('-auth-token'))
+        const hasAuthCookie = cookies.some(({ name }) => name.startsWith('sb-') && name.includes('-auth-token'))
         if (hasAuthCookie) {
             const { data } = await supabase.auth.getUser()
             user.value = data.user ?? null

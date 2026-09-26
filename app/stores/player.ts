@@ -6,6 +6,14 @@ type ViewName = 'now' | 'queue' | 'lyrics'
 type ViewMode = 'sidebar' | 'fullscreen'
 export type RepeatMode = 'off' | 'all' | 'one'
 
+const AUDIO_FORMATS = ['mp3', 'mpeg', 'wav', 'ogg', 'oga', 'opus', 'flac', 'aac', 'm4a', 'webm', 'weba']
+
+/** Codec hint for Howler from the file extension; older uploads have none and are MP3. */
+export function audioFormat(url: string): string {
+    const ext = new URL(url, 'http://x').pathname.split('.').pop()?.toLowerCase() ?? ''
+    return AUDIO_FORMATS.includes(ext) ? ext : 'mp3'
+}
+
 const VOLUME_KEY = 'swagmusic:volume'
 
 export const usePlayerStore = defineStore('player', () => {
@@ -26,6 +34,8 @@ export const usePlayerStore = defineStore('player', () => {
     // The Howl instance is not reactive state (and must not be serialized into the SSR payload).
     let sound: Howl | null = null
     let progressTimer: ReturnType<typeof setInterval> | null = null
+    // Load errors in a row; stops auto-skipping once every track in the queue has failed.
+    let consecutiveErrors = 0
 
     // ───────────── Views (now playing / queue / lyrics panels) ─────────────
 
@@ -147,6 +157,8 @@ export const usePlayerStore = defineStore('player', () => {
         isLoading.value = true
         const howl = new Howl({
             src: [track.audio_url],
+            // Uploaded files have no extension in their URL, so Howler can't guess the codec.
+            format: [audioFormat(track.audio_url)],
             html5: true,
             volume: volume.value,
             onload: () => {
@@ -158,8 +170,10 @@ export const usePlayerStore = defineStore('player', () => {
                 isPlaying.value = false
                 console.error('Howler load error', { err, src: track.audio_url })
                 useToast().add({ title: 'Could not load track', description: track.title, color: 'error' })
-                // skip to the next track, unless this was the only one
-                if (queue.value.length > 1) playNext()
+                // skip to the next track, but don't loop forever when nothing can be played
+                consecutiveErrors += 1
+                if (queue.value.length > 1 && consecutiveErrors < queue.value.length) playNext(true)
+                else consecutiveErrors = 0
             },
             onplayerror: () => {
                 // Autoplay was blocked: wait for the browser to unlock audio, then retry.
@@ -167,6 +181,7 @@ export const usePlayerStore = defineStore('player', () => {
                 howl.once('unlock', () => howl.play())
             },
             onplay: () => {
+                consecutiveErrors = 0
                 isLoading.value = false
                 isPlaying.value = true
                 startProgress()

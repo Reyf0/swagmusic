@@ -29,7 +29,7 @@ class FakeHowl {
 
 vi.mock('howler', () => ({ Howl: FakeHowl }))
 
-const { usePlayerStore } = await import('~/stores/player')
+const { usePlayerStore, audioFormat } = await import('~/stores/player')
 
 const track = (id: string): Track => ({
     id,
@@ -144,5 +144,16 @@ describe('player store', () => {
         expect(player.volume).toBe(1)
         player.setVolume(-1)
         expect(player.volume).toBe(0)
+    })
+})
+
+describe('audioFormat', () => {
+    it('uses the file extension when there is one', () => {
+        expect(audioFormat('https://x.supabase.co/storage/v1/object/public/tracks/u/a.ogg')).toBe('ogg')
+        expect(audioFormat('https://x.supabase.co/a.FLAC?v=1')).toBe('flac')
+    })
+    it('falls back to mp3 for extension-less uploads', () => {
+        expect(audioFormat('https://x.supabase.co/storage/v1/object/public/tracks/1756659047987_hdmi_')).toBe('mp3')
+        expect(audioFormat('https://x.supabase.co/tracks/1758098623929_kissing%20the%20shadows_')).toBe('mp3')
     })
 })

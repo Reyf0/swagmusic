@@ -47,7 +47,7 @@ watch(() => user.value?.id, (id) => {
   tracksStore.loadRecent({ userId: id, limit: 50 })
 }, { immediate: true })
 
-useSeoMeta({ title: 'Your library · SwagMusic' })
+useSeoMeta({ title: 'Your library' })
 </script>
 
 <template>

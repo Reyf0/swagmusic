@@ -12,7 +12,7 @@ async function load(initial: boolean) {
 
 onMounted(() => load(true))
 
-useSeoMeta({ title: 'All tracks · SwagMusic' })
+useSeoMeta({ title: 'All tracks' })
 </script>
 
 <template>

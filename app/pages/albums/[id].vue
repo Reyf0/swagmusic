@@ -42,7 +42,7 @@ async function load() {
 
 watch(albumId, load, { immediate: true })
 
-useSeoMeta({ title: () => (album.value ? `${album.value.title} · SwagMusic` : 'Album · SwagMusic') })
+useSeoMeta({ title: () => (album.value ? `${album.value.title}` : 'Album') })
 </script>
 
 <template>

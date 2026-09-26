@@ -163,7 +163,7 @@ async function uploadTrack() {
   }
 }
 
-useSeoMeta({ title: 'Upload · SwagMusic' })
+useSeoMeta({ title: 'Upload' })
 </script>
 
 <template>

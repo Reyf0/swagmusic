@@ -50,7 +50,7 @@ const tabs = computed(() => [
   { value: 'invites' as const, label: invites.value.length ? `Invites (${invites.value.length})` : 'Invites' },
 ])
 
-useSeoMeta({ title: 'Studio · SwagMusic' })
+useSeoMeta({ title: 'Studio' })
 </script>
 
 <template>

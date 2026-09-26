@@ -77,7 +77,7 @@ async function onAvatarPicked(e: Event) {
 
 const joined = computed(() => user.value?.created_at ? new Date(user.value.created_at).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' }) : '')
 
-useSeoMeta({ title: 'Profile · SwagMusic' })
+useSeoMeta({ title: 'Profile' })
 </script>
 
 <template>

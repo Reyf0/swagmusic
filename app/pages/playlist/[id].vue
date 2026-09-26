@@ -38,7 +38,7 @@ async function fetchPlaylist() {
 
 watch(playlistId, fetchPlaylist, { immediate: true })
 
-useSeoMeta({ title: () => playlist.value ? `${playlist.value.name} · SwagMusic` : 'Playlist · SwagMusic' })
+useSeoMeta({ title: () => playlist.value ? `${playlist.value.name}` : 'Playlist' })
 
 /* ── owner actions ── */
 const editOpen = ref(false)

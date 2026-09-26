@@ -112,7 +112,7 @@ async function confirmDelete() {
   }
 }
 
-useSeoMeta({ title: 'Users · Admin · SwagMusic' })
+useSeoMeta({ title: 'Users · Admin' })
 </script>
 
 <template>

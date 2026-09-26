@@ -29,7 +29,7 @@ function submitLocal() {
   navigateTo({ path: '/search', query: localText.value.trim() ? { q: localText.value.trim() } : {} })
 }
 
-useSeoMeta({ title: () => (query.value ? `“${query.value}” · Search · SwagMusic` : 'Search · SwagMusic') })
+useSeoMeta({ title: () => (query.value ? `“${query.value}” · Search` : 'Search') })
 </script>
 
 <template>

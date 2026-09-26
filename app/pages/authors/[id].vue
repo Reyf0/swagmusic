@@ -48,7 +48,7 @@ const displayName = computed(() => artist.value?.username || artist.value?.full_
 // Only link http(s) URLs (the field is user-provided).
 const website = computed(() => /^https?:\/\//i.test(artist.value?.website ?? '') ? artist.value!.website! : null)
 
-useSeoMeta({ title: () => `${displayName.value} · SwagMusic` })
+useSeoMeta({ title: () => `${displayName.value}` })
 </script>
 
 <template>

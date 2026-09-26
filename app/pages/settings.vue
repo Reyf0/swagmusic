@@ -44,7 +44,7 @@ async function signOut() {
   await navigateTo('/')
 }
 
-useSeoMeta({ title: 'Settings · SwagMusic' })
+useSeoMeta({ title: 'Settings' })
 </script>
 
 <template>

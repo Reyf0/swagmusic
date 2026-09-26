@@ -5,6 +5,8 @@ definePageMeta({
   layout: 'auth'
 })
 
+useSeoMeta({ title: 'Reset password' })
+
 const supabase = useSupabase()
 const user = useSupabaseUser()
 const toast = useToast()

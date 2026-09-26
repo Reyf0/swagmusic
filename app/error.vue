@@ -16,7 +16,7 @@ function onSearch() {
   clearError({ redirect: query ? `/search?q=${encodeURIComponent(query)}` : '/search' })
 }
 
-useSeoMeta({ title: () => (is404.value ? 'Page not found · SwagMusic' : 'Error · SwagMusic') })
+useSeoMeta({ title: () => (is404.value ? 'Page not found' : 'Error') })
 </script>
 
 <template>

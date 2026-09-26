@@ -24,6 +24,8 @@ watch(() => user.value?.id, (id) => {
 
 onUnmounted(() => tracksStore.cancelFeed())
 
+// The home tab shows just the site name, without the ' | SwagMusic' suffix.
+useHead({ titleTemplate: '%s' })
 useSeoMeta({
   title: 'SwagMusic',
   description: 'Listen to new tracks, upload your own music and build playlists.',

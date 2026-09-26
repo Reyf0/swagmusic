@@ -3,6 +3,8 @@ definePageMeta({
   layout: 'auth'
 })
 
+useSeoMeta({ title: 'Sign in' })
+
 const supabase = useSupabase()
 const user = useSupabaseUser()
 const route = useRoute()

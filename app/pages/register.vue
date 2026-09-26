@@ -5,6 +5,8 @@ definePageMeta({
   layout: 'auth'
 })
 
+useSeoMeta({ title: 'Create account' })
+
 const supabase = useSupabase()
 
 const email = ref<string>('')

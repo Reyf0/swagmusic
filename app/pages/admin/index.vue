@@ -25,7 +25,7 @@ const cards = computed(() => [
 
 const maxPlays = computed(() => Math.max(1, ...(stats.value?.playsByDay ?? []).map(d => d.total_listens)))
 
-useSeoMeta({ title: 'Admin · SwagMusic' })
+useSeoMeta({ title: 'Admin' })
 </script>
 
 <template>

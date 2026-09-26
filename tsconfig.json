@@ -1,45 +1,10 @@
 {
   // https://nuxt.com/docs/guide/concepts/typescript
-  "extends": "./.nuxt/tsconfig.json",
-
-  "compilerOptions": {
-    "types": [
-      "vitest",
-      "@vitest/browser/matchers",
-      "@vitest/browser/providers/playwright"
-    ],
-    "baseUrl": ".",
-    "paths": {
-      "@/*": ["./*"]
-    },
-    "typeRoots": ["./types", "./node_modules/@types"]
-  },
-  "include": [
-    "types",
-    "nuxt.config.ts",
-    "components",
-    "composables",
-    "pages",
-    "stores",
-    "utils",
-    "app.vue",
-    "**/*.ts",
-    "**/*.vue",
-    "components/**/*.vue",
-    "composables/**/*.ts"
-  ],
+  "files": [],
   "references": [
-    {
-      "path": "./.nuxt/tsconfig.app.json"
-    },
-    {
-      "path": "./.nuxt/tsconfig.server.json"
-    },
-    {
-      "path": "./.nuxt/tsconfig.shared.json"
-    },
-    {
-      "path": "./.nuxt/tsconfig.node.json"
-    }
+    { "path": "./.nuxt/tsconfig.app.json" },
+    { "path": "./.nuxt/tsconfig.server.json" },
+    { "path": "./.nuxt/tsconfig.shared.json" },
+    { "path": "./.nuxt/tsconfig.node.json" }
   ]
 }

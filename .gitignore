@@ -41,3 +41,6 @@ qodana.yaml
 .env.sentry-build-plugin
 .vercel
 .env*.local
+
+# TypeScript build info (vue-tsc -b)
+*.tsbuildinfo

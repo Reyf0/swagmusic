@@ -1,31 +1,19 @@
 <script setup lang="ts">
-import { ref, onMounted, watch, nextTick, computed } from 'vue'
-import { storeToRefs } from 'pinia'
-import { usePlayerStore } from '@/stores/player'
-import { useProfileStore } from '@/stores/useProfileStore'
-import { useTracksStore } from '@/stores/useTracksStore'
+import type { DropdownMenuItem } from '@nuxt/ui'
+import { useEventListener } from '@vueuse/core'
 import MiniPlayer from '@/components/MiniPlayer.vue'
 import PlayerViews from '@/components/player/PlayerViews.vue'
-import ResizablePanel from '@/components/ResizablePanel.vue'
-import PlaylistSidebar from '@/components/PlaylistSidebar.vue'
-import type { DropdownMenuItem } from '@nuxt/ui'
-import PlayerDragFix from "@/components/player/PlayerDragFix.vue";
-import { useSupabase } from "@/composables/useSupabase";
+import MobilePlayer from '@/components/player/MobilePlayer.vue'
 
-const supabase = useSupabase()
+const route = useRoute()
+const toast = useToast()
 
 const profileStore = useProfileStore()
 const { displayName, avatarUrl, isLoggedIn, isAdmin } = storeToRefs(profileStore)
 const playerStore = usePlayerStore()
 const { currentTrack } = storeToRefs(playerStore)
-const tracksStore = useTracksStore()
-const { q } = storeToRefs(tracksStore)
-
-const loading = ref(true)
-const error = ref(null)
-
-const router = useRouter()
-const toast = useToast()
+const studioStore = useStudioStore()
+const { pendingInviteCount } = storeToRefs(studioStore)
 
 /* Desktop sidebar state */
 const sidebarCollapsed = ref(false)
@@ -52,64 +40,62 @@ const sidebarStartX = ref(0)
 const sidebarDrag = ref(0)
 const SIDEBAR_CLOSE_THRESHOLD = -80
 
-/* mounted flag to avoid SSR/client mismatches */
-const mounted = ref(false)
-
 /* Profile dropdown items */
-const profileDropdownMenuItems = ref<DropdownMenuItem[][]>([
-  [
-    { label: 'Profile', to: '/profile' },
-    { label: 'Upload', to: '/upload' },
-    { label: 'Settings', to: '/settings' },
-    { label: 'Studio', to: '/studio' }
-  ],
-  [
-    { label: 'Log out', slot: 'logOut', onSelect() { signOut() } }
+const profileDropdownMenuItems = computed<DropdownMenuItem[][]>(() => {
+  const groups: DropdownMenuItem[][] = [
+    [
+      { label: 'Profile', icon: 'i-lucide-user-round', to: '/profile' },
+      { label: 'Upload', icon: 'i-lucide-upload', to: '/upload' },
+      { label: pendingInviteCount.value ? `Studio (${pendingInviteCount.value})` : 'Studio', icon: 'i-lucide-audio-lines', to: '/studio' },
+      { label: 'Settings', icon: 'i-lucide-settings', to: '/settings' },
+    ],
   ]
-])
+  if (isAdmin.value) groups.push([{ label: 'Admin', icon: 'i-lucide-shield', to: '/admin' }])
+  groups.push([{ label: 'Log out', icon: 'i-lucide-log-out', onSelect: () => { signOut() } }])
+  return groups
+})
 
-const fetchProfile = async () => {
-  loading.value = true
-  error.value = null
-
+async function signOut() {
   try {
-    await profileStore.loadProfile()
-
-    // mutate items only on client (we call fetchProfile onMounted)
-    if (isAdmin.value) {
-      // prevent duplicate Admin insertion
-      const hasAdmin = profileDropdownMenuItems.value.some(group =>
-          group.some(item => item.label === 'Admin')
-      )
-      if (!hasAdmin) {
-        // insert as a separate group for clarity (client-only)
-        profileDropdownMenuItems.value.splice(1, 0, [{ label: 'Admin', to: '/admin' }])
-      }
-    }
+    await profileStore.signOut()
+    toast.add({ title: 'Signed out', color: 'success' })
+    await navigateTo('/')
   } catch (err: any) {
-    console.error('Error fetching profile:', err)
-    error.value = err.message || 'Ошибка загрузки профиля'
-    toast.add({ title: 'Ошибка загрузки профиля', description: error.value, color: 'error' })
-  } finally {
-    loading.value = false
+    toast.add({ title: 'Could not sign out', description: err?.message, color: 'error' })
   }
 }
 
-const signOut = async () => {
-  const { error } = await supabase.auth.signOut()
-  if (error) {
-    toast.add({ title: 'Ошибка при выходе', description: error.message, color: 'error' })
-  } else {
-    toast.add({ title: 'Вы вышли из аккаунта', color: 'success' })
-    await router.push('/login')
-  }
+/* Search: typing on /search updates results live, Enter elsewhere opens /search */
+const searchText = ref(typeof route.query.q === 'string' ? route.query.q : '')
+watch(() => route.query.q, (v) => {
+  if (route.path === '/search') searchText.value = typeof v === 'string' ? v : ''
+})
+
+let searchTimer: ReturnType<typeof setTimeout> | null = null
+watch(searchText, (text) => {
+  if (route.path !== '/search') return
+  if (searchTimer) clearTimeout(searchTimer)
+  searchTimer = setTimeout(() => {
+    navigateTo({ path: '/search', query: text.trim() ? { q: text.trim() } : {} }, { replace: true })
+  }, 300)
+})
+
+async function handleSearch() {
+  mobileSearchOpen.value = false
+  const text = searchText.value.trim()
+  await navigateTo({ path: '/search', query: text ? { q: text } : {} })
 }
 
-const handleSearch = async () => {
-  if (q.value) {
-    mobileSearchOpen.value = false
-    await router.push({ path: '/search', query: { q: q.value } })
-  }
+/* Space toggles playback (unless typing) */
+if (import.meta.client) {
+  useEventListener(window, 'keydown', (e: KeyboardEvent) => {
+    if (e.code !== 'Space' || e.repeat || e.ctrlKey || e.metaKey || e.altKey) return
+    const el = e.target as HTMLElement | null
+    if (el?.closest('input, textarea, select, button, [contenteditable="true"], [role="slider"]')) return
+    if (!currentTrack.value) return
+    e.preventDefault()
+    playerStore.togglePlay()
+  })
 }
 
 /* Sidebar handlers */
@@ -143,7 +129,6 @@ const toggleMobileMenu = () => {
   if (mobileMenuOpen.value) {
     mobileSearchOpen.value = false
     mobileSidebarOpen.value = false
-    // reset drag state
     menuTouching.value = false
     menuDrag.value = 0
   }
@@ -152,7 +137,6 @@ const openMobileSidebar = () => {
   mobileSidebarOpen.value = true
   mobileMenuOpen.value = false
   mobileSearchOpen.value = false
-  // reset drag for sidebar
   sidebarTouching.value = false
   sidebarDrag.value = 0
 }
@@ -168,372 +152,269 @@ const openMobileSearch = () => {
 }
 const closeMobileSearch = () => { mobileSearchOpen.value = false }
 
+// Close drawers after navigating from them.
+watch(() => route.fullPath, () => {
+  mobileMenuOpen.value = false
+  mobileSidebarOpen.value = false
+})
+
 /* Swipe handlers for mobile menu (left drawer) */
 const onMenuTouchStart = (e: TouchEvent) => {
-  if (!mobileMenuOpen.value) return
+  if (!mobileMenuOpen.value || !e.touches[0]) return
   menuTouching.value = true
   menuStartX.value = e.touches[0].clientX
   menuDrag.value = 0
 }
 const onMenuTouchMove = (e: TouchEvent) => {
-  if (!menuTouching.value) return
-  const currentX = e.touches[0].clientX
-  const delta = currentX - menuStartX.value // negative when swiping left
-  menuDrag.value = Math.min(0, delta) // only allow left dragging
+  if (!menuTouching.value || !e.touches[0]) return
+  menuDrag.value = Math.min(0, e.touches[0].clientX - menuStartX.value) // only allow left dragging
 }
 const onMenuTouchEnd = () => {
   if (!menuTouching.value) return
-  if (menuDrag.value <= MENU_CLOSE_THRESHOLD) {
-    mobileMenuOpen.value = false
-  }
-  // reset
+  if (menuDrag.value <= MENU_CLOSE_THRESHOLD) mobileMenuOpen.value = false
   menuTouching.value = false
   menuDrag.value = 0
 }
 
 /* Swipe handlers for mobile playlist sidebar */
 const onSidebarTouchStart = (e: TouchEvent) => {
-  if (!mobileSidebarOpen.value) return
+  if (!mobileSidebarOpen.value || !e.touches[0]) return
   sidebarTouching.value = true
   sidebarStartX.value = e.touches[0].clientX
   sidebarDrag.value = 0
 }
 const onSidebarTouchMove = (e: TouchEvent) => {
-  if (!sidebarTouching.value) return
-  const currentX = e.touches[0].clientX
-  const delta = currentX - sidebarStartX.value
-  sidebarDrag.value = Math.min(0, delta) // only left drag to close
+  if (!sidebarTouching.value || !e.touches[0]) return
+  sidebarDrag.value = Math.min(0, e.touches[0].clientX - sidebarStartX.value) // only left drag to close
 }
 const onSidebarTouchEnd = () => {
   if (!sidebarTouching.value) return
-  if (sidebarDrag.value <= SIDEBAR_CLOSE_THRESHOLD) {
-    mobileSidebarOpen.value = false
-  }
+  if (sidebarDrag.value <= SIDEBAR_CLOSE_THRESHOLD) mobileSidebarOpen.value = false
   sidebarTouching.value = false
   sidebarDrag.value = 0
 }
 
-watch(q, async () => {
-  tracksStore.search()
-})
-
-onMounted(async () => {
-  mounted.value = true
-  // fetch profile only on client — avoids changing server HTML after hydration
-  await fetchProfile()
-})
-
 /* computed inline styles used while dragging */
-const mobileMenuAsideStyle = computed(() => {
-  // when not open we won't render aside; when open:
-  if (menuTouching.value) {
-    // translate by the drag amount (negative value) — move left
-    return { transform: `translateX(${menuDrag.value}px)` }
-  }
-  return {}
-})
-
-const mobileSidebarAsideStyle = computed(() => {
-  if (sidebarTouching.value) {
-    return { transform: `translateX(${sidebarDrag.value}px)` }
-  }
-  return {}
-})
+const mobileMenuAsideStyle = computed(() => menuTouching.value ? { transform: `translateX(${menuDrag.value}px)` } : {})
+const mobileSidebarAsideStyle = computed(() => sidebarTouching.value ? { transform: `translateX(${sidebarDrag.value}px)` } : {})
 </script>
 
 <template>
-  <div>
-    <UApp>
-      <div class="flex flex-col h-screen">
-        <!-- NAVIGATION -->
-        <nav class="bg-black p-4 hidden md:block">
-          <div class="container mx-auto flex justify-between items-center">
-            <div>
-              <UButton>
-                <NuxtLink to="/" class="text-[#4ade80] text-xl font-bold">SwagMusic</NuxtLink>
+  <div class="flex flex-col h-dvh">
+    <!-- NAVIGATION (desktop) -->
+    <nav class="bg-black px-4 py-3 hidden md:block">
+      <div class="flex justify-between items-center gap-6">
+        <NuxtLink to="/" class="text-[#4ade80] text-xl font-bold shrink-0">SwagMusic</NuxtLink>
+
+        <form class="flex-1 max-w-xl" role="search" @submit.prevent="handleSearch">
+          <UInput
+            v-model="searchText"
+            icon="i-heroicons-magnifying-glass"
+            placeholder="Search by title or artist"
+            size="lg"
+            class="w-full"
+            :ui="{ base: 'rounded-full bg-old-neutral-800 text-white placeholder:text-old-neutral-400' }"
+            aria-label="Search"
+          />
+        </form>
+
+        <div class="flex items-center gap-1">
+          <UButton to="/" variant="ghost" color="neutral" class="text-old-neutral-300 hover:text-white">Home</UButton>
+          <UButton to="/tracks" variant="ghost" color="neutral" class="text-old-neutral-300 hover:text-white">Tracks</UButton>
+          <UButton to="/albums" variant="ghost" color="neutral" class="text-old-neutral-300 hover:text-white">Albums</UButton>
+
+          <template v-if="isLoggedIn">
+            <UButton to="/library" variant="ghost" color="neutral" class="text-old-neutral-300 hover:text-white">Library</UButton>
+            <UDropdownMenu :items="profileDropdownMenuItems" :content="{ align: 'end' }">
+              <UButton variant="ghost" color="neutral" class="rounded-full p-0.5" :aria-label="`Account menu for ${displayName}`">
+                <UChip :show="pendingInviteCount > 0" color="error" size="md">
+                  <UAvatar :src="avatarUrl ?? undefined" :alt="displayName ?? undefined" />
+                </UChip>
               </UButton>
-            </div>
-
-            <div class="flex-1 mx-6">
-              <input
-                  v-model="q"
-                  type="text"
-                  placeholder="Search by title or artist"
-                  class="hover:bg-old-neutral-700 transition w-full px-4 py-1 dark:bg-old-neutral-800 text-white rounded-full focus:outline-none focus:ring-2 focus:ring-white"
-                  @keydown.enter="handleSearch"
-              />
-            </div>
-
-            <div class="flex items-center space-x-4">
-              <UButton><NuxtLink to="/" class="hover:text-white text-gray-300">Home</NuxtLink></UButton>
-              <UButton><NuxtLink to="/tracks" class="hover:text-white text-gray-300">Tracks</NuxtLink></UButton>
-
-              <!-- client-only profile area -->
-              <ClientOnly>
-                <template #default>
-                  <template v-if="isLoggedIn">
-                    <UButton><NuxtLink to="/library" class="hover:text-white text-gray-300">Library</NuxtLink></UButton>
-                    <UDropdownMenu
-                        :items="profileDropdownMenuItems"
-                        class="bg-old-neutral-800 cursor-pointer hover:scale-110 transition"
-                        :ui="{ content: 'dark:bg-old-neutral-800 dark:text-old-neutral-300 text-old-neutral-800' }"
-                    >
-                      <UTooltip :text="displayName">
-                        <UAvatar :src="avatarUrl" :alt="displayName" :ui="{ content:'text-white' }"/>
-                      </UTooltip>
-                    </UDropdownMenu>
-                  </template>
-
-                  <template v-else>
-                    <UButton><NuxtLink to="/register" class="hover:text-white text-gray-300">Register</NuxtLink></UButton>
-                    <UButton class="has-[a.router-link-active]:bg-transparent border bg-white hover:*:text-white">
-                      <NuxtLink to="/login" class="text-black">Login</NuxtLink>
-                    </UButton>
-                  </template>
-
-                  <ColorModeButton class="cursor-pointer text-white hover:bg-gray-800/50"/>
-                </template>
-              </ClientOnly>
-            </div>
-          </div>
-        </nav>
-
-        <!-- Mobile nav -->
-        <nav class="bg-black p-3 flex items-center justify-between md:hidden">
-          <div class="flex items-center space-x-2">
-            <button aria-label="Open menu" @click="toggleMobileMenu" class="p-2 rounded-md hover:bg-gray-800/50">
-              <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
-              </svg>
-            </button>
-
-            <UButton><NuxtLink to="/" class="text-[#4ade80] text-lg font-bold">SwagMusic</NuxtLink></UButton>
-          </div>
-
-          <div class="flex items-center space-x-2">
-            <button aria-label="Search" @click="openMobileSearch" class="p-2 rounded-md hover:bg-gray-800/50">
-              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-4.35-4.35M17 11a6 6 0 11-12 0 6 6 0 0112 0z"/>
-              </svg>
-            </button>
-
-            <button aria-label="Open playlists" @click="openMobileSidebar" class="p-2 rounded-md hover:bg-gray-800/50">
-              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6m6 13V6M3 6h18"/>
-              </svg>
-            </button>
-
-            <!-- client-only small avatar / auth links -->
-            <ClientOnly>
-              <template #default>
-                <div v-if="isLoggedIn">
-                  <UDropdownMenu
-                      :items="profileDropdownMenuItems"
-                      class="bg-old-neutral-800 cursor-pointer"
-                      :ui="{ content: 'dark:bg-old-neutral-800 dark:text-old-neutral-300 text-old-neutral-800' }"
-                  >
-                    <UTooltip :text="displayName">
-                      <UAvatar :src="avatarUrl" :alt="displayName" size="sm" :ui="{ content:'text-white' }"/>
-                    </UTooltip>
-                  </UDropdownMenu>
-                </div>
-
-                <div v-else>
-                  <UButton><NuxtLink to="/login" class="text-gray-300">Login</NuxtLink></UButton>
-                </div>
-              </template>
-            </ClientOnly>
-          </div>
-        </nav>
-
-        <!-- Mobile menu drawer (client-only) -->
-        <ClientOnly>
-          <transition name="slide-in">
-            <div v-if="mobileMenuOpen" class="fixed inset-0 z-40">
-              <div class="absolute inset-0 bg-black/50" @click="mobileMenuOpen = false"></div>
-              <!-- aside: слушаем touch события для свайпа -->
-              <aside
-                  class="absolute left-0 top-0 bottom-0 w-72 bg-old-neutral-900 text-white p-4 overflow-y-auto shadow-lg"
-                  :class="{ 'no-transition': menuTouching }"
-                  :style="mobileMenuAsideStyle"
-                  @touchstart.passive="onMenuTouchStart"
-                  @touchmove.passive="onMenuTouchMove"
-                  @touchend.passive="onMenuTouchEnd"
-              >
-                <div class="flex items-center justify-between mb-4">
-                  <UButton><NuxtLink to="/" class="text-[#4ade80] text-lg font-bold">SwagMusic</NuxtLink></UButton>
-                  <button @click="mobileMenuOpen = false" class="p-2 rounded-md hover:bg-gray-800/50">
-                    ✕
-                  </button>
-                </div>
-
-                <nav class="flex flex-col space-y-2">
-                  <NuxtLink to="/" class="px-3 py-2 rounded-md hover:bg-old-neutral-800">Home</NuxtLink>
-                  <NuxtLink to="/tracks" class="px-3 py-2 rounded-md hover:bg-old-neutral-800">Tracks</NuxtLink>
-
-                  <template v-if="isLoggedIn">
-                    <NuxtLink to="/library" class="px-3 py-2 rounded-md hover:bg-old-neutral-800">Library</NuxtLink>
-                    <NuxtLink to="/upload" class="px-3 py-2 rounded-md hover:bg-old-neutral-800">Upload</NuxtLink>
-                  </template>
-
-                  <template v-else>
-                    <NuxtLink to="/register" class="px-3 py-2 rounded-md hover:bg-old-neutral-800">Register</NuxtLink>
-                    <NuxtLink to="/login" class="px-3 py-2 rounded-md hover:bg-old-neutral-800">Login</NuxtLink>
-                  </template>
-
-                  <div class="mt-4 border-t border-old-neutral-800 pt-3">
-                    <div class="text-sm text-old-neutral-400 mb-2">Profile</div>
-                    <div class="flex items-center space-x-3">
-                      <UAvatar :src="avatarUrl" :alt="displayName" size="sm" />
-                      <div>
-                        <div class="text-white text-sm">{{ displayName }}</div>
-                        <div class="text-xs text-old-neutral-500">{{ isLoggedIn ? 'Signed in' : 'Guest' }}</div>
-                      </div>
-                    </div>
-
-                    <div class="mt-3 flex flex-col space-y-2">
-                      <div v-for="(group, gIdx) in profileDropdownMenuItems" :key="`group-${gIdx}`" class="flex flex-col space-y-1">
-                        <template v-for="(item, idx) in group" :key="`item-${gIdx}-${idx}`">
-                          <NuxtLink v-if="item.to" :to="item.to" class="px-3 py-2 rounded-md hover:bg-old-neutral-800">
-                            {{ item.label }}
-                          </NuxtLink>
-
-                          <button v-else-if="isLoggedIn && item.slot === 'logOut'" @click="item.onSelect && item.onSelect()" class="text-left px-3 py-2 rounded-md hover:bg-old-neutral-800">
-                            {{ item.label }}
-                          </button>
-
-                          <button v-else @click="item.onSelect && item.onSelect()" class="text-left px-3 py-2 rounded-md hover:bg-old-neutral-800">
-                            {{ item.label }}
-                          </button>
-                        </template>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div class="mt-4">
-                    <ColorModeButton />
-                  </div>
-                </nav>
-              </aside>
-            </div>
-          </transition>
-        </ClientOnly>
-
-        <!-- Mobile search overlay (client-only). -->
-        <ClientOnly>
-          <transition name="fade">
-            <div v-if="mobileSearchOpen" class="fixed inset-0 z-50 flex items-start pt-8">
-              <div class="absolute inset-0 bg-black/50" @click="closeMobileSearch"></div>
-              <div class="relative mx-auto w-full px-4">
-                <div class="bg-old-neutral-900 rounded-xl p-3 shadow-lg">
-                  <div class="flex items-center">
-                    <input
-                        v-model="q"
-                        type="text"
-                        placeholder="Search by title or artist"
-                        class="w-full px-3 py-2  bg-old-neutral-800   rounded-full text-white focus:outline-none focus:ring-2 focus:ring-white"
-                        @keydown.enter="handleSearch"
-                    />
-                    <button @click="handleSearch" class="ml-2 p-2 rounded-md hover:bg-gray-800/50">
-                      <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-4.35-4.35M17 11a6 6 0 11-12 0 6 6 0 0112 0z"/>
-                      </svg>
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </transition>
-        </ClientOnly>
-
-        <!-- MAIN CONTENT -->
-        <div class="flex dark:text-white dark:bg-old-neutral-900 flex-1 overflow-hidden">
-          <!-- Desktop Playlist Sidebar -->
-          <ResizablePanel
-              class="shrink-0 hidden md:block"
-              :width="sidebarWidth"
-              :default-width="sidebarWidth"
-              :min-width="60"
-              :max-width="400"
-              position="left"
-              :resizable="true"
-              @resize="handleSidebarResize"
-          >
-            <PlaylistSidebar
-                :is-collapsed="sidebarCollapsed"
-                @toggle-collapse="toggleSidebarCollapse"
-                @resize="handleSidebarResize"
-            />
-          </ResizablePanel>
-
-          <!-- Page Content -->
-          <main class="flex-1 overflow-y-auto overflow-x-hidden">
-            <ClientOnly>
-              <template #default>
-                <PlayerViews v-if="playerStore.getFullscreenView" :view="playerStore.getFullscreenView!" mode="fullscreen"/>
-              </template>
-            </ClientOnly>
-
-            <NuxtPage />
-          </main>
-
-          <!-- Right Sidebar -->
-          <ClientOnly>
-            <template #default>
-              <ResizablePanel
-                  v-if="playerStore.getSidebarView"
-                  class="shrink-0 hidden md:block"
-                  :width="rightSidebarWidth"
-                  :default-width="rightSidebarWidth"
-                  :min-width="300"
-                  :max-width="600"
-                  position="right"
-                  :resizable="true"
-                  @resize="handleRightSidebarResize"
-              >
-                <aside class="w-full h-full border-l border-old-neutral-700 bg-old-neutral-900 text-white overflow-y-auto">
-                  <PlayerViews :view="playerStore.getSidebarView!" mode="sidebar" />
-                </aside>
-              </ResizablePanel>
-            </template>
-          </ClientOnly>
-        </div>
-
-        <!-- Mobile Playlist Drawer (client-only) с свайпом -->
-        <ClientOnly>
-          <transition name="slide-left">
-            <div v-if="mobileSidebarOpen" class="fixed inset-0 z-40 md:hidden">
-              <div class="absolute inset-0 bg-black/50" @click="closeMobileSidebar"></div>
-              <aside
-                  class="absolute left-0 top-0 bottom-0 w-80 bg-old-neutral-900 text-white overflow-y-auto p-2"
-                  :class="{ 'no-transition': sidebarTouching }"
-                  :style="mobileSidebarAsideStyle"
-                  @touchstart.passive="onSidebarTouchStart"
-                  @touchmove.passive="onSidebarTouchMove"
-                  @touchend.passive="onSidebarTouchEnd"
-              >
-                <div class="flex items-center justify-between p-2">
-                  <div class="text-lg font-semibold text-[#4ade80]">Playlists</div>
-                  <button @click="closeMobileSidebar" class="p-2 rounded-md hover:bg-gray-800/50">✕</button>
-                </div>
-                <PlaylistSidebar :is-collapsed="false" @toggle-collapse="() => {}" @resize="() => {}" />
-              </aside>
-            </div>
-          </transition>
-        </ClientOnly>
-
-        <!-- MINI PLAYER -->
-        <ClientOnly>
-          <template #default>
-            <div v-if="currentTrack" class="hidden md:block">
-              <MiniPlayer />
-            </div>
-            <PlayerDragFix v-if="currentTrack" class="md:hidden" />
-            <!-- <PlayerExpander v-if="currentTrack"/> -->
+            </UDropdownMenu>
           </template>
-        </ClientOnly>
+
+          <template v-else>
+            <UButton to="/register" variant="ghost" color="neutral" class="text-old-neutral-300 hover:text-white">Register</UButton>
+            <UButton to="/login" color="neutral" variant="solid" class="rounded-full">Log in</UButton>
+          </template>
+
+          <ColorModeButton class="text-white" />
+        </div>
       </div>
-    </UApp>
+    </nav>
+
+    <!-- NAVIGATION (mobile) -->
+    <nav class="bg-black p-3 flex items-center justify-between md:hidden">
+      <div class="flex items-center gap-2">
+        <UButton icon="i-heroicons-bars-3" variant="ghost" color="neutral" class="text-white" aria-label="Open menu" @click="toggleMobileMenu" />
+        <NuxtLink to="/" class="text-[#4ade80] text-lg font-bold">SwagMusic</NuxtLink>
+      </div>
+
+      <div class="flex items-center gap-1">
+        <UButton icon="i-heroicons-magnifying-glass" variant="ghost" color="neutral" class="text-white" aria-label="Search" @click="openMobileSearch" />
+        <UButton icon="i-lucide-list-music" variant="ghost" color="neutral" class="text-white" aria-label="Open playlists" @click="openMobileSidebar" />
+
+        <UDropdownMenu v-if="isLoggedIn" :items="profileDropdownMenuItems" :content="{ align: 'end' }">
+          <UButton variant="ghost" color="neutral" class="rounded-full p-0.5" aria-label="Account menu">
+            <UChip :show="pendingInviteCount > 0" color="error">
+              <UAvatar :src="avatarUrl ?? undefined" :alt="displayName ?? undefined" size="sm" />
+            </UChip>
+          </UButton>
+        </UDropdownMenu>
+        <UButton v-else to="/login" size="sm" color="neutral" class="rounded-full">Log in</UButton>
+      </div>
+    </nav>
+
+    <!-- Mobile menu drawer -->
+    <ClientOnly>
+      <transition name="slide-in">
+        <div v-if="mobileMenuOpen" class="fixed inset-0 z-40 md:hidden">
+          <div class="absolute inset-0 bg-black/50" @click="mobileMenuOpen = false" />
+          <aside
+            class="absolute left-0 top-0 bottom-0 w-72 bg-old-neutral-900 text-white p-4 overflow-y-auto shadow-lg"
+            :class="{ 'no-transition': menuTouching }"
+            :style="mobileMenuAsideStyle"
+            @touchstart.passive="onMenuTouchStart"
+            @touchmove.passive="onMenuTouchMove"
+            @touchend.passive="onMenuTouchEnd"
+          >
+            <div class="flex items-center justify-between mb-4">
+              <NuxtLink to="/" class="text-[#4ade80] text-lg font-bold">SwagMusic</NuxtLink>
+              <UButton icon="i-heroicons-x-mark" variant="ghost" color="neutral" class="text-white" aria-label="Close menu" @click="mobileMenuOpen = false" />
+            </div>
+
+            <nav class="flex flex-col gap-1">
+              <NuxtLink to="/" class="px-3 py-2 rounded-md hover:bg-old-neutral-800">Home</NuxtLink>
+              <NuxtLink to="/tracks" class="px-3 py-2 rounded-md hover:bg-old-neutral-800">Tracks</NuxtLink>
+              <NuxtLink to="/albums" class="px-3 py-2 rounded-md hover:bg-old-neutral-800">Albums</NuxtLink>
+              <NuxtLink to="/search" class="px-3 py-2 rounded-md hover:bg-old-neutral-800">Search</NuxtLink>
+
+              <template v-if="isLoggedIn">
+                <NuxtLink to="/library" class="px-3 py-2 rounded-md hover:bg-old-neutral-800">Library</NuxtLink>
+
+                <div class="mt-4 border-t border-old-neutral-800 pt-3">
+                  <div class="flex items-center gap-3 px-3 mb-2">
+                    <UAvatar :src="avatarUrl ?? undefined" :alt="displayName ?? undefined" size="sm" />
+                    <div class="text-sm">{{ displayName }}</div>
+                  </div>
+                  <template v-for="(group, gIdx) in profileDropdownMenuItems" :key="gIdx">
+                    <template v-for="item in group" :key="item.label">
+                      <NuxtLink v-if="item.to" :to="item.to" class="block px-3 py-2 rounded-md hover:bg-old-neutral-800">{{ item.label }}</NuxtLink>
+                      <button v-else type="button" class="w-full text-left px-3 py-2 rounded-md hover:bg-old-neutral-800" @click="signOut">{{ item.label }}</button>
+                    </template>
+                  </template>
+                </div>
+              </template>
+
+              <template v-else>
+                <NuxtLink to="/register" class="px-3 py-2 rounded-md hover:bg-old-neutral-800">Register</NuxtLink>
+                <NuxtLink to="/login" class="px-3 py-2 rounded-md hover:bg-old-neutral-800">Log in</NuxtLink>
+              </template>
+
+              <div class="mt-4 px-1">
+                <ColorModeButton />
+              </div>
+            </nav>
+          </aside>
+        </div>
+      </transition>
+    </ClientOnly>
+
+    <!-- Mobile search overlay -->
+    <ClientOnly>
+      <transition name="fade">
+        <div v-if="mobileSearchOpen" class="fixed inset-0 z-50 flex items-start pt-8 md:hidden">
+          <div class="absolute inset-0 bg-black/50" @click="closeMobileSearch" />
+          <form class="relative mx-auto w-full px-4" role="search" @submit.prevent="handleSearch">
+            <div class="bg-old-neutral-900 rounded-xl p-3 shadow-lg flex items-center gap-2">
+              <UInput v-model="searchText" autofocus placeholder="Search by title or artist" class="flex-1" aria-label="Search" />
+              <UButton type="submit" icon="i-heroicons-magnifying-glass" aria-label="Search" />
+            </div>
+          </form>
+        </div>
+      </transition>
+    </ClientOnly>
+
+    <!-- MAIN CONTENT -->
+    <div class="flex dark:text-white dark:bg-old-neutral-900 flex-1 overflow-hidden">
+      <!-- Desktop Playlist Sidebar -->
+      <ResizablePanel
+        class="shrink-0 hidden md:block"
+        :width="sidebarWidth"
+        :default-width="sidebarWidth"
+        :min-width="60"
+        :max-width="400"
+        position="left"
+        :resizable="true"
+        @resize="handleSidebarResize"
+      >
+        <PlaylistSidebar
+          :is-collapsed="sidebarCollapsed"
+          @toggle-collapse="toggleSidebarCollapse"
+        />
+      </ResizablePanel>
+
+      <!-- Page Content (a fullscreen player view temporarily replaces it) -->
+      <main class="flex-1 overflow-y-auto overflow-x-hidden">
+        <ClientOnly>
+          <PlayerViews v-if="playerStore.getFullscreenView" :view="playerStore.getFullscreenView" mode="fullscreen" />
+        </ClientOnly>
+        <div v-show="!playerStore.getFullscreenView">
+          <slot />
+        </div>
+      </main>
+
+      <!-- Right Sidebar -->
+      <ClientOnly>
+        <ResizablePanel
+          v-if="playerStore.getSidebarView"
+          class="shrink-0 hidden md:block"
+          :width="rightSidebarWidth"
+          :default-width="rightSidebarWidth"
+          :min-width="300"
+          :max-width="600"
+          position="right"
+          :resizable="true"
+          @resize="handleRightSidebarResize"
+        >
+          <aside class="w-full h-full border-l border-old-neutral-700 bg-old-neutral-900 text-white overflow-y-auto">
+            <PlayerViews :view="playerStore.getSidebarView" mode="sidebar" />
+          </aside>
+        </ResizablePanel>
+      </ClientOnly>
+    </div>
+
+    <!-- Mobile Playlist Drawer -->
+    <ClientOnly>
+      <transition name="slide-left">
+        <div v-if="mobileSidebarOpen" class="fixed inset-0 z-40 md:hidden">
+          <div class="absolute inset-0 bg-black/50" @click="closeMobileSidebar" />
+          <aside
+            class="absolute left-0 top-0 bottom-0 w-80 bg-old-neutral-900 text-white overflow-y-auto p-2"
+            :class="{ 'no-transition': sidebarTouching }"
+            :style="mobileSidebarAsideStyle"
+            @touchstart.passive="onSidebarTouchStart"
+            @touchmove.passive="onSidebarTouchMove"
+            @touchend.passive="onSidebarTouchEnd"
+          >
+            <div class="flex items-center justify-between p-2">
+              <div class="text-lg font-semibold text-[#4ade80]">Playlists</div>
+              <UButton icon="i-heroicons-x-mark" variant="ghost" color="neutral" class="text-white" aria-label="Close playlists" @click="closeMobileSidebar" />
+            </div>
+            <PlaylistSidebar :is-collapsed="false" />
+          </aside>
+        </div>
+      </transition>
+    </ClientOnly>
+
+    <!-- PLAYER -->
+    <ClientOnly>
+      <div v-if="currentTrack" class="hidden md:block">
+        <MiniPlayer />
+      </div>
+      <MobilePlayer v-if="currentTrack" class="md:hidden" />
+    </ClientOnly>
   </div>
 </template>
 

@@ -2,34 +2,30 @@
 @import 'tailwind-scrollbar-hide/v4';
 @import "@nuxt/ui";
 
-
-
-
-:root {
-    --brand: #4ade80; /* цвет лого */
-    --ui-primary: rgba(0, 0, 0, 0);
-    --ui-bg: #000;
-}
-
 @theme {
-    --color-brand: var(--brand);
-    --color-brand-dark: #22c55e; /* затемнённый */
-    --color-brand-light: #86efac; /* осветлённый */
+    /* logo / accent green */
+    --color-brand: #4ade80;
+    --color-brand-dark: #22c55e;
+    --color-brand-light: #86efac;
+
+    /* Classic neutral grey scale used throughout the UI (bg-old-neutral-900, …) */
+    --color-old-neutral-50: #fafafa;
+    --color-old-neutral-100: #f5f5f5;
+    --color-old-neutral-200: #e5e5e5;
+    --color-old-neutral-300: #d4d4d4;
+    --color-old-neutral-400: #a3a3a3;
+    --color-old-neutral-500: #737373;
+    --color-old-neutral-600: #525252;
+    --color-old-neutral-700: #404040;
+    --color-old-neutral-800: #262626;
+    --color-old-neutral-900: #171717;
+    --color-old-neutral-950: #0a0a0a;
 }
 
 .dark {
-    /* Dark preset (old-neutral) */
-    /*--ui-background: #171717;*/
-    /*--ui-foreground: #f9fafb;*/
-    /*--ui-border: #262626;*/
-    /*--ui-muted: #737373;*/
-    /*--ui-accent: #f472b6;*/
+    --ui-bg: var(--color-old-neutral-900);
 }
 
 img {
-  image-rendering: high-quality;
-}
-
-.cover {
-  aspect-ratio: 1 / 1;
+    image-rendering: high-quality;
 }

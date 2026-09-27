@@ -1,54 +1,20 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
-import CreatePlaylistModal from "@/components/modals/CreatePlaylistModal.vue";
-
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-const props = defineProps<{
-  isCollapsed: boolean
-}>()
+withDefaults(defineProps<{
+  isCollapsed?: boolean
+}>(), {
+  isCollapsed: false,
+})
 
 const emit = defineEmits<{
   'toggle-collapse': []
-  'resize': [width: number]
 }>()
 
-const supabase = useSupabase()
+const route = useRoute()
 const user = useSupabaseUser()
-const playlists = ref<Playlist[]>([])
-const isLoading = ref(true)
+const playlistsStore = usePlaylistsStore()
+const { mine: playlists, loading: isLoading } = storeToRefs(playlistsStore)
 
-const fetchUserPlaylists = async () => {
-  isLoading.value = true
-  try {
-    const { data, error } = await supabase
-      .from('playlists')
-      .select(`
-        *,
-        author:profiles(*)
-      `)
-      .eq('user_id', user.value?.id)
-      .order('created_at', { ascending: false })
-
-    if (error) console.error(error)
-    playlists.value = data || []
-  } catch (err) {
-    console.error('Error fetching playlists:', err)
-  } finally {
-    isLoading.value = false
-  }
-}
-
-onMounted(() => {
-  if (user?.value) {
-    void fetchUserPlaylists()
-  } else {
-    isLoading.value = false
-  }
-})
-
-const navigateToPlaylist = (playlistId: string) => {
-  navigateTo(`/playlist/${playlistId}`)
-}
+onMounted(() => playlistsStore.load())
 </script>
 
 <template>
@@ -79,28 +45,31 @@ const navigateToPlaylist = (playlistId: string) => {
       <template v-if="!isCollapsed">
         <!-- Create Playlist Button -->
         <div class="p-4">
-          <CreatePlaylistModal />
+          <UButton block icon="i-heroicons-plus" color="neutral" variant="soft" @click="playlistsStore.openCreate()">
+            Create playlist
+          </UButton>
         </div>
 
         <!-- Playlists List -->
         <div class="px-2">
-          <div v-if="isLoading" class="flex justify-center py-8">
+          <div v-if="isLoading && !playlists.length" class="flex justify-center py-8">
             <div class="animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-white"/>
           </div>
 
           <div v-else-if="playlists.length === 0" class="text-center py-8 text-gray-400">
             <UIcon name="i-heroicons-musical-note" class="w-12 h-12 mx-auto mb-2 opacity-50" />
             <p class="text-sm">No playlists yet</p>
-            <p v-if="user?.value?.id" class="text-xs mt-1">Create your first playlist</p>
-            <NuxtLink v-else to="/login" class="text-xs mt-1 hover:underline">Create your first playlist</NuxtLink>
+            <p v-if="user" class="text-xs mt-1">Create your first playlist</p>
+            <NuxtLink v-else to="/login" class="text-xs mt-1 hover:underline">Log in to create playlists</NuxtLink>
           </div>
 
           <div v-else class="space-y-1">
-            <div
+            <NuxtLink
               v-for="playlist in playlists"
               :key="playlist.id"
-              class="flex items-center p-3 hover:bg-old-neutral-800 rounded-lg cursor-pointer transition-colors group"
-              @click="navigateToPlaylist(playlist.id)"
+              :to="`/playlist/${playlist.id}`"
+              class="flex items-center p-3 hover:bg-old-neutral-800 rounded-lg transition-colors group"
+              :class="{ 'bg-old-neutral-800': route.path === `/playlist/${playlist.id}` }"
             >
               <div class="size-12 bg-old-neutral-700 rounded-lg flex items-center justify-center mr-3 flex-shrink-0">
                 <img
@@ -114,10 +83,10 @@ const navigateToPlaylist = (playlistId: string) => {
               <div class="flex-1 min-w-0">
                 <p class="font-medium truncate group-hover:text-white">{{ playlist.name }}</p>
                 <p class="text-sm text-gray-400 truncate">
-                  Playlist • {{ playlist.profiles?.username || 'You' }}
+                  Playlist • {{ playlist.track_count }} {{ playlist.track_count === 1 ? 'track' : 'tracks' }}
                 </p>
               </div>
-            </div>
+            </NuxtLink>
           </div>
         </div>
       </template>
@@ -128,17 +97,17 @@ const navigateToPlaylist = (playlistId: string) => {
           <button
             class="flex items-center justify-center p-2.5 hover:bg-old-neutral-800 rounded-lg transition-colors"
             title="Create Playlist"
-            @click="navigateTo('/create-playlist')"
+            @click="playlistsStore.openCreate()"
           >
             <UIcon name="i-heroicons-plus" class="w-6 h-6" />
           </button>
 
-          <div
+          <NuxtLink
             v-for="playlist in playlists.slice(0, 10)"
             :key="playlist.id"
-            class="flex justify-center items-center w-full p-3 hover:bg-old-neutral-800 rounded-lg cursor-pointer transition-colors"
+            :to="`/playlist/${playlist.id}`"
+            class="flex justify-center items-center w-full p-3 hover:bg-old-neutral-800 rounded-lg transition-colors"
             :title="playlist.name"
-            @click="navigateToPlaylist(playlist.id)"
           >
             <div class="w-6 h-6 bg-old-neutral-700 rounded flex items-center justify-center mx-auto">
               <img
@@ -149,7 +118,7 @@ const navigateToPlaylist = (playlistId: string) => {
               >
               <UIcon v-else name="i-heroicons-musical-note" class="w-4 h-4 text-old-neutral-400" />
             </div>
-          </div>
+          </NuxtLink>
         </div>
       </template>
     </div>

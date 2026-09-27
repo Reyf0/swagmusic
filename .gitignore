@@ -36,9 +36,11 @@ qodana.yaml
 # /docs/
 # /.junie/guidelines.md
 /content/index.md
-/package-lock.json
 
 # Sentry Config File
 .env.sentry-build-plugin
 .vercel
 .env*.local
+
+# TypeScript build info (vue-tsc -b)
+*.tsbuildinfo

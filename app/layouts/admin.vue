@@ -1,132 +1,59 @@
-<template>
-  <div class="min-h-screen bg-gray-100">
-    <UApp>
-      <!-- Admin Header -->
-      <header class="bg-white shadow">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div class="flex justify-between h-16">
-            <div class="flex">
-              <div class="flex-shrink-0 flex items-center">
-                <h1 class="text-xl font-bold text-gray-900">SwagMusic Admin</h1>
-              </div>
-            </div>
-            <div class="flex items-center">
-              <UButton
-                  icon="i-heroicons-arrow-left-circle"
-                  color="gray"
-                  variant="ghost"
-                  to="/"
-                  class="mr-2"
-              >
-                Back to Site
-              </UButton>
-              <UButton
-                  icon="i-heroicons-arrow-right-on-rectangle"
-                  color="red"
-                  variant="ghost"
-                  @click="logout"
-              >
-                Logout
-              </UButton>
-            </div>
-          </div>
-        </div>
-      </header>
-
-      <div class="flex">
-        <!-- Sidebar -->
-        <aside class="w-64 bg-white shadow h-[calc(100vh-4rem)] sticky top-16">
-          <nav class="p-4 space-y-1">
-            <UButton
-                block
-                variant="ghost"
-                color="gray"
-                icon="i-heroicons-home"
-                class="justify-start"
-            >
-              <NuxtLink to="/admin">Dashboard</NuxtLink>
-            </UButton>
-            <UButton
-                block
-                variant="ghost"
-                color="gray"
-                icon="i-heroicons-users"
-                class="justify-start"
-            >
-              <NuxtLink to="/admin/users">Users</NuxtLink>
-            </UButton>
-            <UButton
-                block
-                variant="ghost"
-                color="gray"
-                icon="i-heroicons-musical-note"
-                class="justify-start"
-            >
-              <NuxtLink to="/admin/tracks">Tracks</NuxtLink>
-            </UButton>
-            <UButton
-                block
-                variant="ghost"
-                color="gray"
-                icon="i-heroicons-rectangle-stack"
-                class="justify-start"
-            >
-              <NuxtLink to="/admin/albums">Albums</NuxtLink>
-            </UButton>
-            <UButton
-                block
-                variant="ghost"
-                color="gray"
-                icon="i-heroicons-queue-list"
-                class="justify-start"
-            >
-              <NuxtLink to="/admin/playlists">Playlists</NuxtLink>
-            </UButton>
-          </nav>
-        </aside>
-
-        <!-- Main Content -->
-        <main class="flex-1 p-6">
-          <slot />
-        </main>
-      </div>
-    </UApp>
-  </div>
-</template>
-
 <script setup lang="ts">
-import { useSupabase } from "@/composables/useSupabase";
+const profileStore = useProfileStore()
 
-const supabase = useSupabase();
-const router = useRouter();
-const toast = useToast();
+const nav = [
+  { label: 'Dashboard', icon: 'i-heroicons-home', to: '/admin' },
+  { label: 'Users', icon: 'i-heroicons-users', to: '/admin/users' },
+  { label: 'Tracks', icon: 'i-heroicons-musical-note', to: '/admin/tracks' },
+  { label: 'Albums', icon: 'i-lucide-disc-3', to: '/admin/albums' },
+  { label: 'Playlists', icon: 'i-heroicons-queue-list', to: '/admin/playlists' },
+]
 
-const logout = async () => {
-  try {
-    const { error } = await supabase.auth.signOut();
-    if (error) throw error;
-
-    toast.add({
-      title: 'Logged out',
-      description: 'You have been successfully logged out',
-      color: 'green',
-    });
-
-    await router.push('/login');
-  } catch (err) {
-    console.error('Error logging out:', err);
-    toast.add({
-      title: 'Error',
-      description: 'Failed to log out',
-      color: 'error',
-    });
-  }
-};
+async function logout() {
+  await profileStore.signOut()
+  await navigateTo('/login')
+}
 </script>
 
-<style scoped>
-nav a.router-link-active {
-  font-weight: bold;
-  color: #4ade80;
-}
-</style>
+<template>
+  <div class="min-h-dvh bg-old-neutral-100 dark:bg-old-neutral-950 text-old-neutral-900 dark:text-white">
+    <header class="bg-white dark:bg-old-neutral-900 shadow-sm">
+      <div class="px-4 h-14 flex items-center justify-between gap-4">
+        <NuxtLink to="/admin" class="text-lg font-bold">SwagMusic <span class="text-green-500">Admin</span></NuxtLink>
+        <div class="flex items-center gap-1">
+          <UButton icon="i-heroicons-arrow-left" color="neutral" variant="ghost" to="/">Back to site</UButton>
+          <UButton icon="i-lucide-log-out" color="error" variant="ghost" @click="logout">Log out</UButton>
+        </div>
+      </div>
+      <nav class="md:hidden flex gap-1 overflow-x-auto px-2 pb-2">
+        <UButton v-for="item in nav" :key="item.to" :to="item.to" :icon="item.icon" size="sm" color="neutral" variant="ghost" active-variant="soft" :exact="item.to === '/admin'">
+          {{ item.label }}
+        </UButton>
+      </nav>
+    </header>
+
+    <div class="flex">
+      <aside class="hidden md:block w-56 shrink-0 p-3">
+        <nav class="flex flex-col gap-1 sticky top-3">
+          <UButton
+            v-for="item in nav"
+            :key="item.to"
+            :to="item.to"
+            :icon="item.icon"
+            color="neutral"
+            variant="ghost"
+            active-variant="soft"
+            class="justify-start"
+            :exact="item.to === '/admin'"
+          >
+            {{ item.label }}
+          </UButton>
+        </nav>
+      </aside>
+
+      <main class="flex-1 min-w-0 p-4 md:p-6">
+        <slot />
+      </main>
+    </div>
+  </div>
+</template>

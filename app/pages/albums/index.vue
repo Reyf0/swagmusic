@@ -1,66 +1,47 @@
-<template>
-  <div class="p-6">
-    <div class="flex justify-between items-center mb-6">
-      <h1 class="text-2xl font-bold">Альбомы</h1>
-      <UButton to="/albums/create">Создать альбом</UButton>
-    </div>
-
-    <div v-if="loading" class="text-gray-500">Загрузка альбомов...</div>
-    <div v-else-if="error" class="text-red-500">Ошибка: {{ error }}</div>
-    <div v-else-if="albums.length === 0" class="text-gray-500">Нет альбомов</div>
-    <div v-else class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6">
-      <div
-          v-for="album in albums"
-          :key="album.id"
-          class="bg-white shadow rounded-lg overflow-hidden cursor-pointer hover:shadow-md transition-shadow"
-          @click="goToAlbum(album.id)"
-      >
-        <img
-            :src="album.cover_url || 'https://via.placeholder.com/300x300?text=No+Cover'"
-            class="w-full h-48 object-cover"
-            alt="Album Cover"
-        >
-        <div class="p-4">
-          <h2 class="font-semibold truncate">{{ album.title }}</h2>
-          <p class="text-sm text-gray-500 truncate">{{ album.author?.username || 'Неизвестный автор' }}</p>
-        </div>
-      </div>
-    </div>
-  </div>
-</template>
-
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
-import type {Album} from "@/types/global";
+import type { Album } from '#shared/types'
+
+type AlbumRow = Album & { author: { id: string; username: string | null } | null }
 
 const supabase = useSupabase()
-const router = useRouter()
+const user = useSupabaseUser()
 
-const albums = ref<Album[]>([])
+const albums = ref<AlbumRow[]>([])
 const loading = ref(true)
 const error = ref<string | null>(null)
 
-const fetchAlbums = async () => {
+async function fetchAlbums() {
   loading.value = true
   error.value = null
-
   const { data, error: err } = await supabase
-      .from('albums')
-      .select('*, user:profiles(username)')
-      .order('created_at', { ascending: false })
+    .from('albums')
+    .select('*, author:profiles!albums_user_id_fkey(id, username)')
+    .order('created_at', { ascending: false })
 
-  if (err) {
-    error.value = err.message
-  } else {
-    albums.value = data || []
-  }
-
+  if (err) error.value = err.message
+  else albums.value = (data ?? []) as AlbumRow[]
   loading.value = false
 }
 
-const goToAlbum = (id: string) => {
-  router.push(`/albums/${id}`)
-}
-
 onMounted(fetchAlbums)
+
+useSeoMeta({ title: 'Albums' })
 </script>
+
+<template>
+  <div class="p-4 md:p-6">
+    <div class="flex justify-between items-center mb-6 gap-4">
+      <h1 class="text-2xl font-bold">Albums</h1>
+      <UButton v-if="user" to="/studio?tab=albums" icon="i-heroicons-plus" variant="soft" color="neutral">New album</UButton>
+    </div>
+
+    <div v-if="loading" class="flex justify-center py-10">
+      <UIcon name="i-lucide-loader-circle" class="size-8 animate-spin text-old-neutral-400" />
+    </div>
+    <UAlert v-else-if="error" color="error" variant="soft" title="Failed to load albums" :description="error" :actions="[{ label: 'Retry', onClick: fetchAlbums }]" />
+    <p v-else-if="!albums.length" class="text-center py-10 text-old-neutral-500">No albums yet.</p>
+    <div v-else class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-6 gap-4">
+      <AlbumCard v-for="album in albums" :key="album.id" :album="album" />
+    </div>
+  </div>
+</template>

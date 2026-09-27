@@ -1,41 +1,40 @@
-import { usePlayerStore } from '@/stores/player'
-import { storeToRefs } from 'pinia'
-import type {Track} from "@/types/global";
+import type { Track } from '#shared/types'
 
+/**
+ * Play button behaviour for track lists: clicking the current track toggles
+ * play/pause, clicking another one starts it with `trackList` as the queue.
+ */
 export const usePlayTrack = () => {
     const playerStore = usePlayerStore()
     const { currentTrack, isPlaying, queue } = storeToRefs(playerStore)
 
-    const isCurrentTrack = (track: Track): boolean => {
-        return currentTrack.value?.id === track.id
-    }
+    const isCurrentTrack = (track: Pick<Track, 'id'>) => currentTrack.value?.id === track.id
+    const isTrackPlaying = (track: Pick<Track, 'id'>) => isCurrentTrack(track) && isPlaying.value
 
-    const playTrack = (track: Track, trackList: Track[] = []) => {
-        // Если клик по текущему треку — ставим на паузу или продолжаем
+    function playTrack(track: Track, trackList: Track[] = []) {
         if (isCurrentTrack(track)) {
-            if (isPlaying.value) {
-                playerStore.pause()
-            } else {
-                playerStore.resume()
-            }
+            playerStore.togglePlay()
             return
         }
-
-        const isSameQueue =
-            queue.value.length === trackList.length &&
-            queue.value.every((t, i) => t.id === trackList[i].id)
-
-        if (isSameQueue) {
-            // Если очередь та же, просто найди индекс и воспроизведи
-            const index = trackList.findIndex(t => t.id === track.id)
-            if (index !== -1) {
-                playerStore.play(trackList[index], trackList)
-            }
-        } else {
-            // Иначе заменяем очередь
-            playerStore.replaceQueue(trackList, track)
-        }
+        playerStore.play(track, trackList.length ? trackList : [track])
     }
 
-    return { playTrack, isCurrentTrack }
+    /** The queue was started from `list` (it still holds all of its tracks) and one of them is loaded. */
+    function isListActive(list: Pick<Track, 'id'>[]) {
+        if (!list.length || !currentTrack.value || !list.some(isCurrentTrack)) return false
+        const queued = new Set(queue.value.map(t => t.id))
+        return list.every(t => queued.has(t.id))
+    }
+    const isListPlaying = (list: Pick<Track, 'id'>[]) => isListActive(list) && isPlaying.value
+
+    /** "Play all" button: pause / resume when this list is already playing, otherwise start from the top. */
+    function playList(list: Track[]) {
+        if (isListActive(list)) {
+            playerStore.togglePlay()
+            return
+        }
+        if (list[0]) playerStore.play(list[0], list)
+    }
+
+    return { playTrack, isCurrentTrack, isTrackPlaying, playList, isListActive, isListPlaying }
 }

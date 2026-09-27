@@ -1,13 +1,13 @@
 import { defineStore } from 'pinia'
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import type { SupabaseClient } from '@supabase/supabase-js'
-import type { Database } from '@@/types/database.types'
-import { profileUpdateSchema } from "@@/lib/schemas/profile";
-import type { ProfileUpdateInput } from "@@/lib/schemas/profile";
+import type { Database, Profile } from '#shared/types'
+import { profileUpdateSchema } from "#shared/schemas/profile";
+import type { ProfileUpdateInput } from "#shared/schemas/profile";
 import { useSupabase } from "@/composables/useSupabase";
 
-// Типы
-type ProfilesRow = Database['public']['Tables']['profiles']['Row']
+
+type ProfilesRow = Profile
 
 export const useProfileStore = defineStore('profile', () => {
   const supabase: SupabaseClient<Database> = useSupabase()
@@ -30,35 +30,28 @@ export const useProfileStore = defineStore('profile', () => {
 
   // Actions
 
-  // init — call once during app startup (client). Subscribes to auth events and loads profile if available.
+  let watchingAuth = false
+
+  // init — called once by the supabase plugin (server and client). Loads the profile of the
+  // signed-in user and, on the client, keeps it in sync when the user signs in/out.
   async function init() {
-    if (isHydrated.value) return
-    console.log(authUser.value)
-    // If authUser is already present, load profile
-    if (authUser.value?.id) {
-      await loadProfile(authUser.value.id)
-    }
-    // subscribe to onAuthStateChange to load/clear profile
-    try {
-      const { data } = supabase.auth.onAuthStateChange(async (event, session) => {
-        if (event === 'SIGNED_OUT') {
-          clearProfile()
-        } else if (event === 'SIGNED_IN' || event === 'USER_UPDATED') {
-          // load profile for new user
-          const uid = session?.user?.id
-          if (uid) await loadProfile(uid)
-        }
+    const uid = authUser.value?.id
+    if (uid && profile.value?.id !== uid) await loadProfile(uid)
+    if (!uid) clearProfile()
+
+    if (import.meta.client && !watchingAuth) {
+      watchingAuth = true
+      watch(() => authUser.value?.id, (newId) => {
+        if (newId) loadProfile(newId)
+        else clearProfile()
       })
-      // You may want to save `data.subscription` to unsubscribe later. We intentionally do not auto-unsubscribe.
-    } catch (err) {
-      // some runtimes may not support onAuthStateChange in the same way — ignore if not available
-      console.warn('profile.init: onAuthStateChange not available', err)
     }
 
     isHydrated.value = true
   }
 
-  // loadProfile(userId) — fetch profile row from DB (client-side). Uses RLS rules, so client can call.
+  // loadProfile() — the signed-in user's own full profile. Private columns (email, settings, is_admin)
+  // are not selectable by clients, so it goes through the get_my_profile() RPC.
   async function loadProfile(userId?: string) {
     loading.value = true
     error.value = null
@@ -68,15 +61,11 @@ export const useProfileStore = defineStore('profile', () => {
         profile.value = null
         return null
       }
-      const { data, error: supError } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', uid)
-        .limit(1)
-        .single()
+      if (uid !== authUser.value?.id) throw new Error("Only the signed-in user's profile can be loaded")
+      const { data, error: supError } = await supabase.rpc('get_my_profile').maybeSingle()
 
       if (supError) throw supError
-      profile.value = data as ProfilesRow
+      profile.value = (data as ProfilesRow | null) ?? null
       return profile.value
     } catch (err: any) {
       error.value = String(err?.message ?? err)
@@ -101,17 +90,15 @@ export const useProfileStore = defineStore('profile', () => {
       const uid = id.value
       if (!uid) throw new Error('Not authenticated')
 
-      // Use .update().eq('id', uid) to follow RLS policies
-      const { data, error: supError } = await supabase
+      // RLS limits the update to the own row; no .select() here because private columns
+      // can't be returned to clients, so re-read the full row through get_my_profile().
+      const { error: supError } = await supabase
         .from('profiles')
         .update(parsed)
         .eq('id', uid)
-        .select()
-        .single()
 
       if (supError) throw supError
-      profile.value = data as ProfilesRow
-      return profile.value
+      return await loadProfile(uid)
     } catch (err: any) {
       // if it's Zod error, return message
       if (err?.name === 'ZodError') {

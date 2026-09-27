@@ -1,13 +1,12 @@
 // https://nuxt.com/docs/api/configuration/nuxt-config
 
-
+const env = process.env
 
 export default defineNuxtConfig({
     compatibilityDate: '2025-05-15',
 
     devtools: {
         enabled: true,
-
         timeline: {
             enabled: true
         }
@@ -18,55 +17,35 @@ export default defineNuxtConfig({
         port: 3000
     },
 
-    plugins: [
-        '~/plugins/supabase.ts',
-        '~/plugins/supabase-auth.client.ts'
-    ],
-
     modules: [
-      '@nuxt/content',
-      '@nuxt/eslint',
-      '@nuxt/fonts',
-      '@nuxt/icon',
-      '@nuxt/image',
-      '@nuxt/test-utils',
-      '@nuxt/ui',
-      '@nuxtjs/tailwindcss',
-      '@pinia/nuxt',
-      'nuxt-auth-utils',
-      '@sentry/nuxt/module',
-      '@vueuse/motion/nuxt',
-      'hero-motion/nuxt',
-      '@nuxtjs/robots',
-      '@nuxtjs/seo',
-      '@nuxt/hints'
+        '@nuxt/eslint',
+        '@nuxt/fonts',
+        '@nuxt/icon',
+        '@nuxt/image',
+        '@nuxt/test-utils/module',
+        '@nuxt/ui',
+        '@pinia/nuxt',
+        '@sentry/nuxt/module',
+        '@nuxtjs/seo',
+        '@nuxt/hints'
     ],
 
+    // Canonical names: NUXT_PUBLIC_SUPABASE_URL, NUXT_PUBLIC_SUPABASE_KEY (publishable key,
+    // sb_publishable_…) and SUPABASE_SECRET_KEY (sb_secret_…). The rest are fallbacks for names
+    // used by older .env files / the Vercel integration (legacy anon / service_role JWTs).
     runtimeConfig: {
-        sentryDsn: process.env.SENTRY_DSN,
-
-        supabaseServiceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_API_SECRET_KEY,
-        supabaseUrl: process.env.SUPABASE_URL,
-        supabaseKey: process.env.SUPABASE_KEY || process.env.NUXT_PUBLIC_SUPABASE_ANON_KEY,
-
+        supabaseSecretKey: env.SUPABASE_SECRET_KEY || env.SUPABASE_API_SECRET_KEY || env.SUPABASE_SERVICE_ROLE_KEY,
 
         public: {
-            errorLoggerEndpoint: process.env.ERROR_ENDPOINT || '/api/v1/error',
-            supabaseUrl: process.env.NUXT_PUBLIC_SUPABASE_URL,
-            supabaseKey: process.env.NUXT_PUBLIC_SUPABASE_ANON_KEY,
-        },
-        supabase: {
-            serviceKey:
-                process.env.SUPABASE_SERVICE_ROLE_KEY ||
-                process.env.NUXT_SUPABASE_SECRET_KEY,
+            supabaseUrl: env.NUXT_PUBLIC_SUPABASE_URL || env.SUPABASE_URL || env.NEXT_PUBLIC_SUPABASE_URL,
+            supabaseKey: env.NUXT_PUBLIC_SUPABASE_KEY || env.SUPABASE_PUBLISHABLE_KEY || env.NUXT_PUBLIC_SUPABASE_ANON_KEY || env.SUPABASE_KEY || env.SUPABASE_ANON_KEY || env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+            sentryDsn: env.NUXT_PUBLIC_SENTRY_DSN || env.SENTRY_DSN || ''
         }
     },
+
     routeRules: {
-        '/': {
-            prerender: true
-        },
         '/admin/**': {
-          ssr: false
+            ssr: false
         }
     },
 
@@ -76,34 +55,29 @@ export default defineNuxtConfig({
         colorMode: true,
         theme: {
             colors: ['primary', 'secondary', 'success', 'warning', 'error', 'info']
-        },
-        icons: ['heroicons'],
-        locale: {
-            default: 'en',
-            fallback: 'en'
         }
     },
 
     icon: {
-        cssLayer: 'icon',
+        cssLayer: 'icon'
     },
 
     app: {
         head: {
             title: 'SwagMusic',
             htmlAttrs: {
-                lang: 'en',
-            },
+                lang: 'en'
+            }
         }
     },
 
-    imports: {
-        dirs: ['./stores', './composables', './types']
+    site: {
+        url: env.NUXT_SITE_URL,
+        name: 'SwagMusic'
     },
 
-    supabase: {
-        redirect: false,
-
+    imports: {
+        dirs: ['stores']
     },
 
     sentry: {
@@ -111,7 +85,6 @@ export default defineNuxtConfig({
             org: 'reyf-org',
             project: 'javascript-nuxt'
         },
-
         autoInjectServerSentry: 'top-level-import'
     },
 

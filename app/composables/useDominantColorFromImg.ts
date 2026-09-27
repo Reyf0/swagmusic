@@ -1,21 +1,23 @@
+import type { Ref } from 'vue'
+
 const FALLBACK = '#D3D3D3'
 
-import { ref, onMounted, watch, nextTick } from 'vue'
+type RGB = [number, number, number]
 
 type Options = {
-    sampleSize?: number // max число пикселей для кластеризации (по умолчанию 900)
-    k?: number // число кластеров для k-means (по умолчанию 3)
-    saturationThreshold?: number // минимальная насыщенность (0..1) при фильтрации (по умолчанию 0.15)
-    lightnessIgnore?: { min: number; max: number } // диапазон l, который игнорируем (white/black), 0..1
-    iterations?: number // итерации k-means
+    sampleSize?: number // max pixels used for clustering (default 900)
+    k?: number // k-means clusters (default 3)
+    saturationThreshold?: number // min saturation 0..1 when filtering (default 0.15)
+    lightnessIgnore?: { min: number; max: number } // lightness range treated as white/black, 0..1
+    iterations?: number // k-means iterations
 }
 
-function rgbToHex([r, g, b]: number[]) {
+function rgbToHex([r, g, b]: RGB) {
     const toHex = (v: number) => Math.max(0, Math.min(255, Math.round(v))).toString(16).padStart(2, '0')
     return `#${toHex(r)}${toHex(g)}${toHex(b)}`.toUpperCase()
 }
 
-function rgbToHsl([r, g, b]: number[]) {
+function rgbToHsl([r, g, b]: RGB) {
     r /= 255; g /= 255; b /= 255
     const max = Math.max(r, g, b), min = Math.min(r, g, b)
     let h = 0, s = 0
@@ -23,230 +25,145 @@ function rgbToHsl([r, g, b]: number[]) {
     if (max !== min) {
         const d = max - min
         s = l > 0.5 ? d / (2 - max - min) : d / (max + min)
-        switch (max) {
-            case r: h = (g - b) / d + (g < b ? 6 : 0); break
-            case g: h = (b - r) / d + 2; break
-            case b: h = (r - g) / d + 4; break
-        }
+        if (max === r) h = (g - b) / d + (g < b ? 6 : 0)
+        else if (max === g) h = (b - r) / d + 2
+        else h = (r - g) / d + 4
         h /= 6
     }
     return { h, s, l }
 }
 
-function distanceRGB(a: number[], b: number[]) {
-    const dr = a[0] - b[0], dg = a[1] - b[1], db = a[2] - b[2]
-    return Math.sqrt(dr*dr + dg*dg + db*db)
+function distance(a: RGB, b: RGB) {
+    return Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2])
 }
 
-function kmeans(samples: number[][], k = 3, iterations = 8) {
-    if (samples.length === 0) return []
-    // init centroids - pick k random distinct samples
-    const centroids: number[][] = []
-    const used = new Set<number>()
-    for (let i = 0; i < Math.min(k, samples.length); i++) {
-        let idx
-        do { idx = Math.floor(Math.random() * samples.length) } while (used.has(idx))
-        used.add(idx)
-        centroids.push(samples[idx].slice())
-    }
+function kmeans(samples: RGB[], k: number, iterations: number) {
+    // init centroids: k random distinct samples
+    const picked = new Set<number>()
+    while (picked.size < Math.min(k, samples.length)) picked.add(Math.floor(Math.random() * samples.length))
+    const centroids: RGB[] = [...picked].map(i => [...samples[i]!] as RGB)
 
-    let assignments = new Array(samples.length).fill(0)
+    const assignments = new Array<number>(samples.length).fill(0)
     for (let iter = 0; iter < iterations; iter++) {
-        // assign
-        for (let i = 0; i < samples.length; i++) {
+        samples.forEach((s, i) => {
             let best = 0, bestDist = Infinity
-            for (let j = 0; j < centroids.length; j++) {
-                const d = distanceRGB(samples[i], centroids[j])
+            centroids.forEach((c, j) => {
+                const d = distance(s, c)
                 if (d < bestDist) { bestDist = d; best = j }
-            }
+            })
             assignments[i] = best
-        }
-        // recompute centroids
-        const sums = Array.from({ length: centroids.length }, () => [0,0,0])
-        const counts = new Array(centroids.length).fill(0)
-        for (let i = 0; i < samples.length; i++) {
-            const a = assignments[i]
-            sums[a][0] += samples[i][0]
-            sums[a][1] += samples[i][1]
-            sums[a][2] += samples[i][2]
-            counts[a]++
-        }
-        for (let j = 0; j < centroids.length; j++) {
-            if (counts[j] === 0) continue
-            centroids[j][0] = sums[j][0] / counts[j]
-            centroids[j][1] = sums[j][1] / counts[j]
-            centroids[j][2] = sums[j][2] / counts[j]
-        }
+        })
+        const sums = centroids.map((): RGB => [0, 0, 0])
+        const counts = centroids.map(() => 0)
+        samples.forEach((s, i) => {
+            const sum = sums[assignments[i]!]!
+            sum[0] += s[0]; sum[1] += s[1]; sum[2] += s[2]
+            counts[assignments[i]!]! += 1
+        })
+        centroids.forEach((c, j) => {
+            const n = counts[j]!
+            if (n) { const sum = sums[j]!; c[0] = sum[0] / n; c[1] = sum[1] / n; c[2] = sum[2] / n }
+        })
     }
-    // produce clusters
-    const clusters = centroids.map((c, idx) => ({ centroid: c, size: 0 }))
-    for (let i = 0; i < assignments.length; i++) clusters[assignments[i]].size++
-    return clusters
+
+    const sizes = centroids.map(() => 0)
+    for (const a of assignments) sizes[a]! += 1
+    return centroids.map((centroid, j) => ({ centroid, size: sizes[j]! }))
 }
 
-/**
- * composable: принимает ref на <img> элемент и вычисляет доминирующий цвет
- * возвращает { color } - реактивный hex
- */
-export function useDominantColorFromImg(
-    imgRef: { value: HTMLImageElement | null },
-    opts: Options = {}
-) {
+/** Dominant colour of an <img> (for the Now Playing background), as a reactive hex string. */
+export function useDominantColorFromImg(imgRef: Ref<HTMLImageElement | null>, opts: Options = {}) {
     const {
         sampleSize = 900,
         k = 3,
         saturationThreshold = 0.15,
         lightnessIgnore = { min: 0.02, max: 0.98 },
-        iterations = 8
+        iterations = 8,
     } = opts
 
-    const color = ref<string>(FALLBACK)
+    const color = ref(FALLBACK)
 
-    async function computeFromImg(img: HTMLImageElement) {
-        if (!img || !img.src) {
+    function readPixels(img: HTMLImageElement): Uint8ClampedArray | null {
+        const w = img.naturalWidth || img.width
+        const h = img.naturalHeight || img.height
+        if (!w || !h) return null
+        // scale down so that sw * sh ≈ sampleSize
+        const ratio = Math.sqrt((w * h) / sampleSize)
+        const canvas = document.createElement('canvas')
+        canvas.width = Math.max(1, Math.round(w / ratio))
+        canvas.height = Math.max(1, Math.round(h / ratio))
+        const ctx = canvas.getContext('2d')
+        if (!ctx) return null
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height)
+        try {
+            return ctx.getImageData(0, 0, canvas.width, canvas.height).data
+        } catch (e) {
+            console.warn('Canvas is tainted (CORS). Add crossorigin and allow the origin on the server.', e)
+            return null
+        }
+    }
+
+    function collect(data: Uint8ClampedArray, satMin: number, lightMin: number, lightMax: number) {
+        const out: RGB[] = []
+        for (let i = 0; i + 3 < data.length; i += 4) {
+            if (data[i + 3] === 0) continue // transparent
+            const px: RGB = [data[i]!, data[i + 1]!, data[i + 2]!]
+            const { s, l } = rgbToHsl(px)
+            if (l <= lightMin || l >= lightMax || s < satMin) continue
+            out.push(px)
+        }
+        return out
+    }
+
+    function compute(img: HTMLImageElement | null) {
+        if (!img?.src) {
             color.value = FALLBACK
             return
         }
-
+        if (!img.complete || !img.naturalWidth) return // the load listener will call us again
         try {
-            // wait a tick если нужно
-            await nextTick()
-            const w = img.naturalWidth || img.width
-            const h = img.naturalHeight || img.height
-            if (!w || !h) return
-
-            // draw scaled down to keep sampleSize ~ sampleW*sampleH
-            const ratio = Math.sqrt((w*h) / sampleSize)
-            const sw = Math.max(1, Math.round(w / ratio))
-            const sh = Math.max(1, Math.round(h / ratio))
-
-            const canvas = document.createElement('canvas')
-            canvas.width = sw
-            canvas.height = sh
-            const ctx = canvas.getContext('2d')
-            if (!ctx) {
+            const data = readPixels(img)
+            if (!data) {
                 color.value = FALLBACK
                 return
             }
 
-            ctx.drawImage(img, 0, 0, sw, sh)
-
-            // try/catch for tainted canvas
-            let imageData
-            try {
-                imageData = ctx.getImageData(0, 0, sw, sh).data
-            } catch (e) {
-                console.warn('Canvas is tainted (CORS). Add crossorigin and allow origin on the server.', e)
+            // Prefer saturated, non white/black pixels; relax the filters for grey covers.
+            let sat = saturationThreshold, lightMin = lightnessIgnore.min, lightMax = lightnessIgnore.max
+            let samples = collect(data, sat, lightMin, lightMax)
+            while (samples.length < 8 && sat > 0) {
+                sat = Math.max(0, sat - 0.05)
+                lightMin = Math.max(0, lightMin - 0.01)
+                lightMax = Math.min(1, lightMax + 0.01)
+                samples = collect(data, sat, lightMin, lightMax)
+            }
+            if (!samples.length) samples = collect(data, 0, -1, 2) // every opaque pixel
+            if (!samples.length) {
                 color.value = FALLBACK
                 return
             }
 
-            const samples: number[][] = []
-            for (let y = 0; y < sh; y++) {
-                for (let x = 0; x < sw; x++) {
-                    const idx = (y * sw + x) * 4
-                    const r = imageData[idx], g = imageData[idx+1], b = imageData[idx+2], a = imageData[idx+3]
-                    if (a === 0) continue // transparent
-                    const { s, l } = rgbToHsl([r,g,b])
-                    // ignore nearly white/black
-                    if (l <= lightnessIgnore.min || l >= lightnessIgnore.max) continue
-                    // filter low saturation (near gray)
-                    if (s < saturationThreshold) continue
-                    samples.push([r,g,b])
-                }
-            }
-
-            // If nothing left after filtering, relax thresholds progressively
-            let curSatThr = saturationThreshold
-            let curLightMin = lightnessIgnore.min
-            let curLightMax = lightnessIgnore.max
-            while (samples.length < 8 && curSatThr > 0) {
-                curSatThr = Math.max(0, curSatThr - 0.05)
-                samples.length = 0
-                for (let y = 0; y < sh; y++) {
-                    for (let x = 0; x < sw; x++) {
-                        const idx = (y * sw + x) * 4
-                        const r = imageData[idx], g = imageData[idx+1], b = imageData[idx+2], a = imageData[idx+3]
-                        if (a === 0) continue
-                        const { s, l } = rgbToHsl([r,g,b])
-                        if (l <= curLightMin || l >= curLightMax) continue
-                        if (s < curSatThr) continue
-                        samples.push([r,g,b])
-                    }
-                }
-                // relax lightness bounds a bit too
-                curLightMin = Math.max(0, curLightMin - 0.01)
-                curLightMax = Math.min(1, curLightMax + 0.01)
-                if (curSatThr === 0) break
-            }
-
-            // fallback: if still no samples — use all pixels
-            if (samples.length === 0) {
-                for (let i = 0; i < imageData.length; i += 4) {
-                    const a = imageData[i+3]; if (a === 0) continue
-                    samples.push([imageData[i], imageData[i+1], imageData[i+2]])
-                }
-            }
-
-            // run k-means
-            const clusters = kmeans(samples, Math.min(k, samples.length), iterations)
-            if (!clusters || clusters.length === 0) {
-                // fallback average
-                const avg = [0,0,0]; let cnt = 0
-                for (let i = 0; i < imageData.length; i += 4) {
-                    const a = imageData[i+3]; if (a === 0) continue
-                    avg[0] += imageData[i]; avg[1] += imageData[i+1]; avg[2] += imageData[i+2]; cnt++
-                }
-                if (cnt) { avg[0]/=cnt; avg[1]/=cnt; avg[2]/=cnt }
-                color.value = rgbToHex(avg)
-                return
-            }
-
-            // score clusters: size * (1 + saturation(centroid))
-            const scored = clusters.map(c => {
-                const sat = rgbToHsl(c.centroid).s
-                return { centroid: c.centroid, size: c.size, score: c.size * (1 + sat) }
-            })
-            scored.sort((a,b) => b.score - a.score)
-            const best = scored[0].centroid
-            color.value = rgbToHex(best)
+            // Biggest cluster wins, with a bonus for saturated colours.
+            const best = kmeans(samples, k, iterations)
+                .map(c => ({ ...c, score: c.size * (1 + rgbToHsl(c.centroid).s) }))
+                .sort((a, b) => b.score - a.score)[0]
+            color.value = best ? rgbToHex(best.centroid) : FALLBACK
         } catch (err) {
             console.error('dominant color error', err)
             color.value = FALLBACK
         }
     }
 
-    // attach to img load and watch
-    onMounted(() => {
-        const el = imgRef.value
-        if (!el) return
-        const handler = () => computeFromImg(el)
-        el.addEventListener('load', handler)
-        // If already loaded
-        if (el.complete && el.naturalWidth) computeFromImg(el)
-    })
+    const onLoad = (e: Event) => compute(e.target as HTMLImageElement)
 
-    // if ref switch (new element), recompute
-    watch(() => imgRef.value, (newEl, oldEl) => {
-        if (oldEl) oldEl.removeEventListener('load', () => computeFromImg(oldEl))
-        if (newEl) {
-            newEl.addEventListener('load', () => computeFromImg(newEl))
-            if (newEl.complete && newEl.naturalWidth) computeFromImg(newEl)
-        }
-    })
+    // New element: move the load listener over. New src on the same element: the load event fires again.
+    watch(imgRef, (el, prev) => {
+        prev?.removeEventListener('load', onLoad)
+        el?.addEventListener('load', onLoad)
+        compute(el)
+    }, { immediate: true })
 
-    watch(
-        () => imgRef.value?.src,
-        (newSrc) => {
-            if (imgRef.value && newSrc) {
-                if (imgRef.value.complete && imgRef.value.naturalWidth) {
-                    computeFromImg(imgRef.value)
-                } else {
-                    imgRef.value.addEventListener('load', () => computeFromImg(imgRef.value!))
-                }
-            }
-        }
-    )
+    onBeforeUnmount(() => imgRef.value?.removeEventListener('load', onLoad))
 
     return { color }
 }

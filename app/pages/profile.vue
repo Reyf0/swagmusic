@@ -1,255 +1,144 @@
-<template>
-  <div class="p-6">
-    <h1 class="text-2xl font-bold mb-4">Profile</h1>
-    <div v-if="!user">
-      <p>Please <NuxtLink to="/login" class="text-blue-500 hover:underline">log in</NuxtLink> to view your profile.</p>
-    </div>
-    <div v-else-if="loading">
-      <p>Loading profile...</p>
-    </div>
-    <div v-else-if="error">
-      <p class="text-red-500">Error: {{ error }}</p>
-    </div>
-    <div v-else-if="profile">
-      <div class="bg-white shadow rounded-lg p-6 mb-6">
-        <div class="flex items-center space-x-6">
-          <div class="shrink-0 relative group w-24 h-24">
-            <UAvatar
-                :alt="profile.username"
-                :src="profile.avatar_url"
-                class="w-24 h-24 rounded-full object-cover border-2 border-gray-200 transition-transform duration-300 group-hover:scale-105"
-            />
-            <div
-                class="absolute inset-0 flex flex-col justify-center items-center bg-black bg-opacity-40 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300 cursor-pointer"
-                @click="showAvatarEditor = true"
-            >
-              <UIcon name="i-heroicons-pencil" class="w-6 h-6 text-white mb-1" />
-              <span class="text-xs text-white">Edit</span>
-            </div>
-          </div>
-          <div>
-            <h2 class="text-xl font-bold">{{ profile.username || user.email }}</h2>
-            <p class="text-gray-500">{{ user.email }}</p>
-            <p v-if="profile.bio" class="mt-2">{{ profile.bio }}</p>
-          </div>
-        </div>
-      </div>
-
-      <div class="bg-white shadow rounded-lg p-6">
-        <h3 class="text-lg font-semibold mb-4">Profile information</h3>
-        <div class="space-y-3">
-          <div>
-            <p class="text-sm text-gray-500">User ID</p>
-            <p>{{ user.id }}</p>
-          </div>
-          <div v-if="profile.full_name">
-            <p class="text-sm text-gray-500">Full name</p>
-            <p>{{ profile.full_name }}</p>
-          </div>
-          <div>
-            <p class="text-sm text-gray-500">Registration date</p>
-            <p>{{ new Date(user.created_at).toLocaleDateString() }}</p>
-          </div>
-        </div>
-      </div>
-    </div>
-    <div v-else>
-      <p>Profile not found.</p>
-    </div>
-    <div
-        v-if="showAvatarEditor"
-        class="fixed inset-0 bg-black bg-opacity-50 z-50 flex justify-center items-center"
-    >
-      <div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-sm relative">
-        <button
-            class="absolute top-2 right-2 text-gray-500 hover:text-gray-700"
-            @click="showAvatarEditor = false"
-        >
-          <UIcon name="i-heroicons-x-mark" class="w-5 h-5" />
-        </button>
-        <h2 class="text-lg font-semibold mb-4">Change Avatar</h2>
-        <UInput type="file" accept="image/*" @change="handleFileChange" />
-        <div class="flex justify-end mt-4 space-x-2">
-          <UButton @click="uploadAvatar">Save</UButton>
-          <UButton color="neutral" @click="showAvatarEditor = false">Cancel</UButton>
-        </div>
-      </div>
-    </div>
-  </div>
-</template>
-
 <script setup lang="ts">
-import { ref, watch, onMounted } from 'vue'
-
 const supabase = useSupabase()
 const user = useSupabaseUser()
 const toast = useToast()
+const storage = useStorageUpload()
+const profileStore = useProfileStore()
+const { profile, loading } = storeToRefs(profileStore)
 
-definePageMeta({
-  middleware: ['auth']
-})
+const form = reactive({ username: '', full_name: '', website: '' })
+const saving = ref(false)
+const formError = ref('')
 
-const profile = ref(null)
-const loading = ref(true)
-const error = ref(null)
-
-const showAvatarEditor = ref(false)
-const selectedFile = ref<File | null>(null)
-const uploading = ref(false)
-
-const handleFileChange = (event: Event) => {
-  const target = event.target as HTMLInputElement
-  if (target.files?.length) {
-    selectedFile.value = target.files[0]
-  }
+function resetForm() {
+  form.username = profile.value?.username ?? ''
+  form.full_name = profile.value?.full_name ?? ''
+  form.website = profile.value?.website ?? ''
 }
+watch(profile, resetForm, { immediate: true })
 
-const getAvatarPath = (avatarUrl: string): string | null => {
-  if (!avatarUrl) return null
+const dirty = computed(() =>
+  form.username !== (profile.value?.username ?? '')
+  || form.full_name !== (profile.value?.full_name ?? '')
+  || form.website !== (profile.value?.website ?? ''))
 
+async function save() {
+  if (!profile.value) return
+  formError.value = ''
+  saving.value = true
   try {
-    // Извлекаем путь после /public/
-    const url = new URL(avatarUrl)
-    const pathParts = url.pathname.split('/public/avatars/')
-    if (pathParts.length < 2) return null
-
-    return pathParts[1]
-  } catch (e) {
-    console.error('Ошибка при парсинге URL аватара:', e)
-    return null
-  }
-}
-
-
-const uploadAvatar = async () => {
-  if (!selectedFile.value || !user.value) return
-  uploading.value = true
-
-  try {
-    const fileExt = selectedFile.value.name.split('.').pop()
-    const fileName = `${user.value.id}.${fileExt}`
-    const filePath = `${user.value.id}/${fileName}`
-
-    // Удаление предыдущего аватара
-    if (profile.value?.avatar_url) {
-      const relativePath = getAvatarPath(profile.value.avatar_url)
-      if (relativePath) {
-        await supabase.storage.from('avatars').remove([relativePath])
-      }
+    const patch: Record<string, string | null> = {}
+    if (form.username !== (profile.value.username ?? '')) {
+      const username = form.username.trim()
+      const { data: taken } = await supabase.from('profiles').select('id').ilike('username', escapeLike(username)).neq('id', profile.value.id).limit(1)
+      if (taken?.length) throw new Error('This username is already taken')
+      patch.username = username
     }
+    if (form.full_name !== (profile.value.full_name ?? '')) patch.full_name = form.full_name.trim() || null
+    if (form.website !== (profile.value.website ?? '')) patch.website = form.website.trim() || null
 
-    // Загрузка нового аватара
-    const { error: uploadError } = await supabase.storage
-        .from('avatars')
-        .upload(filePath, selectedFile.value, {
-          cacheControl: '3600',
-          upsert: true,
-        })
-
-    if (uploadError) throw uploadError
-
-    // Получение публичного URL с параметром для предотвращения кэширования
-    const { data } = supabase.storage.from('avatars').getPublicUrl(filePath)
-    if (!data?.publicUrl) throw new Error('Не удалось получить публичный URL')
-
-    // Обновление профиля с новым URL
-    const { error: updateError } = await supabase
-        .from('profiles')
-        .update({ avatar_url: `${data.publicUrl}?t=${Date.now()}` })
-        .eq('id', user.value.id)
-
-    if (updateError) throw updateError
-
-    // Обновляем профиль в интерфейсе
-    await fetchProfile()
-
-    toast.add({ title: 'Аватар обновлён', color: 'success' })
-    showAvatarEditor.value = false
-  } catch (err) {
-    console.error('Ошибка при загрузке аватара:', err)
-    toast.add({ title: 'Ошибка', description: err.message, color: 'error' })
+    await profileStore.updateProfile(patch)
+    toast.add({ title: 'Profile saved', color: 'success' })
+  } catch (e: any) {
+    formError.value = e?.issues?.[0]?.message ?? e?.message ?? 'Could not save profile'
   } finally {
-    uploading.value = false
+    saving.value = false
   }
 }
 
+/* avatar */
+const avatarInput = ref<HTMLInputElement | null>(null)
+const uploadingAvatar = ref(false)
 
+async function onAvatarPicked(e: Event) {
+  const file = (e.target as HTMLInputElement).files?.[0]
+  ;(e.target as HTMLInputElement).value = ''
+  if (!file || !profile.value) return
+  if (!file.type.startsWith('image/')) return void toast.add({ title: 'Please choose an image', color: 'warning' })
+  if (file.size > MAX_IMAGE_BYTES) return void toast.add({ title: 'Images can be at most 5 MB', color: 'warning' })
 
-
-
-
-// Function to fetch user profile
-const fetchProfile = async () => {
-  if (!user.value) return
-
-  loading.value = true
-  error.value = null
-
+  uploadingAvatar.value = true
+  const previousPath = storagePathFromPublicUrl('avatars', profile.value.avatar_url)
+  let newPath: string | null = null
   try {
-    const { data, error: supabaseError } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', user.value.id)
-      .single()
-
-    if (supabaseError) {
-      throw supabaseError
-    }
-
-    // If profile exists, use it
-    if (data) {
-      profile.value = data
-
-      // If username is not in profile but exists in user metadata, use that
-      if (!profile.value.username && user.value.user_metadata && user.value.user_metadata.username) {
-        profile.value.username = user.value.user_metadata.username
-      }
-    } else if (user.value.user_metadata && user.value.user_metadata.username) {
-      // Create a basic profile with username from metadata
-      profile.value = {
-        id: user.value.id,
-        username: user.value.user_metadata.username
-      }
-    } else {
-      // Create a minimal profile
-      profile.value = {
-        id: user.value.id,
-        username: user.value.email?.split('@')[0] || 'User'
-      }
-    }
-  } catch (err) {
-    console.error('Error fetching profile:', err)
-    error.value = err.message || 'Failed to load profile'
-    toast.add({
-      title: 'Ошибка загрузки профиля',
-      description: error.value,
-      color: 'error',
-    })
+    const { path, publicUrl } = await storage.uploadPublic('avatars', file)
+    newPath = path
+    await profileStore.updateProfile({ avatar_url: publicUrl })
+    // Only delete the previous avatar if it was one of ours (user-folder layout).
+    if (previousPath?.startsWith(`${profile.value.id}/`)) await storage.remove('avatars', previousPath)
+    toast.add({ title: 'Avatar updated', color: 'success' })
+  } catch (err: any) {
+    await storage.remove('avatars', newPath)
+    toast.add({ title: 'Could not update avatar', description: err?.message, color: 'error' })
   } finally {
-    loading.value = false
+    uploadingAvatar.value = false
   }
 }
 
-// Watch for user changes and fetch profile when user is available
-watch(user, (newUser) => {
-  if (newUser) {
-    fetchProfile()
-  } else {
-    profile.value = null
-    loading.value = false
-  }
-},
-    { onError: (err) => {
-        console.error('Ошибка отслеживания пользователя:', err)
-        error.value = 'Ошибка отслеживания пользователя'
-      },
-      immediate: true
-    })
+const joined = computed(() => user.value?.created_at ? new Date(user.value.created_at).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' }) : '')
 
-// Also fetch on component mount to handle page refresh
-onMounted(() => {
-  if (user.value) {
-    fetchProfile()
-  }
-})
+useSeoMeta({ title: 'Profile' })
 </script>
+
+<template>
+  <div class="p-4 md:p-6 max-w-2xl mx-auto">
+    <h1 class="text-2xl font-bold mb-6">Profile</h1>
+
+    <div v-if="loading && !profile" class="flex justify-center py-10">
+      <UIcon name="i-lucide-loader-circle" class="size-8 animate-spin" />
+    </div>
+
+    <UAlert
+      v-else-if="!profile"
+      color="error"
+      variant="soft"
+      title="Profile not found"
+      description="Your account has no profile yet. Try signing out and in again."
+    />
+
+    <template v-else>
+      <div class="flex items-center gap-6 mb-8">
+        <button
+          type="button"
+          class="relative group size-24 shrink-0 rounded-full"
+          aria-label="Change avatar"
+          :disabled="uploadingAvatar"
+          @click="avatarInput?.click()"
+        >
+          <UAvatar :src="profile.avatar_url ?? undefined" :alt="profile.username ?? undefined" class="size-24 text-3xl" />
+          <span class="absolute inset-0 rounded-full bg-black/50 text-white flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100 transition">
+            <UIcon :name="uploadingAvatar ? 'i-lucide-loader-circle' : 'i-heroicons-camera'" class="size-6" :class="{ 'animate-spin': uploadingAvatar }" />
+            <span class="text-xs">Change</span>
+          </span>
+        </button>
+        <input ref="avatarInput" type="file" accept="image/*" class="hidden" @change="onAvatarPicked">
+
+        <div class="min-w-0">
+          <h2 class="text-xl font-bold truncate">{{ profile.username || user?.email }}</h2>
+          <p class="text-old-neutral-500 truncate">{{ user?.email }}</p>
+          <p class="text-sm text-old-neutral-500">Joined {{ joined }}</p>
+          <NuxtLink :to="`/authors/${profile.id}`" class="text-sm text-green-500 hover:underline">View your artist page</NuxtLink>
+        </div>
+      </div>
+
+      <form class="space-y-4" @submit.prevent="save">
+        <UFormField label="Username" help="Shown as your artist name.">
+          <UInput v-model="form.username" class="w-full" maxlength="30" />
+        </UFormField>
+        <UFormField label="Full name">
+          <UInput v-model="form.full_name" class="w-full" maxlength="120" />
+        </UFormField>
+        <UFormField label="Website">
+          <UInput v-model="form.website" type="url" placeholder="https://" class="w-full" maxlength="200" />
+        </UFormField>
+
+        <p v-if="formError" class="text-sm text-red-500" role="alert">{{ formError }}</p>
+
+        <div class="flex gap-2">
+          <UButton type="submit" :loading="saving" :disabled="!dirty">Save changes</UButton>
+          <UButton variant="ghost" color="neutral" :disabled="!dirty || saving" @click="resetForm">Cancel</UButton>
+        </div>
+      </form>
+    </template>
+  </div>
+</template>

@@ -1,13 +1,16 @@
-<script lang="ts" setup>
-import { HeroProvider } from 'hero-motion'
-</script>
-
 <template>
-  <NuxtErrorBoundary>
-    <ErrorBoundary>
-      <NuxtLayout>
-        <NuxtPage />
-      </NuxtLayout>
-    </ErrorBoundary>
-  </NuxtErrorBoundary>
+  <UApp>
+    <NuxtErrorBoundary>
+      <ErrorBoundary>
+        <NuxtLayout>
+          <NuxtPage />
+        </NuxtLayout>
+      </ErrorBoundary>
+    </NuxtErrorBoundary>
+
+    <ClientOnly>
+      <CreatePlaylistModal />
+      <AddToPlaylistModal />
+    </ClientOnly>
+  </UApp>
 </template>

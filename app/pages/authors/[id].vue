@@ -1,117 +1,93 @@
-<template>
-
-
-  <div v-if="isLoading">
-    <div class="flex justify-center items-center py-20">
-      <UIcon name="i-heroicons-arrow-path" class="animate-spin w-12 h-12 text-gray-500"/>
-    </div>
-  </div>
-  <div v-else>
-    <div>
-      <div>
-        <div class="text-6xl font-bold ">{{ author?.name }}</div>
-      </div>
-      <div class="text-xl">Tracks</div>
-      <div class="flex flex-col gap-3">
-        <div
-            v-for="(track, index) in tracks"
-            :key="track.id"
-            class="flex flex-row gap-2 p-1 rounded-xl hover:bg-gray-200 transition"
-        >
-          <div class="flex justify-center items-center text-gray-500 w-6">{{ index + 1 }}</div>
-          <div class="flex justify-center items-center shadow aspect-square rounded-lg w-12">
-            <img v-if="track?.cover_url" :src="track.cover_url" class="text-gray-400 rounded-lg" alt="Cover">
-            <UIcon v-else name="i-heroicons-musical-note"/>
-          </div>
-          <div>
-            <div class="font-semibold">{{ track.title }}</div>
-            <div v-if="track?.authors" class="truncate whitespace-nowrap overflow-hidden">
-              <span
-                  v-for="(author, index) in track.authors"
-                  :key="index"
-                  class="text-sm text-gray-500"
-              >
-                <NuxtLink
-                    :to="`/authors/${author.id}`"
-                    class="text-sm hover:underline"
-                >{{ author.name }}</NuxtLink>
-                <span v-if="index < track.authors.length - 1">,&nbsp;</span>
-              </span>
-            </div>
-          </div>
-        </div>
-
-      </div>
-    </div>
-  </div>
-
-
-</template>
-
 <script setup lang="ts">
+import type { Album, Profile, Track } from '#shared/types'
 
-import type {SupabaseClient} from "@supabase/supabase-js";
-import type {Author, TrackUI} from "@/types/global";
-
+// Artist page: a profile, the tracks it is credited on and its albums.
 const route = useRoute()
-const supabase: SupabaseClient<Database> = useSupabase()
+const supabase = useSupabase()
+const likesStore = useLikesStore()
 
-const author = ref<Author>()
-const authorId = route.params.id
-
-const tracks = ref<TrackUI[]>([])
-
+const artistId = computed(() => String(route.params.id))
+const artist = ref<Pick<Profile, 'id' | 'username' | 'full_name' | 'avatar_url' | 'website'> | null>(null)
+const tracks = ref<Track[]>([])
+const albums = ref<Album[]>([])
 const isLoading = ref(true)
+const error = ref<string | null>(null)
 
-
-const fetchAuthor = async () => {
-  try {
-    const {data, error} = await supabase
-        .from('authors')
-        .select('*')
-        .eq('id', authorId)
-        .single()
-    author.value = data
-    if (error) console.error(error)
-  } catch (err) {
-    console.error(err)
-  } finally {
-    isLoading.value = false
-  }
-
-}
-
-
-
-const fetchTracks = async () => {
+async function load() {
   isLoading.value = true
+  error.value = null
   try {
-    const { data, error} = await supabase.from('tracks')
-        .select(`
-                    *,
-                    track_authors!inner(
-                      track_id
-                    ),
-                    authors(*)
-                  `)
-        .eq('track_authors.author_id', authorId)
-    if (error) console.error(error)
-
-    tracks.value = data ?? [];
-  } catch (error) {
-    console.error(error)
+    const [{ data: profile, error: profileError }, { data: credits, error: creditsError }, { data: albumRows, error: albumsError }] = await Promise.all([
+      supabase.from('profiles').select('id, username, full_name, avatar_url, website').eq('id', artistId.value).maybeSingle(),
+      supabase.from('track_authors').select(`track:tracks(${TRACK_SELECT})`).eq('profile_id', artistId.value).in('status', CREDITED_STATUSES),
+      supabase.from('albums').select('*').eq('user_id', artistId.value).order('created_at', { ascending: false }),
+    ])
+    if (profileError) throw profileError
+    if (creditsError) throw creditsError
+    if (albumsError) throw albumsError
+    if (!profile) {
+      error.value = 'Artist not found'
+      return
+    }
+    artist.value = profile
+    tracks.value = toTracks((credits ?? []).map((c: any) => c.track))
+      .sort((a, b) => (b.created_at ?? '').localeCompare(a.created_at ?? ''))
+    albums.value = albumRows ?? []
+    likesStore.fetchLikes(tracks.value.map(t => t.id))
+  } catch (e: any) {
+    console.error('Error loading artist', e)
+    error.value = 'Failed to load artist'
   } finally {
     isLoading.value = false
   }
 }
 
-onMounted(() => {
-  void fetchAuthor()
-  void fetchTracks()
-})
+watch(artistId, load, { immediate: true })
 
+const displayName = computed(() => artist.value?.username || artist.value?.full_name || 'Unnamed artist')
+// Only link http(s) URLs (the field is user-provided).
+const website = computed(() => /^https?:\/\//i.test(artist.value?.website ?? '') ? artist.value!.website! : null)
+
+useSeoMeta({ title: () => `${displayName.value}` })
 </script>
 
-<style scoped>
+<template>
+  <div class="p-4 md:p-6">
+    <div v-if="isLoading" class="flex justify-center items-center py-20">
+      <UIcon name="i-lucide-loader-circle" class="size-10 animate-spin text-old-neutral-400" />
+    </div>
 
-</style>
+    <UAlert v-else-if="error" color="error" variant="soft" :title="error" :actions="[{ label: 'Go home', to: '/' }]" />
+
+    <template v-else-if="artist">
+      <header class="flex flex-col md:flex-row items-center md:items-end gap-6 mb-6">
+        <UAvatar :src="artist.avatar_url ?? undefined" :alt="displayName" class="size-40 text-5xl shadow-lg" />
+        <div class="text-center md:text-left min-w-0">
+          <div class="text-xs uppercase font-semibold text-old-neutral-500 mb-1">Artist</div>
+          <h1 class="text-4xl md:text-6xl font-bold break-words">{{ displayName }}</h1>
+          <p class="text-sm text-old-neutral-500 mt-2">
+            {{ tracks.length }} {{ tracks.length === 1 ? 'track' : 'tracks' }}
+            <template v-if="albums.length"> · {{ albums.length }} {{ albums.length === 1 ? 'album' : 'albums' }}</template>
+            <template v-if="website">
+              · <a :href="website" target="_blank" rel="noopener noreferrer nofollow" class="hover:underline">{{ website.replace(/^https?:\/\//, '') }}</a>
+            </template>
+          </p>
+        </div>
+      </header>
+
+      <PlayAllButton :tracks="tracks" label="Play all tracks" class="mb-6" />
+
+      <section class="mb-10">
+        <h2 class="text-xl font-bold mb-3">Tracks</h2>
+        <TrackList :tracks="tracks" empty-text="This artist has no tracks yet." />
+      </section>
+
+      <section v-if="albums.length">
+        <h2 class="text-xl font-bold mb-3">Albums</h2>
+        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+          <AlbumCard v-for="album in albums" :key="album.id" :album="album" />
+        </div>
+      </section>
+    </template>
+  </div>
+</template>

@@ -5,7 +5,7 @@ This document provides essential development information for the SwagMusic proje
 ## Project Overview
 
 SwagMusic is a modern music streaming application built with:
-- **Frontend**: Vue 3 + Nuxt 3 + TypeScript
+- **Frontend**: Vue 3 + Nuxt 4 + TypeScript
 - **Styling**: Tailwind CSS + Nuxt UI
 - **State Management**: Pinia
 - **Audio**: Howler.js
@@ -22,14 +22,14 @@ SwagMusic is a modern music streaming application built with:
 ### Environment Setup
 Create a `.env` file in the project root with the following variables:
 ```env
-SUPABASE_URL=your_supabase_project_url
-SUPABASE_KEY=your_supabase_anon_key
-SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key
+NUXT_PUBLIC_SUPABASE_URL=your_supabase_project_url
+NUXT_PUBLIC_SUPABASE_KEY=your_publishable_key   # sb_publishable_…
+SUPABASE_SECRET_KEY=your_secret_key            # sb_secret_…, server only
 ```
 
 These variables are required for:
-- `SUPABASE_URL` & `SUPABASE_KEY`: Client-side Supabase configuration
-- `SUPABASE_SERVICE_ROLE_KEY`: Server-side API operations (user management)
+- `NUXT_PUBLIC_SUPABASE_URL` & `NUXT_PUBLIC_SUPABASE_KEY`: Supabase client (browser and SSR, cookie-based session)
+- `SUPABASE_SECRET_KEY`: Server-side admin API operations (user management, moderation)
 
 ### Installation & Development
 ```bash
@@ -94,7 +94,6 @@ describe('Component or Feature Name', () => {
 })
 ```
 
-**Note**: The `tests` directory is excluded from version control but exists locally for development.
 
 ## Code Style Guidelines
 

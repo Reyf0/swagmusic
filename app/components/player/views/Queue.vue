@@ -1,50 +1,74 @@
-<template>
-  <div class="w-full h-full flex flex-col bg-old-neutral-900 text-white p-6">
-    <div class="flex justify-between items-center mb-4">
-      <h2 class="text-xl font-semibold">Queue</h2>
-      <UButton icon="i-heroicons-x-mark" size="sm" color="gray" @click="player.closeView('queue')" />
-    </div>
-
-    <div class="flex-grow overflow-y-auto space-y-2">
-      <div
-          v-for="(track) in queue"
-          :key="track.id"
-          class="flex items-center justify-between bg-old-neutral-800 p-3 rounded cursor-pointer hover:bg-old-neutral-700"
-          @click="player.play(track, queue)"
-      >
-        <div class="flex items-center space-x-3">
-          <div class="flex justify-center items-center w-12 h-12 bg-old-neutral-700 overflow-hidden rounded">
-            <img
-                v-if="track.cover_url"
-                :src="track.cover_url"
-                alt="cover"
-                class="w-full h-full object-cover"
-            >
-            <UIcon v-else name="i-heroicons-musical-note" class="w-5 h-5 text-gray-400" />
-          </div>
-          <div>
-            <p class="font-semibold">{{ track.title }}</p>
-            <p class="text-sm text-gray-400">
-              {{ track.track_authors?.map(a => a.author.name).join(', ') || 'Unknown Artist' }}
-            </p>
-          </div>
-        </div>
-        <div>
-          <UIcon
-              v-if="track.id === currentTrack?.id"
-              name="i-heroicons-speaker-wave"
-              class="text-green-500"
-          />
-        </div>
-      </div>
-    </div>
-  </div>
-</template>
-
 <script setup lang="ts">
-import { usePlayerStore } from '@/stores/player'
-import { storeToRefs } from 'pinia'
+const props = defineProps<{
+  mode?: 'sidebar' | 'fullscreen'
+}>()
 
 const player = usePlayerStore()
-const { queue, currentTrack } = storeToRefs(player)
+const { queue, currentTrackIndex } = storeToRefs(player)
+
+const upNext = computed(() => queue.value
+  .map((track, index) => ({ track, index }))
+  .filter(({ index }) => index > currentTrackIndex.value))
 </script>
+
+<template>
+  <div class="w-full h-full flex flex-col p-4 md:p-6" :class="props.mode === 'sidebar' ? '' : 'bg-old-neutral-900 text-white'">
+    <div class="flex justify-between items-center mb-4">
+      <h2 class="text-xl font-semibold">Queue</h2>
+      <UButton
+        icon="i-heroicons-x-mark"
+        size="sm"
+        variant="ghost"
+        color="neutral"
+        class="hidden md:inline-flex"
+        aria-label="Close queue"
+        @click="player.closeView('queue')"
+      />
+    </div>
+
+    <template v-if="queue[currentTrackIndex]">
+      <h3 class="text-sm font-semibold text-old-neutral-400 mb-2">Now playing</h3>
+      <div class="flex items-center gap-3 p-2 rounded bg-old-neutral-800/60 mb-6">
+        <img v-if="queue[currentTrackIndex]!.cover_url" :src="queue[currentTrackIndex]!.cover_url!" alt="" class="size-12 rounded object-cover">
+        <div v-else class="size-12 rounded bg-old-neutral-700 flex items-center justify-center">
+          <UIcon name="i-heroicons-musical-note" class="size-5 text-old-neutral-400" />
+        </div>
+        <div class="min-w-0 flex-1">
+          <p class="font-semibold text-green-500 truncate">{{ queue[currentTrackIndex]!.title }}</p>
+          <p class="text-sm text-old-neutral-400 truncate">{{ artistNames(queue[currentTrackIndex]) }}</p>
+        </div>
+        <UIcon name="i-heroicons-speaker-wave" class="text-green-500 shrink-0" />
+      </div>
+    </template>
+
+    <h3 class="text-sm font-semibold text-old-neutral-400 mb-2">Up next</h3>
+    <p v-if="!upNext.length" class="text-sm text-old-neutral-500">Nothing queued. Use “Play next” or “Add to queue” in a track’s menu.</p>
+    <ul v-else class="flex-grow overflow-y-auto space-y-1">
+      <li
+        v-for="{ track, index } in upNext"
+        :key="`${track.id}-${index}`"
+        class="group flex items-center gap-3 p-2 rounded hover:bg-old-neutral-800"
+      >
+        <button type="button" class="flex items-center gap-3 min-w-0 flex-1 text-left" @click="player.playAt(index)">
+          <img v-if="track.cover_url" :src="track.cover_url" alt="" class="size-12 rounded object-cover shrink-0">
+          <div v-else class="size-12 rounded bg-old-neutral-700 flex items-center justify-center shrink-0">
+            <UIcon name="i-heroicons-musical-note" class="size-5 text-old-neutral-400" />
+          </div>
+          <div class="min-w-0">
+            <p class="font-semibold truncate">{{ track.title }}</p>
+            <p class="text-sm text-old-neutral-400 truncate">{{ artistNames(track) }}</p>
+          </div>
+        </button>
+        <UButton
+          icon="i-heroicons-x-mark"
+          size="sm"
+          variant="ghost"
+          color="neutral"
+          class="md:opacity-0 md:group-hover:opacity-100 focus:opacity-100"
+          :aria-label="`Remove ${track.title} from queue`"
+          @click="player.removeFromQueue(index)"
+        />
+      </li>
+    </ul>
+  </div>
+</template>

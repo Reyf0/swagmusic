@@ -50,7 +50,7 @@ useSeoMeta({
     />
 
     <section class="pl-6">
-      <h2 class="text-2xl font-bold mb-4">🔥 Popular</h2>
+      <h2 class="text-2xl font-bold mb-4">Popular</h2>
       <div v-if="popularLoading && !popularItems.length" class="flex gap-4 overflow-hidden">
         <UiSkeletonTrackCard v-for="i in 5" :key="i" />
       </div>
@@ -59,7 +59,7 @@ useSeoMeta({
     </section>
 
     <section class="pl-6">
-      <h2 class="text-2xl font-bold mb-4">🆕 New releases</h2>
+      <h2 class="text-2xl font-bold mb-4">New releases</h2>
       <div v-if="feedLoading && !feedItems.length" class="flex gap-4 overflow-hidden">
         <UiSkeletonTrackCard v-for="i in 5" :key="i" />
       </div>
@@ -70,7 +70,7 @@ useSeoMeta({
     </section>
 
     <section v-if="user" class="pl-6">
-      <h2 class="text-2xl font-bold mb-4">🎧 Recently played</h2>
+      <h2 class="text-2xl font-bold mb-4">Recently played</h2>
       <div v-if="recentLoading && !recentItems.length" class="flex gap-4 overflow-hidden">
         <UiSkeletonTrackCard v-for="i in 5" :key="i" />
       </div>

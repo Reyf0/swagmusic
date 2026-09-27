@@ -96,7 +96,7 @@ useSeoMeta({ title: 'Studio' })
               <TrackArtists :authors="track.authors" />
               <template v-if="albumTitle(track.album_id)"> · {{ albumTitle(track.album_id) }}</template>
               · {{ formatDuration(track.duration_seconds) }}
-              · {{ track.likes_count }} ♥
+              · {{ track.likes_count }} {{ track.likes_count === 1 ? 'like' : 'likes' }}
               <template v-if="track.lyrics"> · lyrics</template>
             </div>
           </div>

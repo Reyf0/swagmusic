@@ -50,7 +50,8 @@ export const useProfileStore = defineStore('profile', () => {
     isHydrated.value = true
   }
 
-  // loadProfile(userId) — fetch profile row from DB (client-side). Uses RLS rules, so client can call.
+  // loadProfile() — the signed-in user's own full profile. Private columns (email, settings, is_admin)
+  // are not selectable by clients, so it goes through the get_my_profile() RPC.
   async function loadProfile(userId?: string) {
     loading.value = true
     error.value = null
@@ -60,15 +61,11 @@ export const useProfileStore = defineStore('profile', () => {
         profile.value = null
         return null
       }
-      const { data, error: supError } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', uid)
-        .limit(1)
-        .single()
+      if (uid !== authUser.value?.id) throw new Error("Only the signed-in user's profile can be loaded")
+      const { data, error: supError } = await supabase.rpc('get_my_profile').maybeSingle()
 
       if (supError) throw supError
-      profile.value = data as ProfilesRow
+      profile.value = (data as ProfilesRow | null) ?? null
       return profile.value
     } catch (err: any) {
       error.value = String(err?.message ?? err)
@@ -93,17 +90,15 @@ export const useProfileStore = defineStore('profile', () => {
       const uid = id.value
       if (!uid) throw new Error('Not authenticated')
 
-      // Use .update().eq('id', uid) to follow RLS policies
-      const { data, error: supError } = await supabase
+      // RLS limits the update to the own row; no .select() here because private columns
+      // can't be returned to clients, so re-read the full row through get_my_profile().
+      const { error: supError } = await supabase
         .from('profiles')
         .update(parsed)
         .eq('id', uid)
-        .select()
-        .single()
 
       if (supError) throw supError
-      profile.value = data as ProfilesRow
-      return profile.value
+      return await loadProfile(uid)
     } catch (err: any) {
       // if it's Zod error, return message
       if (err?.name === 'ZodError') {

@@ -76,12 +76,6 @@ export default defineNuxtConfig({
         name: 'SwagMusic'
     },
 
-    // Part of @nuxtjs/seo; no generated social images are used, and without a renderer
-    // installed it stops `nuxt dev` with an interactive "which renderer?" prompt.
-    ogImage: {
-        enabled: false,
-    },
-
     imports: {
         dirs: ['stores']
     },

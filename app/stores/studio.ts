@@ -1,6 +1,15 @@
 import { defineStore } from 'pinia'
 import type { Album, Track } from '#shared/types'
 
+/** A credit on one of my tracks, as shown in the track's co-author list. */
+export type Credit = {
+    id: number
+    profile_id: string
+    status: string
+    order_index: number | null
+    profile: { id: string; username: string | null; avatar_url: string | null } | null
+}
+
 export type Invite = {
     id: number
     track_id: string
@@ -101,6 +110,40 @@ export const useStudioStore = defineStore('studio', () => {
         if (accept) await loadTracks()
     }
 
+    /** All credits of a track I own, including pending and rejected invites. */
+    async function loadCredits(trackId: string): Promise<Credit[]> {
+        const { data, error } = await supabase
+            .from('track_authors')
+            .select('id, profile_id, status, order_index, profile:profiles!track_authors_profile_id_fkey(id, username, avatar_url)')
+            .eq('track_id', trackId)
+            .order('order_index', { ascending: true })
+        if (error) throw error
+        return (data ?? []) as unknown as Credit[]
+    }
+
+    /** Invites co-authors to a track I own; they are credited once they accept in their Studio. */
+    async function inviteCoAuthors(trackId: string, profileIds: string[], nextOrderIndex: number) {
+        const uid = requireUserId()
+        if (!profileIds.length) return
+        const now = new Date().toISOString()
+        const { error } = await supabase.from('track_authors').insert(profileIds.map((profileId, i) => ({
+            track_id: trackId,
+            profile_id: profileId,
+            status: CREDIT_STATUS.pending,
+            invited_by: uid,
+            invited_at: now,
+            order_index: nextOrderIndex + i,
+        })))
+        if (error) throw error
+    }
+
+    /** Cancels an invite or removes a co-author from a track I own. */
+    async function removeCredit(creditId: number) {
+        const { error } = await supabase.from('track_authors').delete().eq('id', creditId)
+        if (error) throw error
+        await loadTracks()
+    }
+
     async function updateTrack(id: string, patch: { title?: string; cover_url?: string | null; lyrics?: string | null; album_id?: string | null; description?: string | null }) {
         const { error } = await supabase.from('tracks').update(patch).eq('id', id)
         if (error) throw error
@@ -164,6 +207,7 @@ export const useStudioStore = defineStore('studio', () => {
     return {
         tracks, albums, invites, loading, pendingInviteCount,
         loadAll, loadTracks, loadAlbums, loadInvites, respondToInvite,
+        loadCredits, inviteCoAuthors, removeCredit,
         updateTrack, deleteTrack, createAlbum, updateAlbum, deleteAlbum,
     }
 })

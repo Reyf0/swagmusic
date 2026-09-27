@@ -6,6 +6,7 @@ const props = defineProps<{ track: Track | null }>()
 const emit = defineEmits<{ close: [] }>()
 
 const toast = useToast()
+const user = useSupabaseUser()
 const storage = useStorageUpload()
 const studioStore = useStudioStore()
 const { albums } = storeToRefs(studioStore)
@@ -19,6 +20,9 @@ const coverPreview = ref<string | null>(null)
 const saving = ref(false)
 const confirmDelete = ref(false)
 const deleting = ref(false)
+
+// Studio also lists tracks I'm only credited on; co-authors are managed by the uploader.
+const isOwner = computed(() => !!props.track && props.track.user_id === user.value?.id)
 
 const open = computed({
   get: () => !!props.track,
@@ -119,6 +123,14 @@ async function remove() {
           <UTextarea v-model="lyrics" :rows="8" autoresize class="w-full" />
         </UFormField>
       </form>
+      <UFormField
+        v-if="track && isOwner"
+        label="Co-authors"
+        help="Co-authors are credited after they accept the invite in their Studio. Changes here apply right away."
+        class="mt-4"
+      >
+        <StudioTrackCredits :track-id="track.id" />
+      </UFormField>
     </template>
     <template #footer>
       <div class="flex w-full items-center justify-between gap-2">

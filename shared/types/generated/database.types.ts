@@ -650,6 +650,28 @@ export type Database = {
           total_listens: number
         }[]
       }
+      get_my_profile: {
+        Args: never
+        Returns: {
+          avatar_url: string | null
+          created_at: string | null
+          email: string | null
+          full_name: string | null
+          id: string
+          is_admin: boolean | null
+          settings: Json | null
+          slug: string | null
+          updated_at: string | null
+          username: string | null
+          website: string | null
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "profiles"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
       get_popular_tracks: {
         Args: { p_limit?: number }
         Returns: {
@@ -776,6 +798,7 @@ export type Database = {
           user_id: string
         }[]
       }
+      is_admin: { Args: never; Returns: boolean }
     }
     Enums: {
       [_ in never]: never

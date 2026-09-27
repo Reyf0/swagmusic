@@ -22,12 +22,14 @@ export default defineNuxtPlugin(async (nuxtApp) => {
         const supabase = createServerClient<Database>(supabaseUrl, supabaseKey, {
             cookies: {
                 getAll: () => cookies,
-                setAll: (toSet) => {
+                // Called after an await when an expired session is refreshed, i.e. outside the
+                // Nuxt context, so restore it for useCookie().
+                setAll: toSet => nuxtApp.runWithContext(() => {
                     for (const { name, value, options } of toSet) {
                         const cookie = useCookie(name, { ...options, encode: (v: string) => v, decode: (v: string) => v } as any)
                         cookie.value = value
                     }
-                },
+                }),
             },
         })
         nuxtApp.provide('supabase', supabase)

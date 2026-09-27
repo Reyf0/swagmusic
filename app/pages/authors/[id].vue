@@ -19,7 +19,7 @@ async function load() {
   try {
     const [{ data: profile, error: profileError }, { data: credits, error: creditsError }, { data: albumRows, error: albumsError }] = await Promise.all([
       supabase.from('profiles').select('id, username, full_name, avatar_url, website').eq('id', artistId.value).maybeSingle(),
-      supabase.from('track_authors').select(`track:tracks(${TRACK_SELECT})`).eq('profile_id', artistId.value).eq('status', 'approved'),
+      supabase.from('track_authors').select(`track:tracks(${TRACK_SELECT})`).eq('profile_id', artistId.value).in('status', CREDITED_STATUSES),
       supabase.from('albums').select('*').eq('user_id', artistId.value).order('created_at', { ascending: false }),
     ])
     if (profileError) throw profileError

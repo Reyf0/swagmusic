@@ -1,4 +1,5 @@
 import type { Track, TrackArtist } from '#shared/types'
+import { isCredited } from '#shared/utils/credits'
 
 /** Embed for direct `tracks` queries: credited authors with their profiles. */
 export const TRACK_AUTHORS_SELECT = 'track_authors(order_index,status,profile:profiles!track_authors_profile_id_fkey(id,username,slug,avatar_url))'
@@ -20,7 +21,7 @@ function toArtist(raw: any): TrackArtist | null {
 
 /**
  * Extracts credited artists from any of the shapes the DB returns:
- * - `track_authors` embed (see TRACK_AUTHORS_SELECT); only approved credits are shown
+ * - `track_authors` embed (see TRACK_AUTHORS_SELECT); only accepted credits are shown
  * - `authors` json from RPCs / the tracks_with_authors view
  * - an already-normalized `authors` array
  */
@@ -42,7 +43,7 @@ export function extractArtists(row: any): TrackArtist[] {
 
     // Credits carry status/order_index (both the embed and the RPC json); pending invites are hidden.
     list = list
-        .filter(item => !item?.status || item.status === 'approved')
+        .filter(item => !item?.status || isCredited(item.status))
         .sort((a, b) => (a?.order_index ?? 0) - (b?.order_index ?? 0))
 
     const seen = new Set<string>()

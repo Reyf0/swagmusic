@@ -4,15 +4,21 @@ import { artistNames, extractArtists, toTrack, toTracks } from '~/utils/tracks'
 const profile = (id: string, username: string) => ({ id, username, slug: null, avatar_url: null })
 
 describe('extractArtists', () => {
-    it('reads the track_authors embed, hides pending credits and keeps order', () => {
+    it('reads the track_authors embed, hides pending / rejected credits and keeps order', () => {
         const row = {
             track_authors: [
-                { order_index: 1, status: 'approved', profile: profile('b', 'Second') },
+                { order_index: 1, status: 'accepted', profile: profile('b', 'Second') },
                 { order_index: 2, status: 'pending', profile: profile('c', 'Invited') },
-                { order_index: 0, status: 'approved', profile: profile('a', 'First') },
+                { order_index: 3, status: 'rejected', profile: profile('d', 'Declined') },
+                { order_index: 0, status: 'accepted', profile: profile('a', 'First') },
             ],
         }
         expect(extractArtists(row).map(a => a.username)).toEqual(['First', 'Second'])
+    })
+
+    it('still shows credits saved with the old "approved" status', () => {
+        const row = { track_authors: [{ order_index: 0, status: 'approved', profile: profile('a', 'Old') }] }
+        expect(extractArtists(row).map(a => a.username)).toEqual(['Old'])
     })
 
     it('reads the authors json returned by RPCs / tracks_with_authors', () => {

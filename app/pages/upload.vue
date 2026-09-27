@@ -131,12 +131,12 @@ async function uploadTrack() {
 
     // The uploader is credited right away; co-authors get an invite to accept in their Studio.
     const credits = [
-      { track_id: track.id, profile_id: uploaderId, order_index: 0, status: 'approved' },
+      { track_id: track.id, profile_id: uploaderId, order_index: 0, status: CREDIT_STATUS.accepted },
       ...coAuthors.value.map((a, i) => ({
         track_id: track.id,
         profile_id: a.id,
         order_index: i + 1,
-        status: 'pending',
+        status: CREDIT_STATUS.pending,
         invited_by: uploaderId,
         invited_at: new Date().toISOString(),
       })),

@@ -40,7 +40,7 @@ export const useStudioStore = defineStore('studio', () => {
             .from('track_authors')
             .select('id, track_id, invited_at, invited_by:profiles!track_authors_invited_by_fkey(id, username), track:tracks(id, title, cover_url)')
             .eq('profile_id', uid)
-            .eq('status', 'pending')
+            .eq('status', CREDIT_STATUS.pending)
             .order('invited_at', { ascending: false })
         if (error) {
             console.error('Failed to load invites', error)
@@ -49,14 +49,14 @@ export const useStudioStore = defineStore('studio', () => {
         invites.value = (data ?? []) as unknown as Invite[]
     }
 
-    /** Tracks I uploaded or am an approved author of. */
+    /** Tracks I uploaded or am a credited author of. */
     async function loadTracks() {
         const uid = requireUserId()
         const { data: credits, error: creditsError } = await supabase
             .from('track_authors')
             .select('track_id')
             .eq('profile_id', uid)
-            .eq('status', 'approved')
+            .in('status', CREDITED_STATUSES)
         if (creditsError) throw creditsError
 
         const ids = (credits ?? []).map(c => c.track_id)
@@ -93,7 +93,7 @@ export const useStudioStore = defineStore('studio', () => {
     async function respondToInvite(inviteId: number, accept: boolean) {
         const { error } = await supabase
             .from('track_authors')
-            .update({ status: accept ? 'approved' : 'declined', responded_at: new Date().toISOString() })
+            .update({ status: accept ? CREDIT_STATUS.accepted : CREDIT_STATUS.rejected, responded_at: new Date().toISOString() })
             .eq('id', inviteId)
             .eq('profile_id', requireUserId())
         if (error) throw error

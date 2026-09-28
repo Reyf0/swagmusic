@@ -114,7 +114,7 @@ async function remove() {
             <UButton v-if="!confirmDelete" color="error" variant="ghost" icon="i-lucide-trash-2" @click="confirmDelete = true">Delete</UButton>
             <div v-else class="flex items-center gap-2">
               <span class="text-sm">Delete album?</span>
-              <UButton color="error" size="sm" :loading="deleting" @click="remove">Yes</UButton>
+              <UButton color="error" size="sm" :loading="deleting" @click="remove">Yes, delete</UButton>
               <UButton color="neutral" variant="ghost" size="sm" @click="confirmDelete = false">No</UButton>
             </div>
           </template>

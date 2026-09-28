@@ -1,6 +1,6 @@
 // Pages anyone can open. Everything else requires a signed-in user.
 const PUBLIC_EXACT = ['/', '/tracks', '/search', '/login', '/register', '/confirm', '/reset-password', '/albums']
-const PUBLIC_PREFIXES = ['/playlist/', '/authors/', '/albums/']
+const PUBLIC_PREFIXES = ['/playlist/', '/authors/', '/albums/', '/tracks/']
 const GUEST_ONLY = ['/login', '/register']
 
 export default defineNuxtRouteMiddleware((to) => {

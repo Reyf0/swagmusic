@@ -48,8 +48,20 @@ export const useTracksStore = defineStore('tracks', () => {
         const query = q.value.trim()
         const data = await api.searchTracks({ q: query || null, limit: limit.value, offset: offset.value })
         if (api.lastError.value) error.value = api.lastError.value.message
-        items.value = reset ? data : items.value.concat(data)
         hasMore.value = data.length >= limit.value
+
+        // Full-text search matches whole words only; on the first page also add title prefix /
+        // fuzzy matches ("hd" → "HDMI"), after the ranked results.
+        let extra: Track[] = []
+        if (reset && query) {
+            const have = new Set(data.map(t => t.id))
+            const ids = (await api.autocompleteTrackIds(query, limit.value)).filter(id => !have.has(id))
+            extra = await api.getTracksByIds(ids)
+            if (q.value.trim() !== query) return data // a newer search replaced this one
+        }
+
+        const seen = new Set<string>()
+        items.value = (reset ? [...data, ...extra] : items.value.concat(data)).filter(t => !seen.has(t.id) && !!seen.add(t.id))
         searched.value = true
         loading.value = false
         return data

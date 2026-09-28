@@ -44,6 +44,17 @@ export const useTracksApi = () => {
             .abortSignal(signal), toTracks, [] as Track[])
     }
 
+    /** Ids of tracks whose title starts with / closely resembles `q` (RPC autocomplete_tracks). */
+    async function autocompleteTrackIds(q: string, limit = 10): Promise<string[]> {
+        if (!q.trim()) return []
+        const { data, error } = await supabase.rpc('autocomplete_tracks', { p_q: q, p_limit: limit })
+        if (error) {
+            console.warn('useTracksApi.autocompleteTrackIds error', error.message)
+            return []
+        }
+        return (data ?? []).map(t => t.id)
+    }
+
     /** Newest tracks, keyset-paginated by (created_at, id). */
     function getFeed(params: { limit?: number; afterCreatedAt?: string | null; afterId?: string | null } = {}) {
         const { limit = 20, afterCreatedAt = null, afterId = null } = params
@@ -99,5 +110,5 @@ export const useTracksApi = () => {
         for (const kind of Object.keys(controllers) as Kind[]) cancel(kind)
     }
 
-    return { searchTracks, getFeed, getTracksByIds, getPopular, getRecentTracksFull, cancel, cancelAll, lastError }
+    return { searchTracks, autocompleteTrackIds, getFeed, getTracksByIds, getPopular, getRecentTracksFull, cancel, cancelAll, lastError }
 }

@@ -1,10 +1,13 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { ref } from 'vue'
 import { createPinia, setActivePinia } from 'pinia'
 import { mockNuxtImport } from '@nuxt/test-utils/runtime'
 import type { Track } from '#shared/types'
 
 // No network in unit tests: the store only records listens through this client.
-mockNuxtImport('useSupabase', () => () => ({ from: () => ({ insert: async () => ({ error: null }) }) }))
+const { insertListen } = vi.hoisted(() => ({ insertListen: vi.fn(async () => ({ error: null })) }))
+mockNuxtImport('useSupabase', () => () => ({ from: () => ({ insert: insertListen }) }))
+mockNuxtImport('useSupabaseUser', () => () => ref({ id: 'user-1' }))
 
 // Minimal Howl stand-in: play() fires onplay synchronously; tests trigger onend by hand.
 const howls: FakeHowl[] = []
@@ -190,5 +193,47 @@ describe('usePlayTrack: play-all button', () => {
         playList(other)
         expect(current()).toBe('x')
         expect(isListPlaying(list)).toBe(false)
+    })
+})
+
+describe('listen counting', () => {
+    beforeEach(() => {
+        setActivePinia(createPinia())
+        howls.length = 0
+        insertListen.mockClear()
+        vi.useFakeTimers()
+    })
+    afterEach(() => vi.useRealTimers())
+
+    it('counts a listen only after 10 seconds of playback, once', () => {
+        const player = usePlayerStore()
+        player.play(list[0]!, list)
+        vi.advanceTimersByTime(9_000)
+        expect(insertListen).not.toHaveBeenCalled()
+        vi.advanceTimersByTime(2_000)
+        expect(insertListen).toHaveBeenCalledTimes(1)
+        expect(insertListen).toHaveBeenCalledWith({ user_id: 'user-1', track_id: 'a' })
+        vi.advanceTimersByTime(60_000)
+        expect(insertListen).toHaveBeenCalledTimes(1)
+    })
+
+    it('does not count tracks skipped right away', () => {
+        const player = usePlayerStore()
+        player.play(list[0]!, list)
+        vi.advanceTimersByTime(2_000)
+        player.playNext()
+        vi.advanceTimersByTime(2_000)
+        player.playNext()
+        vi.advanceTimersByTime(2_000)
+        expect(insertListen).not.toHaveBeenCalled()
+    })
+
+    it('does not count time while paused', () => {
+        const player = usePlayerStore()
+        player.play(list[0]!, list)
+        vi.advanceTimersByTime(5_000)
+        player.pause()
+        vi.advanceTimersByTime(30_000)
+        expect(insertListen).not.toHaveBeenCalled()
     })
 })

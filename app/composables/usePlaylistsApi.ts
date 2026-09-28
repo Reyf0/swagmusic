@@ -99,5 +99,17 @@ export const usePlaylistsApi = () => {
         if (error) throw error
     }
 
-    return { getUserPlaylists, getPlaylist, getPlaylistTracks, createPlaylist, updatePlaylist, deletePlaylist, addTrack, removeTrack }
+    /** Saves a new track order (`trackIds` top to bottom) as positions 0…n-1; only moved rows are written. */
+    async function reorderTracks(playlistId: string, trackIds: string[], previous: string[]) {
+        const moved = trackIds.map((id, i) => ({ id, i })).filter(({ id, i }) => previous[i] !== id)
+        if (!moved.length) return
+        await Promise.all(moved.map(({ id, i }) => supabase
+            .from('playlist_tracks')
+            .update({ position: i })
+            .match({ playlist_id: playlistId, track_id: id })
+            .then(({ error }) => { if (error) throw error })))
+        await supabase.from('playlists').update({ updated_at: new Date().toISOString() }).eq('id', playlistId)
+    }
+
+    return { getUserPlaylists, getPlaylist, getPlaylistTracks, createPlaylist, updatePlaylist, deletePlaylist, addTrack, removeTrack, reorderTracks }
 }

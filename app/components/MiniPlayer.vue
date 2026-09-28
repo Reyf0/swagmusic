@@ -12,16 +12,8 @@ const {
   isShuffle
 } = storeToRefs(player)
 
-const lastVolume = ref(0.5)
-const isMuted = computed(() => volume.value === 0)
-function toggleMute() {
-  if (isMuted.value) {
-    player.setVolume(lastVolume.value || 0.5)
-  } else {
-    lastVolume.value = volume.value
-    player.setVolume(0)
-  }
-}
+const { isMuted } = storeToRefs(player)
+const toggleMute = () => player.toggleMute()
 
 const progress = computed(() => duration.value > 0 ? (currentTime.value / duration.value) * 100 : 0)
 
@@ -57,7 +49,7 @@ const repeatLabel = computed(() => ({ off: 'Repeat: off', all: 'Repeat: all', on
         <UIcon v-else name="i-heroicons-musical-note" class="text-old-neutral-400" />
       </button>
       <div class="flex flex-col min-w-0">
-        <div class="font-semibold truncate">{{ currentTrack.title }}</div>
+        <NuxtLink :to="`/tracks/${currentTrack.id}`" class="block font-semibold truncate hover:underline">{{ currentTrack.title }}</NuxtLink>
         <div class="text-sm text-old-neutral-400 truncate">
           <TrackArtists :authors="currentTrack.authors" />
         </div>

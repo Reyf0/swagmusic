@@ -1,3 +1,17 @@
+/**
+ * The last `n` calendar days (UTC) ending today, oldest first; days without plays are 0,
+ * so the chart shows gaps instead of squeezing active days together.
+ */
+function lastDays(n: number, rows: { day: string; total_listens: number }[]) {
+    const byDay = new Map(rows.map(r => [r.day, Number(r.total_listens)]))
+    const today = new Date()
+    return Array.from({ length: n }, (_, i) => {
+        const d = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate() - (n - 1 - i)))
+        const day = d.toISOString().slice(0, 10)
+        return { day, total_listens: byDay.get(day) ?? 0 }
+    })
+}
+
 /** Admin: totals and plays per day for the dashboard. */
 export default defineEventHandler(async (event) => {
     await requireAdmin(event)
@@ -24,6 +38,6 @@ export default defineEventHandler(async (event) => {
         albums,
         playlists,
         plays,
-        playsByDay: ((daily.data ?? []) as { day: string; total_listens: number }[]).slice(-30),
+        playsByDay: lastDays(30, (daily.data ?? []) as { day: string; total_listens: number }[]),
     }
 })

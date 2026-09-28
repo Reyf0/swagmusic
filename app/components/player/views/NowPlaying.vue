@@ -88,7 +88,9 @@ const uploadedAt = computed(() => track.value?.created_at
         <!-- Title + artists -->
         <div class="flex items-start gap-2 min-w-0 mt-4 md:mt-0">
           <div class="min-w-0 flex-1">
-            <h2 class="font-bold truncate" :class="props.mode === 'fullscreen' ? 'text-3xl md:text-5xl' : 'text-xl'">{{ track.title }}</h2>
+            <h2 class="font-bold truncate" :class="props.mode === 'fullscreen' ? 'text-3xl md:text-5xl' : 'text-xl'">
+              <NuxtLink :to="`/tracks/${track.id}`" class="hover:underline">{{ track.title }}</NuxtLink>
+            </h2>
             <p class="text-old-neutral-300 truncate"><TrackArtists :authors="track.authors" /></p>
           </div>
           <LikeButton :track-id="track.id" size="lg" />

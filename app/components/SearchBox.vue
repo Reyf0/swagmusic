@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import type { Track } from '#shared/types'
 
-// Header search with a live preview of tracks, artists, albums and playlists.
+// Header search with a live preview of tracks, artists, albums and playlists; with an empty
+// field it shows recent searches and recently played tracks.
 // ↑/↓ move through the results, Enter opens the highlighted one (or the full search), Esc closes.
 const props = withDefaults(defineProps<{
   /** Show the preview (off on /search, where the page itself updates live). */
@@ -23,7 +24,11 @@ const emit = defineEmits<{ submit: [], navigate: [] }>()
 const text = defineModel<string>({ required: true })
 
 const route = useRoute()
+const user = useSupabaseUser()
 const { playTrack } = usePlayTrack()
+const tracksStore = useTracksStore()
+const { recentItems } = storeToRefs(tracksStore)
+const { recent, add: addRecent, remove: removeRecent, clear: clearRecent } = useRecentSearches()
 
 const focused = ref(false)
 const dismissed = ref(false)
@@ -33,16 +38,30 @@ const listId = useId()
 const enabled = computed(() => props.preview)
 const { results, loading, isEmpty, term } = useQuickSearch(text, enabled)
 
-const open = computed(() => props.preview && !dismissed.value && (focused.value || props.inline) && !!text.value.trim())
+// Empty field: recent searches + recently played instead of results.
+const showingRecent = computed(() => !text.value.trim())
+const recentTracks = computed(() => {
+  if (!user.value) return []
+  const seen = new Set<string>()
+  return recentItems.value.filter(t => !seen.has(t.id) && !!seen.add(t.id)).slice(0, 4)
+})
+const hasRecent = computed(() => recent.value.length > 0 || recentTracks.value.length > 0)
+
+const open = computed(() => props.preview && !dismissed.value && (focused.value || props.inline)
+  && (showingRecent.value ? hasRecent.value : true))
 
 type Item =
-  | { kind: 'track', key: string, track: Track }
+  | { kind: 'track', key: string, track: Track, list: Track[] }
   | { kind: 'link', key: string, to: string }
+  | { kind: 'query', key: string, q: string }
   | { kind: 'all', key: string }
 
 // Flat list in display order, for keyboard navigation.
-const items = computed<Item[]>(() => [
-  ...results.value.tracks.map(track => ({ kind: 'track' as const, key: `t-${track.id}`, track })),
+const items = computed<Item[]>(() => showingRecent.value ? [
+  ...recent.value.map(q => ({ kind: 'query' as const, key: `q-${q}`, q })),
+  ...recentTracks.value.map(track => ({ kind: 'track' as const, key: `rt-${track.id}`, track, list: recentTracks.value })),
+] : [
+  ...results.value.tracks.map(track => ({ kind: 'track' as const, key: `t-${track.id}`, track, list: results.value.tracks })),
   ...results.value.artists.map(a => ({ kind: 'link' as const, key: `a-${a.id}`, to: `/authors/${a.id}` })),
   ...results.value.albums.map(a => ({ kind: 'link' as const, key: `al-${a.id}`, to: `/albums/${a.id}` })),
   ...results.value.playlists.map(p => ({ kind: 'link' as const, key: `p-${p.id}`, to: `/playlist/${p.id}` })),
@@ -63,13 +82,22 @@ function close() {
 }
 
 async function select(item: Item | undefined) {
+  if (item?.kind === 'query') {
+    text.value = item.q
+    addRecent(item.q)
+    close()
+    emit('submit')
+    return
+  }
+  // Picking something from the results remembers what was typed.
+  if (!showingRecent.value) addRecent(text.value)
   if (!item || item.kind === 'all') {
     close()
     emit('submit')
     return
   }
   if (item.kind === 'track') {
-    playTrack(item.track, results.value.tracks)
+    playTrack(item.track, item.list)
     close()
     emit('navigate')
     return
@@ -96,6 +124,7 @@ function onKeydown(e: KeyboardEvent) {
 }
 
 function onSubmit() {
+  addRecent(text.value)
   close()
   emit('submit')
 }
@@ -103,6 +132,7 @@ function onSubmit() {
 function onFocus() {
   focused.value = true
   dismissed.value = false
+  if (user.value && !recentItems.value.length) tracksStore.loadRecent({ userId: user.value.id })
 }
 
 // Clicks inside the panel shouldn't blur the input before they register.
@@ -143,7 +173,64 @@ const artistName = (a: { username: string | null; full_name: string | null }) =>
       :class="inline ? 'mt-3' : 'absolute left-0 right-0 top-full mt-2 z-50 shadow-2xl border border-old-neutral-200 dark:border-old-neutral-800 max-h-[70vh] overflow-y-auto'"
       @mousedown.prevent
     >
-      <div v-if="loading && isEmpty" class="px-4 py-3 text-sm text-old-neutral-500">Searching…</div>
+      <!-- Empty field: recent searches and recently played -->
+      <template v-if="showingRecent">
+        <div v-if="recent.length" class="py-1">
+          <div class="flex items-center justify-between px-4 pt-2 pb-1">
+            <span class="text-xs font-semibold uppercase tracking-wide text-old-neutral-500">Recent searches</span>
+            <button type="button" class="text-xs text-old-neutral-500 hover:text-old-neutral-800 dark:hover:text-white" @click="clearRecent">Clear</button>
+          </div>
+          <div
+            v-for="q in recent"
+            :id="optionId(`q-${q}`)"
+            :key="q"
+            role="option"
+            :aria-selected="items[active]?.key === `q-${q}`"
+            class="flex items-center gap-3 px-4 py-2 cursor-pointer"
+            :class="items[active]?.key === `q-${q}` ? 'bg-old-neutral-100 dark:bg-old-neutral-800' : 'hover:bg-old-neutral-100 dark:hover:bg-old-neutral-800'"
+            @mouseenter="active = indexOf(`q-${q}`)"
+            @click="select(items[indexOf(`q-${q}`)])"
+          >
+            <UIcon name="i-lucide-history" class="size-4 text-old-neutral-400 shrink-0" />
+            <span class="truncate flex-1">{{ q }}</span>
+            <button
+              type="button"
+              class="text-old-neutral-400 hover:text-old-neutral-800 dark:hover:text-white"
+              :aria-label="`Remove ${q} from recent searches`"
+              @click.stop="removeRecent(q)"
+            >
+              <UIcon name="i-heroicons-x-mark" class="size-4" />
+            </button>
+          </div>
+        </div>
+
+        <div v-if="recentTracks.length" class="py-1" :class="{ 'border-t border-old-neutral-100 dark:border-old-neutral-800': recent.length }">
+          <div class="px-4 pt-2 pb-1 text-xs font-semibold uppercase tracking-wide text-old-neutral-500">Recently played</div>
+          <div
+            v-for="track in recentTracks"
+            :id="optionId(`rt-${track.id}`)"
+            :key="track.id"
+            role="option"
+            :aria-selected="items[active]?.key === `rt-${track.id}`"
+            class="flex items-center gap-3 px-4 py-2 cursor-pointer"
+            :class="items[active]?.key === `rt-${track.id}` ? 'bg-old-neutral-100 dark:bg-old-neutral-800' : 'hover:bg-old-neutral-100 dark:hover:bg-old-neutral-800'"
+            @mouseenter="active = indexOf(`rt-${track.id}`)"
+            @click="select(items[indexOf(`rt-${track.id}`)])"
+          >
+            <div class="size-10 shrink-0 rounded bg-old-neutral-200 dark:bg-old-neutral-700 overflow-hidden flex items-center justify-center">
+              <img v-if="track.cover_url" :src="track.cover_url" alt="" class="size-full object-cover">
+              <UIcon v-else name="i-heroicons-musical-note" class="size-5 text-old-neutral-400" />
+            </div>
+            <div class="min-w-0 flex-1">
+              <div class="truncate font-medium">{{ track.title }}</div>
+              <div class="truncate text-sm text-old-neutral-500"><TrackArtists :authors="track.authors" :linked="false" /></div>
+            </div>
+            <UIcon name="i-heroicons-play-solid" class="size-4 text-old-neutral-400" />
+          </div>
+        </div>
+      </template>
+
+      <div v-else-if="loading && isEmpty" class="px-4 py-3 text-sm text-old-neutral-500">Searching…</div>
       <div v-else-if="isEmpty && term" class="px-4 py-3 text-sm text-old-neutral-500">Nothing found for “{{ term }}”</div>
 
       <template v-else>
@@ -242,6 +329,7 @@ const artistName = (a: { username: string | null; full_name: string | null }) =>
       </template>
 
       <div
+        v-if="!showingRecent"
         :id="optionId('all')"
         role="option"
         :aria-selected="items[active]?.key === 'all'"

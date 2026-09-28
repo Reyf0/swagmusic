@@ -23,7 +23,16 @@ const cards = computed(() => [
   { label: 'Plays', value: stats.value?.plays, icon: 'i-heroicons-play' },
 ])
 
-const maxPlays = computed(() => Math.max(1, ...(stats.value?.playsByDay ?? []).map(d => d.total_listens)))
+const days = computed(() => stats.value?.playsByDay ?? [])
+const maxPlays = computed(() => Math.max(1, ...days.value.map(d => d.total_listens)))
+const periodTotal = computed(() => days.value.reduce((sum, d) => sum + d.total_listens, 0))
+
+// Days are UTC calendar dates (YYYY-MM-DD); format them in UTC so they don't shift by a day.
+const fmtDay = (day: string, opts: Intl.DateTimeFormatOptions) =>
+  new Date(`${day}T00:00:00Z`).toLocaleDateString(undefined, { timeZone: 'UTC', ...opts })
+// Date labels under the axis: first, middle and last day.
+const labelIdx = computed(() => new Set([0, Math.floor((days.value.length - 1) / 2), days.value.length - 1]))
+const hovered = ref<number | null>(null)
 
 useSeoMeta({ title: 'Admin' })
 </script>
@@ -52,17 +61,75 @@ useSeoMeta({ title: 'Admin' })
     </div>
 
     <section class="rounded-xl bg-white dark:bg-old-neutral-900 p-4 shadow-sm">
-      <h2 class="font-semibold mb-4">Plays per day (last 30 days with activity)</h2>
-      <p v-if="!pending && !stats?.playsByDay.length" class="text-sm text-old-neutral-500">No plays yet.</p>
-      <div v-else class="flex items-end gap-1 h-40" role="img" aria-label="Plays per day">
-        <div
-          v-for="d in stats?.playsByDay ?? []"
-          :key="d.day"
-          class="flex-1 bg-green-500/80 hover:bg-green-500 rounded-t min-h-0.5"
-          :style="{ height: `${(d.total_listens / maxPlays) * 100}%` }"
-          :title="`${new Date(d.day).toLocaleDateString()}: ${d.total_listens}`"
-        />
+      <div class="flex items-baseline justify-between gap-4 mb-4">
+        <h2 class="font-semibold">Plays per day, last 30 days</h2>
+        <span v-if="days.length" class="text-sm text-old-neutral-500 tabular-nums">{{ periodTotal }} in total</span>
       </div>
+
+      <USkeleton v-if="pending" class="h-48 w-full" />
+      <template v-else-if="days.length">
+        <div class="flex gap-2">
+          <!-- y axis: max and 0 -->
+          <div class="flex flex-col justify-between h-40 text-xs text-old-neutral-500 tabular-nums text-right w-8 -my-1.5">
+            <span>{{ maxPlays }}</span>
+            <span>0</span>
+          </div>
+
+          <div class="relative flex-1 min-w-0">
+            <div class="relative flex h-40" @mouseleave="hovered = null">
+              <!-- gridlines at max and 0 -->
+              <div class="absolute inset-x-0 top-0 border-t border-dashed border-old-neutral-200 dark:border-old-neutral-800" />
+              <div class="absolute inset-x-0 bottom-0 border-t border-old-neutral-300 dark:border-old-neutral-700" />
+              <!-- each column is the hover target; the bar inside it is the mark -->
+              <div
+                v-for="(d, i) in days"
+                :key="d.day"
+                class="relative flex-1 h-full flex items-end px-px cursor-default"
+                tabindex="0"
+                :aria-label="`${fmtDay(d.day, { day: 'numeric', month: 'long' })}: ${d.total_listens} plays`"
+                @mouseenter="hovered = i"
+                @focus="hovered = i"
+                @blur="hovered = null"
+              >
+                <div
+                  class="w-full rounded-t-[4px] transition-colors"
+                  :class="hovered === i ? 'bg-green-500' : 'bg-green-500/75'"
+                  :style="{ height: d.total_listens ? `max(2px, ${(d.total_listens / maxPlays) * 100}%)` : '0' }"
+                />
+                <div
+                  v-if="hovered === i"
+                  class="absolute bottom-full mb-2 z-10 pointer-events-none whitespace-nowrap rounded-md bg-old-neutral-900 dark:bg-old-neutral-800 text-white text-xs px-2 py-1 shadow-lg"
+                  :class="i < days.length / 2 ? 'left-0' : 'right-0'"
+                >
+                  <div class="font-semibold tabular-nums">{{ d.total_listens }} {{ d.total_listens === 1 ? 'play' : 'plays' }}</div>
+                  <div class="text-old-neutral-300">{{ fmtDay(d.day, { weekday: 'short', day: 'numeric', month: 'short' }) }}</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- x axis: first / middle / last date -->
+            <div class="relative h-5 mt-1 text-xs text-old-neutral-500">
+              <span
+                v-for="i in labelIdx"
+                :key="i"
+                class="absolute whitespace-nowrap"
+                :class="i === 0 ? 'left-0' : i === days.length - 1 ? 'right-0' : '-translate-x-1/2'"
+                :style="i !== 0 && i !== days.length - 1 ? { left: `${((i + 0.5) / days.length) * 100}%` } : {}"
+              >{{ fmtDay(days[i]!.day, { day: 'numeric', month: 'short' }) }}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- same data as a table for screen readers -->
+        <table class="sr-only">
+          <caption>Plays per day, last 30 days</caption>
+          <thead><tr><th>Date</th><th>Plays</th></tr></thead>
+          <tbody>
+            <tr v-for="d in days" :key="d.day"><td>{{ d.day }}</td><td>{{ d.total_listens }}</td></tr>
+          </tbody>
+        </table>
+      </template>
+      <p v-else class="text-sm text-old-neutral-500">No plays yet.</p>
     </section>
   </div>
 </template>

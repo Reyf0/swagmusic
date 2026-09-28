@@ -36,6 +36,12 @@ export const usePlayerStore = defineStore('player', () => {
     let progressTimer: ReturnType<typeof setInterval> | null = null
     // Load errors in a row; stops auto-skipping once every track in the queue has failed.
     let consecutiveErrors = 0
+    // A listen counts once the current track has actually been playing for a while (not on
+    // start: tracks that fail to load or are skipped right away must not inflate play counts).
+    const LISTEN_AFTER_SECONDS = 10
+    const PROGRESS_TICK_MS = 250
+    let listenedSeconds = 0
+    let listenRecorded = false
 
     // ───────────── Views (now playing / queue / lyrics panels) ─────────────
 
@@ -99,8 +105,15 @@ export const usePlayerStore = defineStore('player', () => {
     function startProgress() {
         stopProgress()
         progressTimer = setInterval(() => {
-            if (sound && isPlaying.value) currentTime.value = Number(sound.seek()) || 0
-        }, 250)
+            if (!sound || !isPlaying.value) return
+            currentTime.value = Number(sound.seek()) || 0
+            listenedSeconds += PROGRESS_TICK_MS / 1000
+            const threshold = Math.min(LISTEN_AFTER_SECONDS, (duration.value || LISTEN_AFTER_SECONDS) / 2)
+            if (!listenRecorded && currentTrack.value && listenedSeconds >= threshold) {
+                listenRecorded = true
+                recordListen(currentTrack.value.id)
+            }
+        }, PROGRESS_TICK_MS)
     }
 
     function stopProgress() {
@@ -197,6 +210,9 @@ export const usePlayerStore = defineStore('player', () => {
             },
             onend: () => {
                 if (repeatMode.value === 'one') {
+                    // each repeat is a new listen
+                    listenedSeconds = 0
+                    listenRecorded = false
                     howl.play()
                     return
                 }
@@ -207,8 +223,9 @@ export const usePlayerStore = defineStore('player', () => {
 
         if (hasNoActiveViews() && import.meta.client && window.matchMedia('(min-width: 768px)').matches) openView('now')
 
+        listenedSeconds = 0
+        listenRecorded = false
         howl.play()
-        recordListen(track.id)
     }
 
     function pause() {

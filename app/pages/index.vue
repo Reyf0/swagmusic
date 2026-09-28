@@ -15,7 +15,13 @@ function loadAll() {
   if (user.value) tracksStore.loadRecent({ userId: user.value.id })
 }
 
-onMounted(loadAll)
+// Until the first load has started (server render and hydration) show placeholders rather than
+// the "nothing here" texts, which would flash and shift the layout.
+const started = ref(false)
+onMounted(() => {
+  started.value = true
+  loadAll()
+})
 
 watch(() => user.value?.id, (id) => {
   if (id) tracksStore.loadRecent({ userId: id })
@@ -52,7 +58,7 @@ defineOgImage('Share', { subtitle: 'Listen to new tracks, upload your own music 
 
     <section class="pl-6">
       <h2 class="text-2xl font-bold mb-4">Popular</h2>
-      <div v-if="popularLoading && !popularItems.length" class="flex gap-4 overflow-hidden">
+      <div v-if="(!started || popularLoading) && !popularItems.length" class="flex gap-4 overflow-hidden">
         <UiSkeletonTrackCard v-for="i in 5" :key="i" />
       </div>
       <p v-else-if="!popularItems.length" class="text-old-neutral-500">Nothing has been played yet.</p>
@@ -61,7 +67,7 @@ defineOgImage('Share', { subtitle: 'Listen to new tracks, upload your own music 
 
     <section class="pl-6">
       <h2 class="text-2xl font-bold mb-4">New releases</h2>
-      <div v-if="feedLoading && !feedItems.length" class="flex gap-4 overflow-hidden">
+      <div v-if="(!started || feedLoading) && !feedItems.length" class="flex gap-4 overflow-hidden">
         <UiSkeletonTrackCard v-for="i in 5" :key="i" />
       </div>
       <p v-else-if="!feedItems.length" class="text-old-neutral-500">
@@ -72,7 +78,7 @@ defineOgImage('Share', { subtitle: 'Listen to new tracks, upload your own music 
 
     <section v-if="user" class="pl-6">
       <h2 class="text-2xl font-bold mb-4">Recently played</h2>
-      <div v-if="recentLoading && !recentItems.length" class="flex gap-4 overflow-hidden">
+      <div v-if="(!started || recentLoading) && !recentItems.length" class="flex gap-4 overflow-hidden">
         <UiSkeletonTrackCard v-for="i in 5" :key="i" />
       </div>
       <p v-else-if="!recentUnique.length" class="text-old-neutral-500">Tracks you play will show up here.</p>

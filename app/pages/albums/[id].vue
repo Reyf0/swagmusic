@@ -42,7 +42,9 @@ async function load() {
 
 watch(albumId, load, { immediate: true })
 
-useSeoMeta({ title: () => (album.value ? `${album.value.title}` : 'Album') })
+// Title, description and link preview (resolved during SSR).
+const share = await useShareInfo('album', albumId)
+useShareMeta('album', share)
 </script>
 
 <template>

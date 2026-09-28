@@ -76,6 +76,11 @@ export default defineNuxtConfig({
         name: 'SwagMusic'
     },
 
+    // Link preview images (app/components/OgImage). Track / album titles are often Cyrillic.
+    ogImage: {
+        fontSubsets: ['latin', 'cyrillic'],
+    },
+
     imports: {
         dirs: ['stores']
     },

@@ -48,7 +48,9 @@ const displayName = computed(() => artist.value?.username || artist.value?.full_
 // Only link http(s) URLs (the field is user-provided).
 const website = computed(() => /^https?:\/\//i.test(artist.value?.website ?? '') ? artist.value!.website! : null)
 
-useSeoMeta({ title: () => `${displayName.value}` })
+// Title, description and link preview (resolved during SSR).
+const share = await useShareInfo('artist', artistId)
+useShareMeta('artist', share)
 </script>
 
 <template>

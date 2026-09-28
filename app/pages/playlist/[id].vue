@@ -38,7 +38,9 @@ async function fetchPlaylist() {
 
 watch(playlistId, fetchPlaylist, { immediate: true })
 
-useSeoMeta({ title: () => playlist.value ? `${playlist.value.name}` : 'Playlist' })
+// Title, description and link preview (resolved during SSR).
+const share = await useShareInfo('playlist', playlistId)
+useShareMeta('playlist', share)
 
 /* ── owner actions ── */
 const editOpen = ref(false)

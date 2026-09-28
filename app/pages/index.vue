@@ -30,6 +30,7 @@ useSeoMeta({
   title: 'SwagMusic',
   description: 'Listen to new tracks, upload your own music and build playlists.',
 })
+defineOgImage('Share', { subtitle: 'Listen to new tracks, upload your own music and build playlists.' })
 </script>
 
 <template>

@@ -206,17 +206,14 @@ const mobileSidebarAsideStyle = computed(() => sidebarTouching.value ? { transfo
       <div class="flex justify-between items-center gap-6">
         <NuxtLink to="/" class="text-[#4ade80] text-xl font-bold shrink-0">SwagMusic</NuxtLink>
 
-        <form class="flex-1 max-w-xl" role="search" @submit.prevent="handleSearch">
-          <UInput
-            v-model="searchText"
-            icon="i-heroicons-magnifying-glass"
-            placeholder="Search by title or artist"
-            size="lg"
-            class="w-full"
-            :ui="{ base: 'rounded-full bg-old-neutral-800 text-white placeholder:text-old-neutral-400' }"
-            aria-label="Search"
-          />
-        </form>
+        <SearchBox
+          v-model="searchText"
+          class="flex-1 max-w-xl"
+          size="lg"
+          :preview="route.path !== '/search'"
+          :input-ui="{ base: 'rounded-full bg-old-neutral-800 text-white placeholder:text-old-neutral-400' }"
+          @submit="handleSearch"
+        />
 
         <div class="flex items-center gap-1">
           <UButton to="/" variant="ghost" color="neutral" class="text-old-neutral-300 hover:text-white">Home</UButton>
@@ -326,12 +323,18 @@ const mobileSidebarAsideStyle = computed(() => sidebarTouching.value ? { transfo
       <transition name="fade">
         <div v-if="mobileSearchOpen" class="fixed inset-0 z-50 flex items-start pt-8 md:hidden">
           <div class="absolute inset-0 bg-black/50" @click="closeMobileSearch" />
-          <form class="relative mx-auto w-full px-4" role="search" @submit.prevent="handleSearch">
-            <div class="bg-old-neutral-900 rounded-xl p-3 shadow-lg flex items-center gap-2">
-              <UInput v-model="searchText" autofocus placeholder="Search by title or artist" class="flex-1" aria-label="Search" />
-              <UButton type="submit" icon="i-heroicons-magnifying-glass" aria-label="Search" />
+          <div class="relative mx-auto w-full px-4">
+            <div class="bg-old-neutral-900 rounded-xl p-3 shadow-lg max-h-[85dvh] overflow-y-auto">
+              <SearchBox
+                v-model="searchText"
+                inline
+                autofocus
+                :preview="route.path !== '/search'"
+                @submit="handleSearch"
+                @navigate="closeMobileSearch"
+              />
             </div>
-          </form>
+          </div>
         </div>
       </transition>
     </ClientOnly>

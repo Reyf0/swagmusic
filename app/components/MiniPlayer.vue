@@ -12,16 +12,8 @@ const {
   isShuffle
 } = storeToRefs(player)
 
-const lastVolume = ref(0.5)
-const isMuted = computed(() => volume.value === 0)
-function toggleMute() {
-  if (isMuted.value) {
-    player.setVolume(lastVolume.value || 0.5)
-  } else {
-    lastVolume.value = volume.value
-    player.setVolume(0)
-  }
-}
+const { isMuted } = storeToRefs(player)
+const toggleMute = () => player.toggleMute()
 
 const progress = computed(() => duration.value > 0 ? (currentTime.value / duration.value) * 100 : 0)
 

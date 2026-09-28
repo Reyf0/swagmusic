@@ -262,6 +262,19 @@ export const usePlayerStore = defineStore('player', () => {
         }
     }
 
+    // Volume to go back to when unmuting.
+    let volumeBeforeMute = 0.5
+    const isMuted = computed(() => volume.value === 0)
+
+    function toggleMute() {
+        if (isMuted.value) {
+            setVolume(volumeBeforeMute || 0.5)
+        } else {
+            volumeBeforeMute = volume.value
+            setVolume(0)
+        }
+    }
+
     function cycleRepeat() {
         repeatMode.value = repeatMode.value === 'off' ? 'all' : repeatMode.value === 'all' ? 'one' : 'off'
     }
@@ -414,6 +427,8 @@ export const usePlayerStore = defineStore('player', () => {
         stop,
         seek,
         setVolume,
+        isMuted,
+        toggleMute,
         playNext,
         playPrevious,
         playAt,

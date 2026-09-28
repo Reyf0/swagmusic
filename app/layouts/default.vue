@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import type { DropdownMenuItem } from '@nuxt/ui'
-import { useEventListener } from '@vueuse/core'
 import MiniPlayer from '@/components/MiniPlayer.vue'
 import PlayerViews from '@/components/player/PlayerViews.vue'
 import MobilePlayer from '@/components/player/MobilePlayer.vue'
@@ -48,6 +47,7 @@ const profileDropdownMenuItems = computed<DropdownMenuItem[][]>(() => {
       { label: 'Upload', icon: 'i-lucide-upload', to: '/upload' },
       { label: pendingInviteCount.value ? `Studio (${pendingInviteCount.value})` : 'Studio', icon: 'i-lucide-audio-lines', to: '/studio' },
       { label: 'Settings', icon: 'i-lucide-settings', to: '/settings' },
+      { label: 'Keyboard shortcuts', icon: 'i-lucide-keyboard', kbds: ['?'], onSelect: () => { shortcutsOpen.value = true } },
     ],
   ]
   if (isAdmin.value) groups.push([{ label: 'Admin', icon: 'i-lucide-shield', to: '/admin' }])
@@ -86,17 +86,15 @@ async function handleSearch() {
   await navigateTo({ path: '/search', query: text ? { q: text } : {} })
 }
 
-/* Space toggles playback (unless typing) */
-if (import.meta.client) {
-  useEventListener(window, 'keydown', (e: KeyboardEvent) => {
-    if (e.code !== 'Space' || e.repeat || e.ctrlKey || e.metaKey || e.altKey) return
-    const el = e.target as HTMLElement | null
-    if (el?.closest('input, textarea, select, button, [contenteditable="true"], [role="slider"]')) return
-    if (!currentTrack.value) return
-    e.preventDefault()
-    playerStore.togglePlay()
-  })
-}
+/* Keyboard shortcuts ("?" lists them) */
+useHotkeys({
+  focusSearch: () => {
+    const input = [...document.querySelectorAll<HTMLInputElement>('nav input[role="combobox"]')].find(i => i.offsetParent)
+    if (input) input.focus()
+    else openMobileSearch()
+  },
+})
+const shortcutsOpen = useShortcutsOpen()
 
 /* Sidebar handlers */
 const toggleSidebarCollapse = () => {

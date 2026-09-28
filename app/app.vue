@@ -11,6 +11,7 @@
     <ClientOnly>
       <CreatePlaylistModal />
       <AddToPlaylistModal />
+      <KeyboardShortcuts />
     </ClientOnly>
   </UApp>
 </template>

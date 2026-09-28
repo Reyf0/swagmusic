@@ -37,12 +37,22 @@ const q = ref('')
 const debouncedQ = refDebounced(q, 300)
 const page = ref(1)
 const pageSize = 25
-watch([debouncedQ, resource], () => { page.value = 1 })
-
-const { data, pending, error, refresh } = await useFetch<{ items: Row[]; total: number }>(() => `/api/v1/admin/${resource.value}`, {
-  query: computed(() => ({ q: debouncedQ.value || undefined, limit: pageSize, offset: (page.value - 1) * pageSize })),
-  server: false,
+watch(debouncedQ, () => { page.value = 1 })
+// The page component is reused for tracks / albums / playlists: start each section fresh.
+watch(resource, () => {
+  q.value = ''
+  page.value = 1
 })
+
+// The key covers everything the request depends on, so any change refetches and an older
+// response can't overwrite a newer one.
+const { data, pending, error, refresh } = await useAsyncData(
+  () => `admin-${resource.value}-${debouncedQ.value}-${page.value}`,
+  () => $fetch<{ items: Row[]; total: number }>(`/api/v1/admin/${resource.value}`, {
+    query: { q: debouncedQ.value || undefined, limit: pageSize, offset: (page.value - 1) * pageSize },
+  }),
+  { server: false },
+)
 
 const columns = computed<TableColumn<Row>[]>(() => [
   { id: 'name', header: 'Name' },

@@ -91,9 +91,57 @@ async function removeTrack(track: Track) {
   }
 }
 
-const rowItems = (track: Track): DropdownMenuItem[] => isOwner.value
-  ? [{ label: 'Remove from this playlist', icon: 'i-lucide-trash-2', color: 'error', onSelect: () => removeTrack(track) }]
-  : []
+/* ── sorting & reordering ── */
+type SortKey = 'custom' | 'title' | 'artist' | 'added' | 'duration'
+const sortItems: { label: string; value: SortKey }[] = [
+  { label: 'Custom order', value: 'custom' },
+  { label: 'Title', value: 'title' },
+  { label: 'Artist', value: 'artist' },
+  { label: 'Date added', value: 'added' },
+  { label: 'Duration', value: 'duration' },
+]
+const sortBy = ref<SortKey>('custom')
+
+const collator = new Intl.Collator(undefined, { sensitivity: 'base', numeric: true })
+// What the list shows and plays; "custom" is the saved playlist order.
+const displayed = computed(() => {
+  const list = [...tracks.value]
+  switch (sortBy.value) {
+    case 'title': return list.sort((a, b) => collator.compare(a.title, b.title))
+    case 'artist': return list.sort((a, b) => collator.compare(artistNames(a, ''), artistNames(b, '')))
+    case 'added': return list.sort((a, b) => (b.added_at ?? '').localeCompare(a.added_at ?? ''))
+    case 'duration': return list.sort((a, b) => (a.duration_seconds ?? 0) - (b.duration_seconds ?? 0))
+    default: return list
+  }
+})
+const canReorder = computed(() => isOwner.value && sortBy.value === 'custom' && tracks.value.length > 1)
+
+async function moveTrack(from: number, to: number) {
+  if (!playlist.value || from === to || to < 0 || to >= tracks.value.length) return
+  const before = tracks.value
+  const next = [...before]
+  const [moved] = next.splice(from, 1)
+  next.splice(to, 0, moved!)
+  tracks.value = next
+  try {
+    await api.reorderTracks(playlist.value.id, next.map(t => t.id), before.map(t => t.id))
+  } catch (e: any) {
+    tracks.value = before
+    toast.add({ title: 'Could not save the new order', description: e?.message, color: 'error' })
+  }
+}
+
+const rowItems = (track: Track, index: number): DropdownMenuItem[] => {
+  if (!isOwner.value) return []
+  const items: DropdownMenuItem[] = []
+  // Keyboard-friendly alternative to dragging.
+  if (canReorder.value) {
+    if (index > 0) items.push({ label: 'Move up', icon: 'i-lucide-arrow-up', onSelect: () => moveTrack(index, index - 1) })
+    if (index < tracks.value.length - 1) items.push({ label: 'Move down', icon: 'i-lucide-arrow-down', onSelect: () => moveTrack(index, index + 1) })
+  }
+  items.push({ label: 'Remove from this playlist', icon: 'i-lucide-trash-2', color: 'error', onSelect: () => removeTrack(track) })
+  return items
+}
 
 const headerMenu = computed<DropdownMenuItem[]>(() => [
   { label: 'Edit details', icon: 'i-lucide-pencil', onSelect: openEdit },
@@ -145,18 +193,30 @@ async function copyLink() {
       </header>
 
       <div class="flex items-center gap-2 mb-4">
-        <PlayAllButton :tracks="tracks" label="Play playlist" />
+        <PlayAllButton :tracks="displayed" label="Play playlist" />
         <UButton icon="i-lucide-link" variant="ghost" color="neutral" aria-label="Copy link" title="Copy link" @click="copyLink" />
         <UDropdownMenu v-if="isOwner" :items="headerMenu">
           <UButton icon="i-heroicons-ellipsis-horizontal" variant="ghost" color="neutral" aria-label="Playlist options" />
         </UDropdownMenu>
+
+        <div v-if="tracks.length > 1" class="ml-auto flex items-center gap-2">
+          <span class="text-sm text-old-neutral-500 hidden sm:inline">Sort by</span>
+          <USelect v-model="sortBy" :items="sortItems" class="w-40" aria-label="Sort tracks by" />
+        </div>
       </div>
 
+      <p v-if="isOwner && tracks.length > 1" class="text-sm text-old-neutral-500 mb-2">
+        <template v-if="canReorder">Drag tracks to change their order.</template>
+        <template v-else>Switch to “Custom order” to rearrange tracks.</template>
+      </p>
+
       <TrackList
-        :tracks="tracks"
+        :tracks="displayed"
         show-added
+        :reorderable="canReorder"
         :row-items="rowItems"
         :empty-text="isOwner ? 'This playlist is empty. Add tracks from any track’s “…” menu.' : 'This playlist is empty.'"
+        @reorder="moveTrack"
       />
     </div>
 

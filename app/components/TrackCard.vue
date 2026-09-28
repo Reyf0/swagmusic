@@ -51,9 +51,9 @@ function handlePlay() {
 
     <div class="flex items-start gap-1 min-w-0">
       <div class="min-w-0 flex-1">
-        <p class="font-semibold truncate" :class="isCurrent ? 'text-green-500' : ''" :title="track.title">
+        <NuxtLink :to="`/tracks/${track.id}`" class="block font-semibold truncate hover:underline" :class="isCurrent ? 'text-green-500' : ''" :title="track.title">
           {{ track.title }}
-        </p>
+        </NuxtLink>
         <p class="text-sm text-old-neutral-500 dark:text-old-neutral-400 truncate">
           <TrackArtists :authors="track.authors" />
         </p>

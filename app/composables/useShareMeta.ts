@@ -1,4 +1,4 @@
-type ShareKind = 'album' | 'playlist' | 'artist'
+type ShareKind = 'track' | 'album' | 'playlist' | 'artist'
 
 export type ShareInfo = {
     title: string
@@ -8,11 +8,24 @@ export type ShareInfo = {
 }
 
 const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`
-const LABEL: Record<ShareKind, string> = { album: 'Album', playlist: 'Playlist', artist: 'Artist' }
-const OG_TYPE = { album: 'music.album', playlist: 'music.playlist', artist: 'profile' } as const
+const LABEL: Record<ShareKind, string> = { track: 'Track', album: 'Album', playlist: 'Playlist', artist: 'Artist' }
+const OG_TYPE = { track: 'music.song', album: 'music.album', playlist: 'music.playlist', artist: 'profile' } as const
 
 async function fetchShareInfo(kind: ShareKind, id: string): Promise<ShareInfo | null> {
     const supabase = useSupabase()
+    if (kind === 'track') {
+        const { data: row } = await supabase.from('tracks').select(TRACK_SELECT + ', album:albums(title)').eq('id', id).maybeSingle()
+        if (!row) return null
+        const track = toTrack(row)
+        const names = artistNames(track, '')
+        const album = (row as unknown as { album: { title: string } | null }).album?.title
+        return {
+            title: track.title,
+            subtitle: names ? `by ${names}` : undefined,
+            meta: [album, track.duration_seconds ? formatDuration(track.duration_seconds) : null].filter(Boolean).join(' · ') || undefined,
+            image: track.cover_url ?? undefined,
+        }
+    }
     if (kind === 'album') {
         const [{ data: album }, { count }] = await Promise.all([
             supabase.from('albums').select('title, cover_url, author:profiles!albums_user_id_fkey(username)').eq('id', id).maybeSingle(),

@@ -78,7 +78,12 @@ function formatDate(iso?: string | null) {
             <UIcon name="i-heroicons-musical-note" class="size-4 text-old-neutral-400" />
           </div>
           <div class="min-w-0">
-            <div class="font-medium truncate" :class="{ 'text-green-500': isCurrentTrack(track) }">{{ track.title }}</div>
+            <NuxtLink
+              :to="`/tracks/${track.id}`"
+              class="block font-medium truncate hover:underline"
+              :class="{ 'text-green-500': isCurrentTrack(track) }"
+              @click.stop
+            >{{ track.title }}</NuxtLink>
             <div class="text-sm text-old-neutral-500 truncate"><TrackArtists :authors="track.authors" /></div>
           </div>
         </div>

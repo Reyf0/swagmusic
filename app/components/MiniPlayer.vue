@@ -49,7 +49,7 @@ const repeatLabel = computed(() => ({ off: 'Repeat: off', all: 'Repeat: all', on
         <UIcon v-else name="i-heroicons-musical-note" class="text-old-neutral-400" />
       </button>
       <div class="flex flex-col min-w-0">
-        <div class="font-semibold truncate">{{ currentTrack.title }}</div>
+        <NuxtLink :to="`/tracks/${currentTrack.id}`" class="block font-semibold truncate hover:underline">{{ currentTrack.title }}</NuxtLink>
         <div class="text-sm text-old-neutral-400 truncate">
           <TrackArtists :authors="currentTrack.authors" />
         </div>

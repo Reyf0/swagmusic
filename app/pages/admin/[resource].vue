@@ -128,7 +128,7 @@ useSeoMeta({ title: () => `${meta.value.title} · Admin` })
       <UTable :data="data?.items ?? []" :columns="columns" :loading="pending">
         <template #name-cell="{ row }">
           <div class="flex items-center gap-2 min-w-0">
-            <img v-if="row.original.cover_url" :src="row.original.cover_url" alt="" class="size-9 rounded object-cover shrink-0">
+            <CoverImage v-if="row.original.cover_url" :src="row.original.cover_url" :size="48" class="size-9 rounded object-cover shrink-0" />
             <NuxtLink v-if="meta.href(row.original.id)" :to="meta.href(row.original.id)" class="font-medium hover:underline truncate">{{ nameOf(row.original) }}</NuxtLink>
             <span v-else class="font-medium truncate">{{ nameOf(row.original) }}</span>
           </div>

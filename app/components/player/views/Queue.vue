@@ -29,7 +29,7 @@ const upNext = computed(() => queue.value
     <template v-if="queue[currentTrackIndex]">
       <h3 class="text-sm font-semibold text-old-neutral-400 mb-2">Now playing</h3>
       <div class="flex items-center gap-3 p-2 rounded bg-old-neutral-800/60 mb-6">
-        <img v-if="queue[currentTrackIndex]!.cover_url" :src="queue[currentTrackIndex]!.cover_url!" alt="" class="size-12 rounded object-cover">
+        <CoverImage v-if="queue[currentTrackIndex]!.cover_url" :src="queue[currentTrackIndex]!.cover_url!" :size="48" class="size-12 rounded object-cover" />
         <div v-else class="size-12 rounded bg-old-neutral-700 flex items-center justify-center">
           <UIcon name="i-heroicons-musical-note" class="size-5 text-old-neutral-400" />
         </div>
@@ -50,7 +50,7 @@ const upNext = computed(() => queue.value
         class="group flex items-center gap-3 p-2 rounded hover:bg-old-neutral-800"
       >
         <button type="button" class="flex items-center gap-3 min-w-0 flex-1 text-left" @click="player.playAt(index)">
-          <img v-if="track.cover_url" :src="track.cover_url" alt="" class="size-12 rounded object-cover shrink-0">
+          <CoverImage v-if="track.cover_url" :src="track.cover_url" :size="48" class="size-12 rounded object-cover shrink-0" />
           <div v-else class="size-12 rounded bg-old-neutral-700 flex items-center justify-center shrink-0">
             <UIcon name="i-heroicons-musical-note" class="size-5 text-old-neutral-400" />
           </div>

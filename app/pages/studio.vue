@@ -86,7 +86,7 @@ useSeoMeta({ title: 'Studio' })
       </p>
       <ul v-else class="divide-y divide-old-neutral-200 dark:divide-old-neutral-800">
         <li v-for="track in tracks" :key="track.id" class="flex items-center gap-3 py-3">
-          <img v-if="track.cover_url" :src="track.cover_url" alt="" class="size-12 rounded object-cover shrink-0">
+          <CoverImage v-if="track.cover_url" :src="track.cover_url" :size="48" class="size-12 rounded object-cover shrink-0" />
           <div v-else class="size-12 rounded bg-old-neutral-200 dark:bg-old-neutral-800 flex items-center justify-center shrink-0">
             <UIcon name="i-heroicons-musical-note" class="size-5 text-old-neutral-400" />
           </div>
@@ -118,7 +118,7 @@ useSeoMeta({ title: 'Studio' })
         </button>
         <div v-for="album in albums" :key="album.id" class="rounded-lg p-3 bg-old-neutral-100 dark:bg-old-neutral-900">
           <NuxtLink :to="`/albums/${album.id}`" class="block aspect-square rounded-md overflow-hidden bg-old-neutral-200 dark:bg-old-neutral-800 mb-2">
-            <img v-if="album.cover_url" :src="album.cover_url" alt="" class="size-full object-cover">
+            <CoverImage v-if="album.cover_url" :src="album.cover_url" :size="320" class="size-full object-cover" />
             <div v-else class="size-full flex items-center justify-center"><UIcon name="i-lucide-disc-3" class="size-10 text-old-neutral-400" /></div>
           </NuxtLink>
           <div class="flex items-center gap-1">
@@ -138,7 +138,7 @@ useSeoMeta({ title: 'Studio' })
       <p v-if="!invites.length" class="text-center py-10 text-old-neutral-500">No pending invites. When someone credits you as a co-author, it shows up here.</p>
       <ul v-else class="divide-y divide-old-neutral-200 dark:divide-old-neutral-800">
         <li v-for="invite in invites" :key="invite.id" class="flex items-center gap-3 py-3">
-          <img v-if="invite.track?.cover_url" :src="invite.track.cover_url" alt="" class="size-12 rounded object-cover shrink-0">
+          <CoverImage v-if="invite.track?.cover_url" :src="invite.track.cover_url" :size="48" class="size-12 rounded object-cover shrink-0" />
           <div v-else class="size-12 rounded bg-old-neutral-200 dark:bg-old-neutral-800 flex items-center justify-center shrink-0">
             <UIcon name="i-heroicons-musical-note" class="size-5 text-old-neutral-400" />
           </div>

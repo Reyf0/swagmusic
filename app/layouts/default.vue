@@ -1,8 +1,5 @@
 <script setup lang="ts">
 import type { DropdownMenuItem } from '@nuxt/ui'
-import MiniPlayer from '@/components/MiniPlayer.vue'
-import PlayerViews from '@/components/player/PlayerViews.vue'
-import MobilePlayer from '@/components/player/MobilePlayer.vue'
 
 const route = useRoute()
 const toast = useToast()
@@ -359,7 +356,7 @@ const mobileSidebarAsideStyle = computed(() => sidebarTouching.value ? { transfo
       <!-- Page Content (a fullscreen player view temporarily replaces it) -->
       <main class="flex-1 overflow-y-auto overflow-x-hidden">
         <ClientOnly>
-          <PlayerViews v-if="playerStore.getFullscreenView" :view="playerStore.getFullscreenView" mode="fullscreen" />
+          <LazyPlayerViews v-if="playerStore.getFullscreenView" :view="playerStore.getFullscreenView" mode="fullscreen" />
         </ClientOnly>
         <div v-show="!playerStore.getFullscreenView">
           <slot />
@@ -380,7 +377,7 @@ const mobileSidebarAsideStyle = computed(() => sidebarTouching.value ? { transfo
           @resize="handleRightSidebarResize"
         >
           <aside class="w-full h-full border-l border-old-neutral-700 bg-old-neutral-900 text-white overflow-y-auto">
-            <PlayerViews :view="playerStore.getSidebarView" mode="sidebar" />
+            <LazyPlayerViews :view="playerStore.getSidebarView" mode="sidebar" />
           </aside>
         </ResizablePanel>
       </ClientOnly>
@@ -412,9 +409,9 @@ const mobileSidebarAsideStyle = computed(() => sidebarTouching.value ? { transfo
     <!-- PLAYER -->
     <ClientOnly>
       <div v-if="currentTrack" class="hidden md:block">
-        <MiniPlayer />
+        <LazyMiniPlayer />
       </div>
-      <MobilePlayer v-if="currentTrack" class="md:hidden" />
+      <LazyPlayerMobilePlayer v-if="currentTrack" class="md:hidden" />
     </ClientOnly>
   </div>
 </template>

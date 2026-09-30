@@ -72,12 +72,13 @@ onMounted(() => playlistsStore.load())
               :class="{ 'bg-old-neutral-800': route.path === `/playlist/${playlist.id}` }"
             >
               <div class="size-12 bg-old-neutral-700 rounded-lg flex items-center justify-center mr-3 flex-shrink-0">
-                <img
+                <CoverImage
                   v-if="playlist.cover_url"
                   :src="playlist.cover_url"
+                  :size="48"
                   :alt="playlist.name"
                   class="w-full h-full object-cover rounded-lg"
-                >
+                />
                 <UIcon v-else name="i-heroicons-musical-note" class="w-6 h-6 text-gray-400" />
               </div>
               <div class="flex-1 min-w-0">
@@ -110,12 +111,13 @@ onMounted(() => playlistsStore.load())
             :title="playlist.name"
           >
             <div class="w-6 h-6 bg-old-neutral-700 rounded flex items-center justify-center mx-auto">
-              <img
+              <CoverImage
                 v-if="playlist?.cover_url"
-                :src="playlist?.cover_url"
+                :src="playlist.cover_url"
+                :size="48"
                 :alt="playlist.name"
                 class="w-full h-full object-cover rounded"
-              >
+              />
               <UIcon v-else name="i-heroicons-musical-note" class="w-4 h-4 text-old-neutral-400" />
             </div>
           </NuxtLink>

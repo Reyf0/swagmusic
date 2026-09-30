@@ -126,7 +126,7 @@ function formatDate(iso?: string | null) {
 
         <!-- title / artists -->
         <div class="flex items-center gap-3 min-w-0">
-          <img v-if="track.cover_url" :src="track.cover_url" alt="" class="size-10 rounded object-cover shrink-0" loading="lazy">
+          <CoverImage v-if="track.cover_url" :src="track.cover_url" :size="48" class="size-10 rounded object-cover shrink-0" />
           <div v-else class="size-10 rounded bg-old-neutral-200 dark:bg-old-neutral-800 flex items-center justify-center shrink-0">
             <UIcon name="i-heroicons-musical-note" class="size-4 text-old-neutral-400" />
           </div>

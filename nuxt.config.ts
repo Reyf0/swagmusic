@@ -2,6 +2,11 @@
 
 const env = process.env
 
+const supabaseUrl = env.NUXT_PUBLIC_SUPABASE_URL || env.SUPABASE_URL || env.NEXT_PUBLIC_SUPABASE_URL
+const supabaseHost = supabaseUrl ? new URL(supabaseUrl).host : undefined
+// Error reporting is only bundled when a DSN is configured (it adds ~50 KB gzipped to every page).
+const sentryDsn = env.NUXT_PUBLIC_SENTRY_DSN || env.SENTRY_DSN || ''
+
 export default defineNuxtConfig({
     compatibilityDate: '2025-05-15',
 
@@ -25,7 +30,7 @@ export default defineNuxtConfig({
         '@nuxt/test-utils/module',
         '@nuxt/ui',
         '@pinia/nuxt',
-        '@sentry/nuxt/module',
+        ...(sentryDsn ? ['@sentry/nuxt/module'] : []),
         '@nuxtjs/seo',
         '@nuxt/hints',
         '@vercel/analytics/nuxt'
@@ -38,9 +43,9 @@ export default defineNuxtConfig({
         supabaseSecretKey: env.SUPABASE_SECRET_KEY || env.SUPABASE_API_SECRET_KEY || env.SUPABASE_SERVICE_ROLE_KEY,
 
         public: {
-            supabaseUrl: env.NUXT_PUBLIC_SUPABASE_URL || env.SUPABASE_URL || env.NEXT_PUBLIC_SUPABASE_URL,
+            supabaseUrl,
             supabaseKey: env.NUXT_PUBLIC_SUPABASE_KEY || env.SUPABASE_PUBLISHABLE_KEY || env.NUXT_PUBLIC_SUPABASE_ANON_KEY || env.SUPABASE_KEY || env.SUPABASE_ANON_KEY || env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
-            sentryDsn: env.NUXT_PUBLIC_SENTRY_DSN || env.SENTRY_DSN || ''
+            sentryDsn
         }
     },
 
@@ -71,6 +76,20 @@ export default defineNuxtConfig({
 
     icon: {
         cssLayer: 'icon'
+    },
+
+    // Covers and avatars are resized / re-encoded by the host's image optimizer (Vercel in production,
+    // IPX locally). Vercel only serves widths listed in `screens`: <CoverImage> sizes plus their 2x.
+    image: {
+        domains: supabaseHost ? [supabaseHost] : [],
+        screens: {
+            thumb: 48, thumb2x: 96, card: 160,
+            xs: 320, sm: 640, md: 768, lg: 1024, xl: 1280, xxl: 1536,
+        },
+        vercel: {
+            // Uploads get unique file names (avatars a ?t= version), so cached results never go stale.
+            minimumCacheTTL: 60 * 60 * 24 * 30,
+        },
     },
 
     app: {
@@ -107,15 +126,17 @@ export default defineNuxtConfig({
         dirs: ['stores']
     },
 
-    sentry: {
-        sourceMapsUploadOptions: {
-            org: 'reyf-org',
-            project: 'javascript-nuxt'
+    // Hidden source maps are uploaded to Sentry by its module.
+    ...(sentryDsn ? {
+        sentry: {
+            sourceMapsUploadOptions: {
+                org: 'reyf-org',
+                project: 'javascript-nuxt'
+            },
+            autoInjectServerSentry: 'top-level-import' as const
         },
-        autoInjectServerSentry: 'top-level-import'
-    },
-
-    sourcemap: {
-        client: 'hidden'
-    }
+        sourcemap: {
+            client: 'hidden' as const
+        }
+    } : {}),
 })

@@ -72,7 +72,7 @@ const sheetStyle = computed(() => dragY.value
       <div class="absolute top-0 left-0 h-0.5 bg-green-500" :style="{ width: `${progress}%` }" />
       <div class="flex items-center gap-3 px-3 py-2">
         <button type="button" class="flex items-center gap-3 min-w-0 flex-1 text-left" aria-label="Open player" @click="open">
-          <img v-if="currentTrack.cover_url" :src="currentTrack.cover_url" alt="" class="size-11 rounded-md object-cover shrink-0">
+          <CoverImage v-if="currentTrack.cover_url" :src="currentTrack.cover_url" :size="48" priority class="size-11 rounded-md object-cover shrink-0" />
           <div v-else class="size-11 rounded-md bg-old-neutral-300 dark:bg-old-neutral-800 flex items-center justify-center shrink-0">
             <UIcon name="i-heroicons-musical-note" class="size-5 text-old-neutral-500" />
           </div>
@@ -128,12 +128,13 @@ const sheetStyle = computed(() => dragY.value
           <div data-scroll class="flex-1 overflow-y-auto">
             <div v-if="tab === 'player'" class="flex flex-col h-full px-6 pb-8 pt-4">
               <div class="flex-1 flex items-center justify-center min-h-0">
-                <img
+                <CoverImage
                   v-if="currentTrack.cover_url"
                   :src="currentTrack.cover_url"
-                  alt=""
+                  :size="640"
+                  priority
                   class="w-full max-w-sm aspect-square object-cover rounded-xl shadow-2xl"
-                >
+                />
                 <div v-else class="w-full max-w-sm aspect-square rounded-xl bg-old-neutral-200 dark:bg-old-neutral-800 flex items-center justify-center">
                   <UIcon name="i-heroicons-musical-note" class="size-20 text-old-neutral-400" />
                 </div>

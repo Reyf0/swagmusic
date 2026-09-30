@@ -175,8 +175,8 @@ async function copyLink() {
     <div v-else-if="playlist">
       <header class="flex flex-col md:flex-row md:items-end gap-6 mb-6">
         <div class="size-48 shrink-0 mx-auto md:mx-0 rounded-md shadow-lg overflow-hidden bg-old-neutral-200 dark:bg-old-neutral-800 flex items-center justify-center">
-          <img v-if="playlist.cover_url" :src="playlist.cover_url" class="size-full object-cover" alt="">
-          <img v-else-if="tracks[0]?.cover_url" :src="tracks[0].cover_url" class="size-full object-cover" alt="">
+          <CoverImage v-if="playlist.cover_url" :src="playlist.cover_url" :size="320" priority class="size-full object-cover" />
+          <CoverImage v-else-if="tracks[0]?.cover_url" :src="tracks[0].cover_url" :size="320" priority class="size-full object-cover" />
           <UIcon v-else name="i-heroicons-musical-note" class="size-16 text-old-neutral-400" />
         </div>
 

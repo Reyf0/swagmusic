@@ -58,7 +58,7 @@ useShareMeta('album', share)
     <template v-else-if="album">
       <header class="flex flex-col md:flex-row md:items-end gap-6 mb-6">
         <div class="size-48 shrink-0 mx-auto md:mx-0 rounded-md shadow-lg overflow-hidden bg-old-neutral-200 dark:bg-old-neutral-800 flex items-center justify-center">
-          <img v-if="album.cover_url" :src="album.cover_url" class="size-full object-cover" alt="">
+          <CoverImage v-if="album.cover_url" :src="album.cover_url" :size="320" priority class="size-full object-cover" />
           <UIcon v-else name="i-lucide-disc-3" class="size-16 text-old-neutral-400" />
         </div>
         <div class="min-w-0">

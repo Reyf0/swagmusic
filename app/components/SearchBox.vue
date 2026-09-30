@@ -218,7 +218,7 @@ const artistName = (a: { username: string | null; full_name: string | null }) =>
             @click="select(items[indexOf(`rt-${track.id}`)])"
           >
             <div class="size-10 shrink-0 rounded bg-old-neutral-200 dark:bg-old-neutral-700 overflow-hidden flex items-center justify-center">
-              <img v-if="track.cover_url" :src="track.cover_url" alt="" class="size-full object-cover">
+              <CoverImage v-if="track.cover_url" :src="track.cover_url" :size="48" class="size-full object-cover" />
               <UIcon v-else name="i-heroicons-musical-note" class="size-5 text-old-neutral-400" />
             </div>
             <div class="min-w-0 flex-1">
@@ -249,7 +249,7 @@ const artistName = (a: { username: string | null; full_name: string | null }) =>
             @click="select(items[indexOf(`t-${track.id}`)])"
           >
             <div class="size-10 shrink-0 rounded bg-old-neutral-200 dark:bg-old-neutral-700 overflow-hidden flex items-center justify-center">
-              <img v-if="track.cover_url" :src="track.cover_url" alt="" class="size-full object-cover">
+              <CoverImage v-if="track.cover_url" :src="track.cover_url" :size="48" class="size-full object-cover" />
               <UIcon v-else name="i-heroicons-musical-note" class="size-5 text-old-neutral-400" />
             </div>
             <div class="min-w-0 flex-1">
@@ -293,7 +293,7 @@ const artistName = (a: { username: string | null; full_name: string | null }) =>
             @click="select(items[indexOf(`al-${a.id}`)])"
           >
             <div class="size-10 shrink-0 rounded bg-old-neutral-200 dark:bg-old-neutral-700 overflow-hidden flex items-center justify-center">
-              <img v-if="a.cover_url" :src="a.cover_url" alt="" class="size-full object-cover">
+              <CoverImage v-if="a.cover_url" :src="a.cover_url" :size="48" class="size-full object-cover" />
               <UIcon v-else name="i-lucide-disc-3" class="size-5 text-old-neutral-400" />
             </div>
             <div class="min-w-0 flex-1">
@@ -317,7 +317,7 @@ const artistName = (a: { username: string | null; full_name: string | null }) =>
             @click="select(items[indexOf(`p-${p.id}`)])"
           >
             <div class="size-10 shrink-0 rounded bg-old-neutral-200 dark:bg-old-neutral-700 overflow-hidden flex items-center justify-center">
-              <img v-if="p.cover_url" :src="p.cover_url" alt="" class="size-full object-cover">
+              <CoverImage v-if="p.cover_url" :src="p.cover_url" :size="48" class="size-full object-cover" />
               <UIcon v-else name="i-lucide-list-music" class="size-5 text-old-neutral-400" />
             </div>
             <div class="min-w-0 flex-1">

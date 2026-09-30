@@ -81,7 +81,7 @@ useShareMeta('track', share)
     <template v-else-if="track">
       <header class="flex flex-col md:flex-row md:items-end gap-6 mb-6">
         <div class="size-48 md:size-56 shrink-0 mx-auto md:mx-0 rounded-md shadow-lg overflow-hidden bg-old-neutral-200 dark:bg-old-neutral-800 flex items-center justify-center">
-          <img v-if="track.cover_url" :src="track.cover_url" class="size-full object-cover" :alt="`Cover for ${track.title}`">
+          <CoverImage v-if="track.cover_url" :src="track.cover_url" :size="320" priority class="size-full object-cover" :alt="`Cover for ${track.title}`" />
           <UIcon v-else name="i-heroicons-musical-note" class="size-16 text-old-neutral-400" />
         </div>
 

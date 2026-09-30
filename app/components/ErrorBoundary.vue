@@ -1,16 +1,15 @@
 <script setup lang="ts">
-import * as Sentry from '@sentry/nuxt'
-
 // Catches render errors below it and shows a recovery screen instead of a blank page.
 const isDev = import.meta.dev
+const { sentryDsn } = useRuntimeConfig().public
 const route = useRoute()
 
 const error = ref<{ message: string; stack?: string } | null>(null)
 
 onErrorCaptured((err: unknown, _instance, info: string) => {
   console.error('Error captured by ErrorBoundary:', err, info)
-  // Returning false stops propagation, so report to Sentry here.
-  Sentry.captureException(err, { extra: { info } })
+  // Returning false stops propagation, so report to Sentry here (loaded only when configured and needed).
+  if (sentryDsn) import('@sentry/nuxt').then(Sentry => Sentry.captureException(err, { extra: { info } }))
   error.value = {
     message: (err as any)?.message ?? String(err ?? 'Unknown error'),
     stack: (err as any)?.stack,

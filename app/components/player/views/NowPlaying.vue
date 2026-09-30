@@ -23,6 +23,8 @@ watch(() => track.value?.album_id, async (albumId) => {
 }, { immediate: true })
 
 const imgEl = ref<HTMLImageElement | null>(null)
+// A plain <img> (the dominant colour is read from it), with a resized cover from the image optimizer.
+const img = useImage()
 const { color } = useDominantColorFromImg(imgEl, { sampleSize: 900, k: 3, saturationThreshold: 0.5 })
 
 const uploadedAt = computed(() => track.value?.created_at
@@ -77,7 +79,7 @@ const uploadedAt = computed(() => track.value?.created_at
           <img
             v-if="track.cover_url"
             ref="imgEl"
-            :src="track.cover_url"
+            :src="img(track.cover_url, { width: 640, format: 'webp' })"
             class="size-full object-cover"
             alt="Cover"
             crossorigin="anonymous"
@@ -137,7 +139,7 @@ const uploadedAt = computed(() => track.value?.created_at
             class="flex items-center gap-3 w-full text-left rounded p-1 hover:bg-old-neutral-700"
             @click="player.playAt(nextIndex)"
           >
-            <img v-if="nextTrack.cover_url" :src="nextTrack.cover_url" alt="" class="size-12 rounded object-cover">
+            <CoverImage v-if="nextTrack.cover_url" :src="nextTrack.cover_url" :size="48" class="size-12 rounded object-cover" />
             <div v-else class="size-12 rounded bg-old-neutral-700 flex items-center justify-center">
               <UIcon name="i-heroicons-musical-note" class="size-5 text-old-neutral-400" />
             </div>

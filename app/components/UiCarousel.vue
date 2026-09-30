@@ -3,6 +3,8 @@ import type { Track } from '#shared/types'
 
 defineProps<{
   tracks: Track[]
+  /** The carousel is at the top of the page: load the first covers first (LCP). */
+  priority?: boolean
 }>()
 
 const carousel = ref<HTMLElement | null>(null)
@@ -26,9 +28,10 @@ function scrollCarousel(direction: 'left' | 'right') {
     </button>
     <div ref="carousel" class="flex gap-4 overflow-x-auto scrollbar-hide pr-6 snap-x">
       <TrackCard
-        v-for="track in tracks"
+        v-for="(track, i) in tracks"
         :key="track.id"
         :track="track"
+        :priority="priority && i < 3"
         :tracks="tracks"
         variant="carousel"
         class="snap-start"

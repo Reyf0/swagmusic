@@ -6,11 +6,14 @@ interface Props {
   /** List the track belongs to; becomes the play queue. */
   tracks?: Track[]
   variant?: 'carousel' | 'grid'
+  /** Above the fold on page load: load the cover first. */
+  priority?: boolean
 }
 
 const props = withDefaults(defineProps<Props>(), {
   variant: 'carousel',
-  tracks: () => []
+  tracks: () => [],
+  priority: false
 })
 
 const { playTrack, isCurrentTrack, isTrackPlaying } = usePlayTrack()
@@ -29,13 +32,14 @@ function handlePlay() {
     :class="variant === 'carousel' ? 'w-44 shrink-0' : 'w-full'"
   >
     <div class="relative aspect-square overflow-hidden rounded-md shadow-md mb-3 bg-old-neutral-200 dark:bg-old-neutral-800 flex items-center justify-center">
-      <img
+      <CoverImage
         v-if="track.cover_url"
         :src="track.cover_url"
+        :size="variant === 'carousel' ? 160 : 320"
         :alt="`Cover for ${track.title}`"
+        :priority="priority"
         class="size-full object-cover"
-        loading="lazy"
-      >
+      />
       <UIcon v-else name="i-heroicons-musical-note" class="size-10 text-old-neutral-400" />
 
       <button

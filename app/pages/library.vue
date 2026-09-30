@@ -98,7 +98,7 @@ useSeoMeta({ title: 'Your library' })
           class="group rounded-lg p-3 bg-old-neutral-100 hover:bg-old-neutral-200 dark:bg-old-neutral-900 dark:hover:bg-old-neutral-800 transition"
         >
           <div class="aspect-square rounded-md overflow-hidden bg-old-neutral-200 dark:bg-old-neutral-800 flex items-center justify-center mb-2">
-            <img v-if="playlist.cover_url" :src="playlist.cover_url" alt="" class="size-full object-cover">
+            <CoverImage v-if="playlist.cover_url" :src="playlist.cover_url" :size="320" class="size-full object-cover" />
             <UIcon v-else name="i-heroicons-musical-note" class="size-10 text-old-neutral-400" />
           </div>
           <div class="font-semibold truncate">{{ playlist.name }}</div>

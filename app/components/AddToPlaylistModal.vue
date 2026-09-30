@@ -64,7 +64,7 @@ async function createAndAdd() {
             :disabled="busy"
             @click="addTo(playlist.id)"
           >
-            <img v-if="playlist.cover_url" :src="playlist.cover_url" alt="" class="size-10 rounded object-cover">
+            <CoverImage v-if="playlist.cover_url" :src="playlist.cover_url" :size="48" class="size-10 rounded object-cover" />
             <div v-else class="size-10 rounded bg-elevated flex items-center justify-center">
               <UIcon name="i-heroicons-musical-note" class="size-5 text-muted" />
             </div>

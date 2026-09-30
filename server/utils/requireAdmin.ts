@@ -5,7 +5,7 @@ import { createServerClient } from '@supabase/ssr'
 type H3Event = Parameters<typeof getHeader>[0]
 
 /** The signed-in user of the request: from `Authorization: Bearer <jwt>` or the session cookies. */
-async function getRequestUser(event: H3Event): Promise<User | null> {
+export async function getRequestUser(event: H3Event): Promise<User | null> {
     const token = getHeader(event, 'authorization')?.replace(/^Bearer\s+/i, '')
     if (token) {
         const { data } = await useSupabaseAdmin().auth.getUser(token)

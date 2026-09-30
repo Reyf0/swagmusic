@@ -143,10 +143,15 @@ const rowItems = (track: Track, index: number): DropdownMenuItem[] => {
   return items
 }
 
-const headerMenu = computed<DropdownMenuItem[]>(() => [
-  { label: 'Edit details', icon: 'i-lucide-pencil', onSelect: openEdit },
-  { label: 'Delete playlist', icon: 'i-lucide-trash-2', color: 'error', onSelect: () => { deleteOpen.value = true } },
-])
+const reportSubject = useReportSubject()
+const headerMenu = computed<DropdownMenuItem[]>(() => isOwner.value
+  ? [
+      { label: 'Edit details', icon: 'i-lucide-pencil', onSelect: openEdit },
+      { label: 'Delete playlist', icon: 'i-lucide-trash-2', color: 'error', onSelect: () => { deleteOpen.value = true } },
+    ]
+  : [
+      { label: 'Report playlist', icon: 'i-lucide-flag', onSelect: () => { if (playlist.value) reportSubject.value = { type: 'playlist', id: playlist.value.id, title: playlist.value.name } } },
+    ])
 
 async function copyLink() {
   try {
@@ -191,7 +196,7 @@ async function copyLink() {
       <div class="flex items-center gap-2 mb-4">
         <PlayAllButton :tracks="displayed" label="Play playlist" />
         <UButton icon="i-lucide-link" variant="ghost" color="neutral" aria-label="Copy link" title="Copy link" @click="copyLink" />
-        <UDropdownMenu v-if="isOwner" :items="headerMenu">
+        <UDropdownMenu :items="headerMenu">
           <UButton icon="i-heroicons-ellipsis-horizontal" variant="ghost" color="neutral" aria-label="Playlist options" />
         </UDropdownMenu>
 

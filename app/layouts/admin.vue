@@ -1,13 +1,22 @@
 <script setup lang="ts">
 const profileStore = useProfileStore()
 
-const nav = [
+const supabase = useSupabase()
+const feedbackCount = useAdminFeedbackCount()
+
+const nav = computed(() => [
   { label: 'Dashboard', icon: 'i-heroicons-home', to: '/admin' },
   { label: 'Users', icon: 'i-heroicons-users', to: '/admin/users' },
   { label: 'Tracks', icon: 'i-heroicons-musical-note', to: '/admin/tracks' },
   { label: 'Albums', icon: 'i-lucide-disc-3', to: '/admin/albums' },
   { label: 'Playlists', icon: 'i-heroicons-queue-list', to: '/admin/playlists' },
-]
+  { label: 'Feedback', icon: 'i-lucide-inbox', to: '/admin/feedback', badge: feedbackCount.value || undefined },
+])
+
+onMounted(async () => {
+  const { count } = await supabase.from('feedback').select('id', { count: 'exact', head: true }).eq('status', 'new')
+  feedbackCount.value = count ?? 0
+})
 
 async function logout() {
   await profileStore.signOut()
@@ -27,7 +36,7 @@ async function logout() {
       </div>
       <nav class="md:hidden flex gap-1 overflow-x-auto px-2 pb-2">
         <UButton v-for="item in nav" :key="item.to" :to="item.to" :icon="item.icon" size="sm" color="neutral" variant="ghost" active-variant="soft" :exact="item.to === '/admin'">
-          {{ item.label }}
+          {{ item.label }}<UBadge v-if="item.badge" color="error" size="sm" class="ml-auto">{{ item.badge }}</UBadge>
         </UButton>
       </nav>
     </header>
@@ -46,7 +55,7 @@ async function logout() {
             class="justify-start"
             :exact="item.to === '/admin'"
           >
-            {{ item.label }}
+            {{ item.label }}<UBadge v-if="item.badge" color="error" size="sm" class="ml-auto">{{ item.badge }}</UBadge>
           </UButton>
         </nav>
       </aside>

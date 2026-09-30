@@ -77,6 +77,68 @@ export type Database = {
           },
         ]
       }
+      feedback: {
+        Row: {
+          admin_note: string | null
+          created_at: string
+          email: string | null
+          id: string
+          ip_hash: string | null
+          kind: string
+          message: string
+          page_url: string | null
+          report_reason: string | null
+          resolved_at: string | null
+          status: string
+          target_id: string | null
+          target_type: string | null
+          user_agent: string | null
+          user_id: string | null
+        }
+        Insert: {
+          admin_note?: string | null
+          created_at?: string
+          email?: string | null
+          id?: string
+          ip_hash?: string | null
+          kind: string
+          message: string
+          page_url?: string | null
+          report_reason?: string | null
+          resolved_at?: string | null
+          status?: string
+          target_id?: string | null
+          target_type?: string | null
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          admin_note?: string | null
+          created_at?: string
+          email?: string | null
+          id?: string
+          ip_hash?: string | null
+          kind?: string
+          message?: string
+          page_url?: string | null
+          report_reason?: string | null
+          resolved_at?: string | null
+          status?: string
+          target_id?: string | null
+          target_type?: string | null
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "feedback_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       genres: {
         Row: {
           created_at: string | null

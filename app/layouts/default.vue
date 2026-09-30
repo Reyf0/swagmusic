@@ -36,6 +36,9 @@ const sidebarStartX = ref(0)
 const sidebarDrag = ref(0)
 const SIDEBAR_CLOSE_THRESHOLD = -80
 
+// The feedback form remembers which page it was opened from.
+const feedbackLink = computed(() => route.path === '/feedback' ? '/feedback' : `/feedback?from=${encodeURIComponent(route.fullPath)}`)
+
 /* Profile dropdown items */
 const profileDropdownMenuItems = computed<DropdownMenuItem[][]>(() => {
   const groups: DropdownMenuItem[][] = [
@@ -45,6 +48,7 @@ const profileDropdownMenuItems = computed<DropdownMenuItem[][]>(() => {
       { label: pendingInviteCount.value ? `Studio (${pendingInviteCount.value})` : 'Studio', icon: 'i-lucide-audio-lines', to: '/studio' },
       { label: 'Settings', icon: 'i-lucide-settings', to: '/settings' },
       { label: 'Keyboard shortcuts', icon: 'i-lucide-keyboard', kbds: ['?'], onSelect: () => { shortcutsOpen.value = true } },
+      { label: 'Send feedback', icon: 'i-lucide-message-square-text', to: feedbackLink.value },
     ],
   ]
   if (isAdmin.value) groups.push([{ label: 'Admin', icon: 'i-lucide-shield', to: '/admin' }])
@@ -293,7 +297,7 @@ const mobileSidebarAsideStyle = computed(() => sidebarTouching.value ? { transfo
                   <template v-for="(group, gIdx) in profileDropdownMenuItems" :key="gIdx">
                     <template v-for="item in group" :key="item.label">
                       <NuxtLink v-if="item.to" :to="item.to" class="block px-3 py-2 rounded-md hover:bg-old-neutral-800">{{ item.label }}</NuxtLink>
-                      <button v-else type="button" class="w-full text-left px-3 py-2 rounded-md hover:bg-old-neutral-800" @click="signOut">{{ item.label }}</button>
+                      <button v-else type="button" class="w-full text-left px-3 py-2 rounded-md hover:bg-old-neutral-800" @click="mobileMenuOpen = false; item.onSelect?.($event)">{{ item.label }}</button>
                     </template>
                   </template>
                 </div>
@@ -302,6 +306,7 @@ const mobileSidebarAsideStyle = computed(() => sidebarTouching.value ? { transfo
               <template v-else>
                 <NuxtLink to="/register" class="px-3 py-2 rounded-md hover:bg-old-neutral-800">Register</NuxtLink>
                 <NuxtLink to="/login" class="px-3 py-2 rounded-md hover:bg-old-neutral-800">Log in</NuxtLink>
+                <NuxtLink :to="feedbackLink" class="px-3 py-2 rounded-md hover:bg-old-neutral-800">Send feedback</NuxtLink>
               </template>
 
               <div class="mt-4 px-1">

@@ -35,6 +35,7 @@ function retry() {
       <div class="mt-4 flex flex-wrap gap-3">
         <UButton @click="retry">Try again</UButton>
         <UButton variant="outline" color="neutral" to="/">Go home</UButton>
+        <UButton variant="ghost" color="neutral" icon="i-lucide-bug" :to="`/feedback?kind=bug&from=${encodeURIComponent(route.fullPath)}`">Report this problem</UButton>
       </div>
 
       <div class="mt-5 text-sm">

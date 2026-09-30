@@ -46,6 +46,7 @@ useSeoMeta({ title: () => (is404.value ? 'Page not found' : 'Error') })
           <div class="mt-4 flex flex-wrap gap-3">
             <UButton @click="clearError({ redirect: $route.fullPath })">Try again</UButton>
             <UButton variant="outline" color="neutral" @click="clearError({ redirect: '/' })">Go home</UButton>
+            <UButton variant="ghost" color="neutral" icon="i-lucide-bug" @click="clearError({ redirect: `/feedback?kind=bug&from=${encodeURIComponent($route.fullPath)}` })">Report this problem</UButton>
           </div>
 
           <div v-if="errorMessage" class="mt-5 text-sm">

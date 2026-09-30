@@ -9,6 +9,8 @@ type AlbumRow = Album & { author: { id: string; username: string | null; avatar_
 const route = useRoute()
 const supabase = useSupabase()
 const likesStore = useLikesStore()
+const user = useSupabaseUser()
+const reportSubject = useReportSubject()
 
 const albumId = computed(() => String(route.params.id))
 
@@ -72,7 +74,18 @@ onMounted(() => watch(() => tracks.value.map(t => t.id), ids => likesStore.fetch
         </div>
       </header>
 
-      <PlayAllButton :tracks="tracks" label="Play album" class="mb-4" />
+      <div class="flex items-center gap-2 mb-4">
+        <PlayAllButton :tracks="tracks" label="Play album" />
+        <UButton
+          v-if="album.user_id !== user?.id"
+          icon="i-lucide-flag"
+          variant="ghost"
+          color="neutral"
+          aria-label="Report album"
+          title="Report album"
+          @click="reportSubject = { type: 'album', id: album.id, title: album.title }"
+        />
+      </div>
 
       <TrackList :tracks="tracks" empty-text="This album has no tracks yet." />
     </template>

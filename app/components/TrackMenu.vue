@@ -2,7 +2,7 @@
 import type { DropdownMenuItem } from '@nuxt/ui'
 import type { Track } from '#shared/types'
 
-// "…" menu for a track: queue actions, add to playlist, go to artist.
+// "…" menu for a track: queue actions, add to playlist, go to artist, report.
 const props = defineProps<{
   track: Track
   /** Extra items shown at the end, e.g. "Remove from this playlist". */
@@ -11,6 +11,8 @@ const props = defineProps<{
 
 const playerStore = usePlayerStore()
 const playlistsStore = usePlaylistsStore()
+const reportSubject = useReportSubject()
+const user = useSupabaseUser()
 
 const items = computed<DropdownMenuItem[][]>(() => {
   const groups: DropdownMenuItem[][] = [
@@ -29,6 +31,10 @@ const items = computed<DropdownMenuItem[][]>(() => {
     })))
   }
   if (props.extraItems?.length) groups.push(props.extraItems)
+  // Not on your own uploads.
+  if (props.track.user_id !== user.value?.id) {
+    groups.push([{ label: 'Report', icon: 'i-lucide-flag', onSelect: () => { reportSubject.value = { type: 'track', id: props.track.id, title: props.track.title } } }])
+  }
   return groups
 })
 </script>

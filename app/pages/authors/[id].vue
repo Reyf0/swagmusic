@@ -8,6 +8,8 @@ definePageMeta({ validate: route => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-
 const route = useRoute()
 const supabase = useSupabase()
 const likesStore = useLikesStore()
+const user = useSupabaseUser()
+const reportSubject = useReportSubject()
 
 const artistId = computed(() => String(route.params.id))
 
@@ -75,7 +77,18 @@ onMounted(() => watch(() => tracks.value.map(t => t.id), ids => likesStore.fetch
         </div>
       </header>
 
-      <PlayAllButton :tracks="tracks" label="Play all tracks" class="mb-6" />
+      <div class="flex items-center gap-2 mb-6">
+        <PlayAllButton :tracks="tracks" label="Play all tracks" />
+        <UButton
+          v-if="artist.id !== user?.id"
+          icon="i-lucide-flag"
+          variant="ghost"
+          color="neutral"
+          aria-label="Report artist"
+          title="Report artist"
+          @click="reportSubject = { type: 'artist', id: artist.id, title: displayName }"
+        />
+      </div>
 
       <section class="mb-10">
         <h2 class="text-xl font-bold mb-3">Tracks</h2>

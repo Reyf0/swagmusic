@@ -195,7 +195,7 @@ useSeoMeta({ title: 'Users · Admin' })
     <UModal
       :open="!!deleting"
       title="Delete user?"
-      :description="`${deleting?.username || deleting?.email} and their sign-in will be removed permanently.`"
+      :description="`${deleting?.username || deleting?.email} will be removed permanently together with their tracks, albums, playlists, likes, listening history and uploaded files. Their tracks also disappear from other people's playlists.`"
       @update:open="(v: boolean) => { if (!v) deleting = null }"
     >
       <template #footer>

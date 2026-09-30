@@ -1,6 +1,9 @@
 <script setup lang="ts">
 import type { Track } from '#shared/types'
 
+// Ids are UUIDs; anything else is an unknown page (404) rather than a database error.
+definePageMeta({ validate: route => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(route.params.id)) })
+
 // Track page: cover, artists, album, lyrics and more tracks by the same artist.
 type TrackRow = Track & { album: { id: string; title: string } | null }
 
@@ -10,40 +13,10 @@ const likesStore = useLikesStore()
 const { playTrack, isTrackPlaying } = usePlayTrack()
 
 const trackId = computed(() => String(route.params.id))
-const track = ref<TrackRow | null>(null)
-const moreByArtist = ref<Track[]>([])
-const isLoading = ref(true)
-const error = ref<string | null>(null)
 
-async function load() {
-  isLoading.value = true
-  error.value = null
-  moreByArtist.value = []
-  try {
-    const { data, error: loadError } = await supabase
-      .from('tracks')
-      .select(`${TRACK_SELECT}, lyrics, album:albums(id, title)`)
-      .eq('id', trackId.value)
-      .maybeSingle()
-    if (loadError) throw loadError
-    if (!data) {
-      error.value = 'Track not found'
-      return
-    }
-    track.value = { ...toTrack(data), album: (data as any).album ?? null }
-    likesStore.fetchLikes([track.value.id])
-    loadMoreByArtist(track.value)
-  } catch (e: any) {
-    console.error('Error loading track', e)
-    error.value = 'Failed to load track'
-  } finally {
-    isLoading.value = false
-  }
-}
-
-async function loadMoreByArtist(t: Track) {
+async function loadMoreByArtist(t: Track): Promise<Track[]> {
   const artist = t.authors[0]
-  if (!artist) return
+  if (!artist) return []
   const { data } = await supabase
     .from('track_authors')
     .select(`track:tracks(${TRACK_SELECT})`)
@@ -51,12 +24,37 @@ async function loadMoreByArtist(t: Track) {
     .in('status', CREDITED_STATUSES)
     .neq('track_id', t.id)
     .limit(5)
-  if (track.value?.id !== t.id) return
-  moreByArtist.value = toTracks((data ?? []).map((c: any) => c.track))
-  likesStore.fetchLikes(moreByArtist.value.map(x => x.id))
+  return toTracks((data ?? []).map((c: any) => c.track))
 }
 
-watch(trackId, load, { immediate: true })
+// Loaded during the server render (the page is in the HTML for visitors and search engines).
+const pageData = useAsyncData(`track-page-${trackId.value}`, async () => {
+  const { data, error } = await supabase
+    .from('tracks')
+    .select(`${TRACK_SELECT}, lyrics, album:albums(id, title)`)
+    .eq('id', trackId.value)
+    .maybeSingle()
+  if (error) throw error
+  if (!data) return null
+  const track: TrackRow = { ...toTrack(data), album: (data as any).album ?? null }
+  return { track, moreByArtist: await loadMoreByArtist(track) }
+})
+
+// Title, description and link preview, fetched in parallel with the page.
+const share = await useShareInfo('track', trackId)
+useShareMeta('track', share)
+
+const { data, status, error: loadError } = await pageData
+if (!data.value && !loadError.value) notFound()
+if (loadError.value) console.error('Error loading track', loadError.value)
+
+const track = computed(() => data.value?.track ?? null)
+const moreByArtist = computed(() => data.value?.moreByArtist ?? [])
+const isLoading = computed(() => status.value === 'pending' && !data.value)
+const error = computed(() => loadError.value ? 'Failed to load track' : !data.value ? 'Track not found' : null)
+
+// Liked state is per viewer, so it is fetched in the browser.
+onMounted(() => watch(() => [track.value, ...moreByArtist.value].filter(Boolean).map(t => t!.id), ids => likesStore.fetchLikes(ids), { immediate: true }))
 
 const year = computed(() => track.value?.created_at ? new Date(track.value.created_at).getFullYear() : null)
 const playing = computed(() => !!track.value && isTrackPlaying(track.value))
@@ -64,10 +62,6 @@ const playing = computed(() => !!track.value && isTrackPlaying(track.value))
 function play() {
   if (track.value) playTrack(track.value, [track.value, ...moreByArtist.value])
 }
-
-// Title, description and link preview (resolved during SSR).
-const share = await useShareInfo('track', trackId)
-useShareMeta('track', share)
 </script>
 
 <template>

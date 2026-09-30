@@ -3,6 +3,9 @@ import type { DropdownMenuItem } from '@nuxt/ui'
 import type { Track } from '#shared/types'
 import type { PlaylistWithMeta } from '@/composables/usePlaylistsApi'
 
+// Ids are UUIDs; anything else is an unknown page (404) rather than a database error.
+definePageMeta({ validate: route => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(route.params.id)) })
+
 const route = useRoute()
 const toast = useToast()
 const user = useSupabaseUser()
@@ -11,36 +14,31 @@ const playlistsStore = usePlaylistsStore()
 const likesStore = useLikesStore()
 
 const playlistId = computed(() => String(route.params.id))
-const playlist = ref<PlaylistWithMeta | null>(null)
-const tracks = ref<(Track & { position: number; added_at: string | null })[]>([])
-const isLoading = ref(true)
-const error = ref<string | null>(null)
+
+// Loaded during the server render (the page is in the HTML for visitors and search engines).
+const pageData = useAsyncData(`playlist-page-${playlistId.value}`, async () => {
+  const [playlist, tracks] = await Promise.all([api.getPlaylist(playlistId.value), api.getPlaylistTracks(playlistId.value)])
+  return playlist ? { playlist, tracks } : null
+})
+
+// Title, description and link preview, fetched in parallel with the page.
+const share = await useShareInfo('playlist', playlistId)
+useShareMeta('playlist', share)
+
+const { data, error: loadError } = await pageData
+if (!data.value && !loadError.value) notFound()
+if (loadError.value) console.error('Error fetching playlist:', loadError.value)
+
+// Editable copies: the owner renames, removes and reorders in place.
+const playlist = ref<PlaylistWithMeta | null>(data.value?.playlist ?? null)
+const tracks = ref<(Track & { position: number; added_at: string | null })[]>(data.value?.tracks ?? [])
+const error = computed(() => loadError.value ? 'Failed to load playlist' : !playlist.value ? 'Playlist not found' : null)
 
 const isOwner = computed(() => !!user.value && playlist.value?.user_id === user.value.id)
 const totalDuration = computed(() => tracks.value.reduce((sum, t) => sum + (t.duration_seconds ?? 0), 0))
 
-async function fetchPlaylist() {
-  isLoading.value = true
-  error.value = null
-  try {
-    const [p, t] = await Promise.all([api.getPlaylist(playlistId.value), api.getPlaylistTracks(playlistId.value)])
-    playlist.value = p
-    tracks.value = t
-    if (!p) error.value = 'Playlist not found'
-    likesStore.fetchLikes(t.map(x => x.id))
-  } catch (e: any) {
-    console.error('Error fetching playlist:', e)
-    error.value = 'Failed to load playlist'
-  } finally {
-    isLoading.value = false
-  }
-}
-
-watch(playlistId, fetchPlaylist, { immediate: true })
-
-// Title, description and link preview (resolved during SSR).
-const share = await useShareInfo('playlist', playlistId)
-useShareMeta('playlist', share)
+// Liked state is per viewer, so it is fetched in the browser.
+onMounted(() => likesStore.fetchLikes(tracks.value.map(t => t.id)))
 
 /* ── owner actions ── */
 const editOpen = ref(false)
@@ -160,12 +158,8 @@ async function copyLink() {
 
 <template>
   <div class="p-4 md:p-6">
-    <div v-if="isLoading && !playlist" class="flex justify-center items-center py-20">
-      <UIcon name="i-lucide-loader-circle" class="size-10 animate-spin text-old-neutral-400" />
-    </div>
-
     <UAlert
-      v-else-if="error"
+      v-if="error"
       color="error"
       variant="soft"
       :title="error"

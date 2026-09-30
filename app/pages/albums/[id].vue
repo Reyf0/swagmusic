@@ -1,5 +1,8 @@
 <script setup lang="ts">
-import type { Album, Track } from '#shared/types'
+import type { Album } from '#shared/types'
+
+// Ids are UUIDs; anything else is an unknown page (404) rather than a database error.
+definePageMeta({ validate: route => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(route.params.id)) })
 
 type AlbumRow = Album & { author: { id: string; username: string | null; avatar_url: string | null } | null }
 
@@ -8,43 +11,35 @@ const supabase = useSupabase()
 const likesStore = useLikesStore()
 
 const albumId = computed(() => String(route.params.id))
-const album = ref<AlbumRow | null>(null)
-const tracks = ref<Track[]>([])
-const isLoading = ref(true)
-const error = ref<string | null>(null)
 
-const totalDuration = computed(() => tracks.value.reduce((sum, t) => sum + (t.duration_seconds ?? 0), 0))
+// Loaded during the server render (the page is in the HTML for visitors and search engines).
+const pageData = useAsyncData(`album-page-${albumId.value}`, async () => {
+  const [{ data: albumRow, error: albumError }, { data: trackRows, error: tracksError }] = await Promise.all([
+    supabase.from('albums').select('*, author:profiles!albums_user_id_fkey(id, username, avatar_url)').eq('id', albumId.value).maybeSingle(),
+    supabase.from('tracks').select(TRACK_SELECT).eq('album_id', albumId.value).order('created_at', { ascending: true }),
+  ])
+  if (albumError) throw albumError
+  if (tracksError) throw tracksError
+  if (!albumRow) return null
+  return { album: albumRow as AlbumRow, tracks: toTracks(trackRows) }
+})
 
-async function load() {
-  isLoading.value = true
-  error.value = null
-  try {
-    const [{ data: albumRow, error: albumError }, { data: trackRows, error: tracksError }] = await Promise.all([
-      supabase.from('albums').select('*, author:profiles!albums_user_id_fkey(id, username, avatar_url)').eq('id', albumId.value).maybeSingle(),
-      supabase.from('tracks').select(TRACK_SELECT).eq('album_id', albumId.value).order('created_at', { ascending: true }),
-    ])
-    if (albumError) throw albumError
-    if (tracksError) throw tracksError
-    if (!albumRow) {
-      error.value = 'Album not found'
-      return
-    }
-    album.value = albumRow as AlbumRow
-    tracks.value = toTracks(trackRows)
-    likesStore.fetchLikes(tracks.value.map(t => t.id))
-  } catch (e: any) {
-    console.error('Error loading album', e)
-    error.value = 'Failed to load album'
-  } finally {
-    isLoading.value = false
-  }
-}
-
-watch(albumId, load, { immediate: true })
-
-// Title, description and link preview (resolved during SSR).
+// Title, description and link preview, fetched in parallel with the page.
 const share = await useShareInfo('album', albumId)
 useShareMeta('album', share)
+
+const { data, status, error: loadError } = await pageData
+if (!data.value && !loadError.value) notFound()
+if (loadError.value) console.error('Error loading album', loadError.value)
+
+const album = computed(() => data.value?.album ?? null)
+const tracks = computed(() => data.value?.tracks ?? [])
+const isLoading = computed(() => status.value === 'pending' && !data.value)
+const error = computed(() => loadError.value ? 'Failed to load album' : !data.value ? 'Album not found' : null)
+const totalDuration = computed(() => tracks.value.reduce((sum, t) => sum + (t.duration_seconds ?? 0), 0))
+
+// Liked state is per viewer, so it is fetched in the browser.
+onMounted(() => watch(() => tracks.value.map(t => t.id), ids => likesStore.fetchLikes(ids), { immediate: true }))
 </script>
 
 <template>

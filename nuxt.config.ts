@@ -65,6 +65,14 @@ export default defineNuxtConfig({
         '/search': { robots: 'noindex, follow' },
     },
 
+    nitro: {
+        vercel: {
+            // Run server rendering next to the database (Supabase eu-north-1, Stockholm), not in the
+            // default US East region: each page render makes several database round trips.
+            functions: { regions: ['arn1'] },
+        },
+    },
+
     css: ['~/assets/css/main.css'],
 
     ui: {

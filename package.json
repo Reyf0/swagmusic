@@ -27,6 +27,7 @@
     "@sentry/nuxt": "^10.53.1",
     "@supabase/ssr": "^0.12.7",
     "@supabase/supabase-js": "^2.106.1",
+    "@vercel/analytics": "^2.0.1",
     "@vueuse/core": "^14.3.0",
     "howler": "^2.2.4",
     "nuxt": "^4.4.6",
@@ -51,6 +52,9 @@
     "vue-tsc": "^3.3.1"
   },
   "overrides": {
-    "fflate": "0.7.5"
+    "fflate": "0.7.5",
+    "@vercel/analytics": {
+      "vue-router": "^5"
+    }
   }
 }

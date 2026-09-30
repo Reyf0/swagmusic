@@ -27,7 +27,8 @@ export default defineNuxtConfig({
         '@pinia/nuxt',
         '@sentry/nuxt/module',
         '@nuxtjs/seo',
-        '@nuxt/hints'
+        '@nuxt/hints',
+        '@vercel/analytics/nuxt'
     ],
 
     // Canonical names: NUXT_PUBLIC_SUPABASE_URL, NUXT_PUBLIC_SUPABASE_KEY (publishable key,

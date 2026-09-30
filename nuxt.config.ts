@@ -78,7 +78,11 @@ export default defineNuxtConfig({
             title: 'SwagMusic',
             htmlAttrs: {
                 lang: 'en'
-            }
+            },
+            // Google Search Console ownership (also public/google044e33024324b981.html). Keep both.
+            meta: [
+                { name: 'google-site-verification', content: 'W-8t5A63Xg6vR_oBuHKbh3eiKu2TH9O5WAokXSIq8SU' }
+            ]
         }
     },
 

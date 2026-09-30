@@ -365,6 +365,7 @@ const mobileSidebarAsideStyle = computed(() => sidebarTouching.value ? { transfo
         </ClientOnly>
         <div v-show="!playerStore.getFullscreenView">
           <slot />
+          <SiteFooter />
         </div>
       </main>
 

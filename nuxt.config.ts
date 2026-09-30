@@ -33,7 +33,7 @@ export default defineNuxtConfig({
         ...(sentryDsn ? ['@sentry/nuxt/module'] : []),
         '@nuxtjs/seo',
         '@nuxt/hints',
-        '@vercel/analytics/nuxt'
+        // Vercel Web Analytics is started by app/plugins/20.consent.client.ts, only with the visitor's consent.
     ],
 
     // Canonical names: NUXT_PUBLIC_SUPABASE_URL, NUXT_PUBLIC_SUPABASE_KEY (publishable key,

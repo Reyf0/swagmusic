@@ -1,5 +1,5 @@
 // Pages anyone can open. Everything else requires a signed-in user.
-const PUBLIC_EXACT = ['/', '/tracks', '/search', '/login', '/register', '/confirm', '/reset-password', '/albums', '/feedback']
+const PUBLIC_EXACT = ['/', '/tracks', '/search', '/login', '/register', '/confirm', '/reset-password', '/albums', '/feedback', '/privacy', '/terms']
 const PUBLIC_PREFIXES = ['/playlist/', '/authors/', '/albums/', '/tracks/']
 const GUEST_ONLY = ['/login', '/register']
 

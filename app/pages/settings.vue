@@ -44,6 +44,13 @@ async function signOut() {
   await navigateTo('/')
 }
 
+// Optional anonymous visit statistics (see CookieBanner); stored per browser.
+const cookieConsent = useCookieConsent()
+const allowStatistics = computed({
+  get: () => !!cookieConsent.value?.analytics,
+  set: (v: boolean) => { cookieConsent.value = storeConsent(v) },
+})
+
 useSeoMeta({ title: 'Settings' })
 </script>
 
@@ -56,6 +63,19 @@ useSeoMeta({ title: 'Settings' })
       <UFormField label="Theme" help="Saved to your account and applied on all your devices.">
         <URadioGroup v-model="theme" :items="themeItems" orientation="horizontal" variant="card" />
       </UFormField>
+    </section>
+
+    <section class="space-y-3">
+      <h2 class="text-lg font-semibold">Privacy</h2>
+      <USwitch
+        v-model="allowStatistics"
+        label="Anonymous visit statistics"
+        description="Helps us see which pages are used. No cookies, no advertising. Saved in this browser."
+      />
+      <p class="text-sm">
+        <NuxtLink to="/privacy" class="text-green-600 dark:text-green-400 hover:underline">Privacy policy</NuxtLink>
+        · <NuxtLink to="/terms" class="text-green-600 dark:text-green-400 hover:underline">Terms of use</NuxtLink>
+      </p>
     </section>
 
     <section class="space-y-3">

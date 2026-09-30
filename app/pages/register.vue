@@ -314,6 +314,12 @@ onUnmounted(() => {
         </div>
       </div>
 
+      <p class="mt-4 text-center text-xs text-old-neutral-500 dark:text-old-neutral-400">
+        By creating an account you accept the
+        <NuxtLink to="/terms" class="underline hover:text-green-500">Terms of use</NuxtLink>
+        and the <NuxtLink to="/privacy" class="underline hover:text-green-500">Privacy policy</NuxtLink>.
+      </p>
+
       <p class="mt-4 text-center text-sm text-old-neutral-500 dark:text-old-neutral-400">
         Already have an account?
         <NuxtLink to="/login" class="ml-1 font-medium text-green-500 hover:text-green-400">Sign in</NuxtLink>

@@ -12,6 +12,11 @@
           <slot />
         </div>
       </div>
+      <nav aria-label="Legal" class="mt-4 flex justify-center gap-4 text-xs text-old-neutral-500">
+        <NuxtLink to="/privacy" class="hover:underline">Privacy</NuxtLink>
+        <NuxtLink to="/terms" class="hover:underline">Terms</NuxtLink>
+        <NuxtLink to="/feedback" class="hover:underline">Feedback</NuxtLink>
+      </nav>
     </div>
   </div>
 </template>

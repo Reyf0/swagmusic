@@ -25,7 +25,7 @@ async function fetchAlbums() {
 
 onMounted(fetchAlbums)
 
-useSeoMeta({ title: 'Albums' })
+useSeoMeta({ title: 'Albums', description: 'Albums released by artists on SwagMusic.' })
 </script>
 
 <template>

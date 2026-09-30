@@ -44,10 +44,20 @@ export default defineNuxtConfig({
         }
     },
 
+    // Personal, auth and admin pages: not indexed and left out of the sitemap.
     routeRules: {
-        '/admin/**': {
-            ssr: false
-        }
+        '/admin/**': { ssr: false, robots: false },
+        '/library': { robots: false },
+        '/profile': { robots: false },
+        '/settings': { robots: false },
+        '/studio': { robots: false },
+        '/upload': { robots: false },
+        '/login': { robots: false },
+        '/register': { robots: false },
+        '/confirm': { robots: false },
+        '/reset-password': { robots: false },
+        // Search result pages are thin duplicates of the content pages.
+        '/search': { robots: 'noindex, follow' },
     },
 
     css: ['~/assets/css/main.css'],
@@ -74,7 +84,14 @@ export default defineNuxtConfig({
 
     site: {
         url: env.NUXT_SITE_URL,
-        name: 'SwagMusic'
+        name: 'SwagMusic',
+        description: 'Listen to new tracks, upload your own music and build playlists.',
+        defaultLocale: 'en'
+    },
+
+    // Tracks, albums, playlists and artists come from the database (server/api/__sitemap__/urls.ts).
+    sitemap: {
+        sources: ['/api/__sitemap__/urls'],
     },
 
     // Link preview images (app/components/OgImage). Track / album titles are often Cyrillic.

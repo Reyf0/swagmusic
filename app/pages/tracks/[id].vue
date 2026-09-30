@@ -1,11 +1,12 @@
 <script setup lang="ts">
 import type { Track } from '#shared/types'
+import type { TrackAttribution } from '#shared/utils/license'
 
 // Ids are UUIDs; anything else is an unknown page (404) rather than a database error.
 definePageMeta({ validate: route => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(route.params.id)) })
 
 // Track page: cover, artists, album, lyrics and more tracks by the same artist.
-type TrackRow = Track & { album: { id: string; title: string } | null }
+type TrackRow = Track & { album: { id: string; title: string } | null; attribution: TrackAttribution | null }
 
 const route = useRoute()
 const supabase = useSupabase()
@@ -31,12 +32,12 @@ async function loadMoreByArtist(t: Track): Promise<Track[]> {
 const pageData = useAsyncData(`track-page-${trackId.value}`, async () => {
   const { data, error } = await supabase
     .from('tracks')
-    .select(`${TRACK_SELECT}, lyrics, album:albums(id, title)`)
+    .select(`${TRACK_SELECT}, lyrics, metadata, album:albums(id, title)`)
     .eq('id', trackId.value)
     .maybeSingle()
   if (error) throw error
   if (!data) return null
-  const track: TrackRow = { ...toTrack(data), album: (data as any).album ?? null }
+  const track: TrackRow = { ...toTrack(data), album: (data as any).album ?? null, attribution: trackAttribution((data as any).metadata) }
   return { track, moreByArtist: await loadMoreByArtist(track) }
 })
 
@@ -90,6 +91,14 @@ function play() {
             <template v-if="year"> · {{ year }}</template>
             <template v-if="track.duration_seconds"> · {{ formatDuration(track.duration_seconds) }}</template>
             <template v-if="track.likes_count"> · {{ track.likes_count }} {{ track.likes_count === 1 ? 'like' : 'likes' }}</template>
+          </div>
+          <!-- Imported tracks (scripts/import-jamendo.ts): Creative Commons licenses require this credit. -->
+          <div v-if="track.attribution" class="mt-2 text-xs text-old-neutral-500">
+            Licensed under
+            <a :href="track.attribution.licenseUrl" target="_blank" rel="license noopener" class="underline hover:text-old-neutral-800 dark:hover:text-old-neutral-200">{{ track.attribution.license ?? 'its original license' }}</a>
+            <template v-if="track.attribution.originalUrl">
+              · <a :href="track.attribution.originalUrl" target="_blank" rel="noopener" class="underline hover:text-old-neutral-800 dark:hover:text-old-neutral-200">Original{{ track.attribution.sourceName ? ` on ${track.attribution.sourceName}` : '' }}</a>
+            </template>
           </div>
         </div>
       </header>

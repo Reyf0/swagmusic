@@ -13,7 +13,8 @@
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "typecheck": "nuxt typecheck",
-    "gen:types": "supabase gen types typescript --project-id ofdlecccivsirfsaghac > shared/types/generated/database.types.ts"
+    "gen:types": "supabase gen types typescript --project-id ofdlecccivsirfsaghac > shared/types/generated/database.types.ts",
+    "import:jamendo": "node --env-file-if-exists=.env scripts/import-jamendo.ts"
   },
   "dependencies": {
     "@nuxt/fonts": "^0.14.0",

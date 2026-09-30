@@ -36,6 +36,20 @@ In the Supabase dashboard (Authentication → URL Configuration) add `http://loc
 | `npm run lint` | ESLint |
 | `npm run typecheck` | `vue-tsc` type check |
 | `npm run gen:types` | regenerate `shared/types/generated/database.types.ts` (needs `npx supabase login`) |
+| `npm run import:jamendo -- --limit 500` | import the most popular Creative Commons tracks from Jamendo (see below) |
+
+### Importing music from Jamendo
+
+`scripts/import-jamendo.ts` takes the top of the [Jamendo](https://www.jamendo.com) chart: every track there is under a Creative Commons license.
+Each artist gets a profile (an auth user with a placeholder `.invalid` email, so nobody can sign in to it), albums and genres are created as needed,
+covers are copied into `covers`, and `audio_url` points at Jamendo's stream. `tracks.metadata` keeps the Jamendo id, license URL and a link to
+the original; the track page shows them as attribution. Re-running skips tracks already imported.
+
+1. Get a client id at [devportal.jamendo.com](https://devportal.jamendo.com) (free for non-commercial use) and set `JAMENDO_CLIENT_ID` in `.env`,
+   along with `NUXT_PUBLIC_SUPABASE_URL` and `SUPABASE_SECRET_KEY`.
+2. Apply `supabase/migrations/20261001000000_jamendo_import.sql` (a unique index on the Jamendo id).
+3. `npm run import:jamendo -- --limit 20 --dry-run` to preview, then drop `--dry-run`. Other options: `--offset`, `--order popularity_month`,
+   `--tags rock,electronic`, `--concurrency`.
 
 ## Project layout
 

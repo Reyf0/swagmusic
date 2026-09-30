@@ -27,6 +27,7 @@ useSeoMeta({
       <li>Upload only music you made or have the right to share. You keep all rights to your music.</li>
       <li>By uploading, you allow SwagMusic to store your tracks and covers and to let anyone stream them on the site, for as long as they are published. Deleting a track withdraws this permission.</li>
       <li>When you credit co-authors, make sure they really took part; they can accept or decline the credit.</li>
+      <li>Some tracks come from <a href="https://www.jamendo.com" target="_blank" rel="noopener">Jamendo</a>, where their artists published them under Creative Commons licenses. Each such track shows its license and a link to the original; follow that license if you reuse the music.</li>
     </ul>
 
     <h2>What is not allowed</h2>

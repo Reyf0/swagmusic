@@ -60,6 +60,8 @@ async function saveEdit() {
     const updated = await playlistsStore.rename(playlist.value.id, { name: editName.value.trim(), description: editDescription.value.trim() || null })
     playlist.value = { ...updated, owner: playlist.value.owner }
     editOpen.value = false
+    // The tab title and description come from the share info.
+    refreshNuxtData(`share-playlist-${updated.id}`)
   } catch (e: any) {
     toast.add({ title: 'Could not save playlist', description: e?.message, color: 'error' })
   } finally {

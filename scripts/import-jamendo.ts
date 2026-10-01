@@ -1,13 +1,17 @@
 /* eslint-disable no-console -- command-line tool */
 /**
- * Imports the most popular Creative Commons tracks from Jamendo.
+ * Imports the most popular Creative Commons tracks from Jamendo, keeps them in sync, or removes them.
  *
- *   npm run import:jamendo -- --limit 500
+ *   npm run import:jamendo -- --limit 500     import the top of the chart
+ *   npm run import:jamendo -- --sync          drop tracks gone from Jamendo, update the rest
+ *   npm run import:jamendo -- --purge --yes   delete everything imported from Jamendo
  *
- * Each Jamendo artist gets a profile (backed by an auth user nobody can sign in to), albums and genres are
- * created as needed, covers are copied into the `covers` bucket, and audio_url points at Jamendo's stream.
+ * Each Jamendo artist gets a profile (backed by an auth user nobody can sign in to, marked imported_from =
+ * 'jamendo'), albums and genres are created as needed. audio_url and cover_url point at Jamendo: their API
+ * terms (https://devportal.jamendo.com/api_terms_of_use) forbid caching content beyond what the app needs and
+ * ask to reflect their changes quickly — hence --sync — and to remove everything if access ends — hence --purge.
  * tracks.metadata keeps the Jamendo id, the license URL and a link to the original, which the track page
- * shows as attribution. Re-running skips tracks that are already imported.
+ * shows as attribution. Re-running an import skips tracks that are already imported.
  *
  * Env: JAMENDO_CLIENT_ID (https://devportal.jamendo.com), NUXT_PUBLIC_SUPABASE_URL, SUPABASE_SECRET_KEY.
  */
@@ -22,11 +26,13 @@ import {
     USAGE,
     artistEmail,
     artistsUrl,
-    imageExtension,
     isImportable,
     parseImportArgs,
+    trackCoverUrl,
+    trackFields,
     trackGenres,
-    trackMetadata,
+    trackPatch,
+    tracksByIdUrl,
     tracksUrl,
     usernameCandidates,
     type ImportOptions,
@@ -80,23 +86,86 @@ async function alreadyImported(db: Db, ids: string[]): Promise<Set<string>> {
     return out
 }
 
-async function downloadImage(url: string): Promise<{ body: ArrayBuffer; contentType: string; ext: string } | null> {
-    if (!url) return null
-    const res = await fetch(url, { signal: AbortSignal.timeout(30_000) })
-    if (!res.ok) return null
-    const contentType = res.headers.get('content-type') ?? 'image/jpeg'
-    if (!contentType.startsWith('image/')) return null
-    return { body: await res.arrayBuffer(), contentType, ext: imageExtension(contentType) }
+/** All rows of a query, 1000 at a time (PostgREST's default page size). */
+async function selectAll<T>(query: (from: number, to: number) => PromiseLike<{ data: T[] | null; error: unknown }>): Promise<T[]> {
+    const out: T[] = []
+    for (let from = 0; ; from += 1000) {
+        const { data, error } = await query(from, from + 999)
+        if (error) throw error
+        out.push(...(data ?? []))
+        if (!data || data.length < 1000) return out
+    }
 }
 
-async function uploadCover(db: Db, path: string, image: { body: ArrayBuffer; contentType: string }): Promise<string> {
-    const { error } = await db.storage.from('covers').upload(path, image.body, {
-        contentType: image.contentType,
-        cacheControl: '31536000',
-        upsert: true,
-    })
+type ImportedTrack = { id: string; user_id: string | null; album_id: string | null; title: string; audio_url: string | null; cover_url: string | null; duration_seconds: number | null; metadata: any }
+
+function importedTracks(db: Db): Promise<ImportedTrack[]> {
+    return selectAll<ImportedTrack>((from, to) => db.from('tracks')
+        .select('id, user_id, album_id, title, audio_url, cover_url, duration_seconds, metadata')
+        .eq('metadata->>source', 'jamendo')
+        .order('id')
+        .range(from, to) as any)
+}
+
+function importedProfileIds(db: Db): Promise<string[]> {
+    return selectAll<{ id: string }>((from, to) => db.from('profiles')
+        .select('id')
+        .not('settings->>jamendo_artist_id', 'is', null)
+        .order('id')
+        .range(from, to)).then(rows => rows.map(r => r.id))
+}
+
+/** Deletes tracks with the rows that point at them, like the admin delete endpoint does. */
+async function deleteTracks(db: Db, ids: string[]): Promise<void> {
+    for (let i = 0; i < ids.length; i += 200) {
+        const chunk = ids.slice(i, i + 200)
+        for (const table of ['playlist_tracks', 'track_authors', 'track_genres', 'track_embeddings', 'play_history'] as const) {
+            const { error } = await db.from(table).delete().in('track_id', chunk)
+            if (error) throw error
+        }
+        const { error: likesError } = await db.from('likes').delete().eq('target_type', 'track').in('target_id', chunk)
+        if (likesError) throw likesError
+        const { error } = await db.from('tracks').delete().in('id', chunk)
+        if (error) throw error
+    }
+}
+
+/** Removes an imported artist: cover copies left by the first version of this script, albums, profile, auth user. */
+async function deleteArtist(db: Db, profileId: string): Promise<void> {
+    const { data: files } = await db.storage.from('covers').list(profileId, { limit: 1000 })
+    const paths = (files ?? []).filter(f => f.name.startsWith('jamendo-')).map(f => `${profileId}/${f.name}`)
+    if (paths.length) await db.storage.from('covers').remove(paths)
+
+    const { error: albumsError } = await db.from('albums').delete().eq('user_id', profileId)
+    if (albumsError) throw albumsError
+    const { error: userError } = await db.auth.admin.deleteUser(profileId)
+    if (userError && !/not found/i.test(userError.message)) throw userError
+    // In case profiles has no ON DELETE CASCADE from auth.users.
+    const { error } = await db.from('profiles').delete().eq('id', profileId)
     if (error) throw error
-    return db.storage.from('covers').getPublicUrl(path).data.publicUrl
+}
+
+/** Deletes the given albums and imported artists when no track is left on them. */
+async function deleteOrphans(db: Db, albumIds: Iterable<string>, profileIds: Iterable<string>): Promise<{ albums: number; artists: number }> {
+    const counts = { albums: 0, artists: 0 }
+    const isUnused = async (column: 'album_id' | 'user_id', id: string) => {
+        const { count, error } = await db.from('tracks').select('id', { count: 'exact', head: true }).eq(column, id)
+        if (error) throw error
+        return count === 0
+    }
+    for (const id of new Set(albumIds)) {
+        if (!(await isUnused('album_id', id))) continue
+        const { error } = await db.from('albums').delete().eq('id', id)
+        if (error) throw error
+        counts.albums++
+    }
+    const imported = new Set(await importedProfileIds(db))
+    for (const id of new Set(profileIds)) {
+        if (!imported.has(id) || !(await isUnused('user_id', id))) continue
+        await deleteArtist(db, id)
+        counts.artists++
+    }
+    return counts
 }
 
 /**
@@ -122,10 +191,10 @@ class Importer {
         return this.artists.get(key)!
     }
 
-    album(t: JamendoTrack, profileId: string, cover: Awaited<ReturnType<typeof downloadImage>>): Promise<string | null> {
+    album(t: JamendoTrack, profileId: string): Promise<string | null> {
         if (!t.album_id || !t.album_name?.trim()) return Promise.resolve(null)
         const key = `${profileId}:${t.album_id}`
-        if (!this.albums.has(key)) this.albums.set(key, this.findOrCreateAlbum(t, profileId, cover))
+        if (!this.albums.has(key)) this.albums.set(key, this.findOrCreateAlbum(t, profileId))
         return this.albums.get(key)!
     }
 
@@ -163,6 +232,7 @@ class Importer {
                 full_name: artist?.name || t.artist_name,
                 avatar_url: artist?.image || null,
                 website: artist?.shareurl || null,
+                imported_from: 'jamendo',
                 settings: { source: 'jamendo', jamendo_artist_id: jamendoId },
             })
             if (!profileError) return data.user.id
@@ -174,7 +244,7 @@ class Importer {
         throw lastError
     }
 
-    private async findOrCreateAlbum(t: JamendoTrack, profileId: string, cover: Awaited<ReturnType<typeof downloadImage>>): Promise<string> {
+    private async findOrCreateAlbum(t: JamendoTrack, profileId: string): Promise<string> {
         const title = t.album_name.trim()
         const { data: existing, error: findError } = await this.db.from('albums')
             .select('id')
@@ -185,10 +255,8 @@ class Importer {
         if (findError) throw findError
         if (existing) return existing.id
 
-        // The album has its own copy of the cover: deleting a track or an album removes its cover file.
-        const coverUrl = cover ? await uploadCover(this.db, `${profileId}/jamendo-album-${t.album_id}.${cover.ext}`, cover) : null
         const { data, error } = await this.db.from('albums')
-            .insert({ title, cover_url: coverUrl, user_id: profileId, author_id: profileId })
+            .insert({ title, cover_url: trackCoverUrl(t), user_id: profileId, author_id: profileId })
             .select('id')
             .single()
         if (error) throw error
@@ -212,26 +280,12 @@ class Importer {
     /** Imports one track. Returns false when it turned out to be imported already (a parallel run). */
     async importTrack(t: JamendoTrack): Promise<boolean> {
         const profileId = await this.artistProfile(t)
-        const cover = await downloadImage(t.album_image || t.image)
-        const albumId = await this.album(t, profileId, cover)
+        const albumId = await this.album(t, profileId)
 
-        const coverPath = cover ? `${profileId}/jamendo-${t.id}.${cover.ext}` : null
-        const coverUrl = cover && coverPath ? await uploadCover(this.db, coverPath, cover) : null
         let trackId: string | null = null
         try {
-            trackId = await this.insertTrack({
-                title: t.name.trim(),
-                audio_url: t.audio,
-                cover_url: coverUrl,
-                duration_seconds: Number(t.duration) || null,
-                user_id: profileId,
-                album_id: albumId,
-                metadata: trackMetadata(t),
-            })
-            if (!trackId) {
-                if (coverPath) await this.db.storage.from('covers').remove([coverPath])
-                return false
-            }
+            trackId = await this.insertTrack({ ...trackFields(t), user_id: profileId, album_id: albumId })
+            if (!trackId) return false
 
             const { error: creditError } = await this.db.from('track_authors')
                 .insert({ track_id: trackId, profile_id: profileId, order_index: 0, status: CREDIT_STATUS.accepted })
@@ -244,8 +298,7 @@ class Importer {
             }
             return true
         } catch (err) {
-            if (trackId) await this.db.from('tracks').delete().eq('id', trackId)
-            if (coverPath) await this.db.storage.from('covers').remove([coverPath])
+            if (trackId) await deleteTracks(this.db, [trackId]).catch(() => {})
             throw err
         }
     }
@@ -292,16 +345,13 @@ function requireEnv(name: string, ...fallbacks: string[]): string {
     throw new Error(`${name} is not set (see .env.example)`)
 }
 
-async function main() {
-    let opts: ImportOptions
-    try {
-        opts = parseImportArgs(process.argv.slice(2))
-    } catch (err) {
-        console.error(`${(err as Error).message}\n\n${USAGE}`)
-        process.exit(2)
-    }
+function supabaseAdmin(): Db {
+    return createClient<Database>(requireEnv('NUXT_PUBLIC_SUPABASE_URL', 'SUPABASE_URL'), requireEnv('SUPABASE_SECRET_KEY', 'SUPABASE_SERVICE_KEY'), {
+        auth: { persistSession: false, autoRefreshToken: false },
+    })
+}
 
-    const clientId = requireEnv('JAMENDO_CLIENT_ID')
+async function runImport(clientId: string, opts: ImportOptions) {
     const chart = await fetchChart(clientId, opts)
     console.log(`Jamendo: ${chart.length} importable tracks in positions ${opts.offset + 1}–${opts.offset + opts.limit} by ${opts.order}${opts.tags.length ? `, tags ${opts.tags.join(', ')}` : ''}`)
 
@@ -310,10 +360,7 @@ async function main() {
         return
     }
 
-    const db = createClient<Database>(requireEnv('NUXT_PUBLIC_SUPABASE_URL', 'SUPABASE_URL'), requireEnv('SUPABASE_SECRET_KEY', 'SUPABASE_SERVICE_KEY'), {
-        auth: { persistSession: false, autoRefreshToken: false },
-    })
-
+    const db = supabaseAdmin()
     const existing = await alreadyImported(db, chart.map(t => String(t.id)))
     const todo = chart.filter(t => !existing.has(String(t.id)))
     const artists = await fetchArtists(clientId, [...new Set(todo.map(t => String(t.artist_id)))])
@@ -341,6 +388,84 @@ async function main() {
 
     console.log(`\nDone: ${imported} imported, ${skipped} skipped, ${failed.length} failed${failed.length ? ` (Jamendo ids ${failed.join(', ')})` : ''}`)
     if (failed.length) process.exitCode = 1
+}
+
+async function runSync(clientId: string, opts: ImportOptions) {
+    const db = supabaseAdmin()
+    const rows = await importedTracks(db)
+    console.log(`Checking ${rows.length} imported tracks against Jamendo…`)
+
+    const live = new Map<string, JamendoTrack>()
+    const ids = rows.map(r => String(r.metadata?.jamendo_id))
+    for (let i = 0; i < ids.length; i += JAMENDO_PAGE_SIZE) {
+        for (const t of await jamendoGet<JamendoTrack>(tracksByIdUrl(clientId, ids.slice(i, i + JAMENDO_PAGE_SIZE)))) {
+            if (isImportable(t)) live.set(String(t.id), t)
+        }
+    }
+
+    const gone = rows.filter(r => !live.has(String(r.metadata?.jamendo_id)))
+    // A broken API answer must not wipe the catalog.
+    if (gone.length > rows.length / 2 && !opts.yes) {
+        throw new Error(`${gone.length} of ${rows.length} tracks look gone from Jamendo; re-run with --yes if that is right`)
+    }
+
+    let updated = 0
+    for (const row of rows) {
+        const t = live.get(String(row.metadata?.jamendo_id))
+        const patch = t && trackPatch(row, t)
+        if (!patch) continue
+        const { error } = await db.from('tracks').update(patch).eq('id', row.id)
+        if (error) throw error
+        updated++
+    }
+
+    await deleteTracks(db, gone.map(r => r.id))
+    for (const r of gone) console.log(`- ${r.title} — ${r.metadata?.artist_name ?? '?'} (no longer on Jamendo)`)
+    const orphans = await deleteOrphans(db, gone.flatMap(r => r.album_id ?? []), gone.flatMap(r => r.user_id ?? []))
+
+    console.log(`\nDone: ${updated} updated, ${gone.length} removed, ${orphans.albums} empty albums and ${orphans.artists} artists without tracks removed`)
+}
+
+async function runPurge(opts: ImportOptions) {
+    const db = supabaseAdmin()
+    const tracks = await importedTracks(db)
+    const profiles = await importedProfileIds(db)
+    console.log(`Imported from Jamendo: ${tracks.length} tracks, ${profiles.length} artists (with their albums).`)
+    if (!opts.yes) {
+        console.log('Nothing deleted. Re-run with --purge --yes to delete them.')
+        return
+    }
+
+    await deleteTracks(db, tracks.map(t => t.id))
+    // Tracks credited to an imported artist but owned by someone else are not ours to delete; keep those artists.
+    let artists = 0
+    for (const id of profiles) {
+        const { count, error } = await db.from('tracks').select('id', { count: 'exact', head: true }).eq('user_id', id)
+        if (error) throw error
+        if (count) {
+            console.warn(`! artist ${id} still owns ${count} tracks that are not from Jamendo, kept`)
+            continue
+        }
+        await db.from('track_authors').delete().eq('profile_id', id)
+        await deleteArtist(db, id)
+        artists++
+    }
+    console.log(`\nDone: ${tracks.length} tracks and ${artists} artists deleted`)
+}
+
+async function main() {
+    let opts: ImportOptions
+    try {
+        opts = parseImportArgs(process.argv.slice(2))
+    } catch (err) {
+        console.error(`${(err as Error).message}\n\n${USAGE}`)
+        process.exit(2)
+    }
+
+    if (opts.purge) return runPurge(opts)
+    const clientId = requireEnv('JAMENDO_CLIENT_ID')
+    if (opts.sync) return runSync(clientId, opts)
+    return runImport(clientId, opts)
 }
 
 main().catch((err) => {

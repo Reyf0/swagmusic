@@ -41,6 +41,12 @@ export interface ImportOptions {
     tags: string[]
     concurrency: number
     dryRun: boolean
+    /** Re-check every imported track against Jamendo instead of importing. */
+    sync: boolean
+    /** Delete everything imported from Jamendo instead of importing. */
+    purge: boolean
+    /** Confirms --purge, and lets --sync remove more than half of the imported tracks. */
+    yes: boolean
 }
 
 export const USAGE = `Usage: npm run import:jamendo -- [options]
@@ -50,7 +56,12 @@ export const USAGE = `Usage: npm run import:jamendo -- [options]
   --order <order>    ${JAMENDO_ORDERS.join(' | ')} (default popularity_total)
   --tags <a,b>       only tracks with any of these tags, e.g. rock,electronic
   --concurrency <n>  tracks imported in parallel (default 4)
-  --dry-run          only list what would be imported; needs JAMENDO_CLIENT_ID only`
+  --dry-run          only list what would be imported; needs JAMENDO_CLIENT_ID only
+
+  --sync             re-check imported tracks: remove the ones gone from Jamendo, update the rest
+                     (Jamendo's API terms ask to reflect their changes; run it at least weekly)
+  --purge            delete everything imported from Jamendo (shows what it would delete without --yes)
+  --yes              confirm --purge, or let --sync remove more than half of the imported tracks`
 
 function positiveInt(name: string, value: string | undefined, fallback: number, min = 1): number {
     if (value === undefined) return fallback
@@ -70,6 +81,9 @@ export function parseImportArgs(args: string[]): ImportOptions {
             'tags': { type: 'string' },
             'concurrency': { type: 'string' },
             'dry-run': { type: 'boolean', default: false },
+            'sync': { type: 'boolean', default: false },
+            'purge': { type: 'boolean', default: false },
+            'yes': { type: 'boolean', default: false },
         },
         strict: true,
     })
@@ -78,6 +92,7 @@ export function parseImportArgs(args: string[]): ImportOptions {
     if (!(JAMENDO_ORDERS as readonly string[]).includes(order)) {
         throw new Error(`--order must be one of ${JAMENDO_ORDERS.join(', ')}, got "${order}"`)
     }
+    if (values.sync && values.purge) throw new Error('--sync and --purge cannot be used together')
 
     return {
         limit: positiveInt('limit', values.limit, 100),
@@ -86,22 +101,30 @@ export function parseImportArgs(args: string[]): ImportOptions {
         tags: (values.tags ?? '').split(',').map(t => t.trim()).filter(Boolean),
         concurrency: positiveInt('concurrency', values.concurrency, 4),
         dryRun: values['dry-run'] ?? false,
+        sync: values.sync ?? false,
+        purge: values.purge ?? false,
+        yes: values.yes ?? false,
     }
 }
+
+const TRACK_FIELDS = { format: 'json', include: 'licenses musicinfo', audioformat: 'mp32', imagesize: '600' }
 
 /** One page of the chart. Arrays go space-separated, which URLSearchParams encodes as "+", as Jamendo expects. */
 export function tracksUrl(clientId: string, opts: Pick<ImportOptions, 'order' | 'tags'>, offset: number, limit: number): string {
     const params = new URLSearchParams({
         client_id: clientId,
-        format: 'json',
         limit: String(limit),
         offset: String(offset),
         order: opts.order,
-        include: 'licenses musicinfo',
-        audioformat: 'mp32',
-        imagesize: '600',
+        ...TRACK_FIELDS,
     })
     if (opts.tags.length) params.set('fuzzytags', opts.tags.join(' '))
+    return `${JAMENDO_API}/tracks/?${params}`
+}
+
+/** Specific tracks by Jamendo id (at most JAMENDO_PAGE_SIZE). */
+export function tracksByIdUrl(clientId: string, ids: string[]): string {
+    const params = new URLSearchParams({ client_id: clientId, limit: String(JAMENDO_PAGE_SIZE), id: ids.join(' '), ...TRACK_FIELDS })
     return `${JAMENDO_API}/tracks/?${params}`
 }
 
@@ -129,6 +152,36 @@ export function trackMetadata(t: JamendoTrack) {
         share_url: t.shareurl || null,
         artist_name: t.artist_name,
     }
+}
+
+/** Cover shown for the track: Jamendo's own image URL (the API terms ask not to cache their content). */
+export function trackCoverUrl(t: JamendoTrack): string | null {
+    return t.album_image || t.image || null
+}
+
+/** The tracks columns an imported track gets from Jamendo. */
+export function trackFields(t: JamendoTrack) {
+    return {
+        title: t.name.trim(),
+        audio_url: t.audio,
+        cover_url: trackCoverUrl(t),
+        duration_seconds: Number(t.duration) || null,
+        metadata: trackMetadata(t),
+    }
+}
+
+type TrackFields = ReturnType<typeof trackFields>
+
+/** Columns of an imported track that changed on Jamendo since the import, or null when it is up to date. */
+export function trackPatch(row: { [K in keyof TrackFields]?: unknown }, t: JamendoTrack): Partial<TrackFields> | null {
+    const fresh = trackFields(t)
+    const patch: Partial<TrackFields> = {}
+    for (const key of ['title', 'audio_url', 'cover_url', 'duration_seconds'] as const) {
+        if (row[key] !== fresh[key]) (patch as any)[key] = fresh[key]
+    }
+    const old = (row.metadata ?? {}) as Record<string, unknown>
+    if (Object.entries(fresh.metadata).some(([k, v]) => old[k] !== v)) patch.metadata = { ...old, ...fresh.metadata }
+    return Object.keys(patch).length ? patch : null
 }
 
 /** Genres of a track as genre rows ({ name, slug }), without duplicates. */
@@ -161,12 +214,4 @@ export function usernameCandidates(artistName: string, count = 5): string[] {
 /** Placeholder address for an artist's account: the reserved .invalid TLD never receives mail, so nobody can sign in. */
 export function artistEmail(jamendoArtistId: string): string {
     return `jamendo-${jamendoArtistId}@import.swagmusic.invalid`
-}
-
-/** File extension for a downloaded image. */
-export function imageExtension(contentType: string | null): string {
-    const type = (contentType ?? '').split(';')[0]!.trim().toLowerCase()
-    if (type === 'image/png') return 'png'
-    if (type === 'image/webp') return 'webp'
-    return 'jpg'
 }

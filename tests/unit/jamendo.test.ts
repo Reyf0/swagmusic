@@ -1,11 +1,13 @@
 import { describe, expect, it } from 'vitest'
 import {
     artistsUrl,
-    imageExtension,
     isImportable,
     parseImportArgs,
     trackGenres,
+    trackFields,
     trackMetadata,
+    trackPatch,
+    tracksByIdUrl,
     tracksUrl,
     usernameCandidates,
     type JamendoTrack,
@@ -30,7 +32,9 @@ const track = (overrides: Partial<JamendoTrack> = {}): JamendoTrack => ({
 
 describe('parseImportArgs', () => {
     it('has defaults', () => {
-        expect(parseImportArgs([])).toEqual({ limit: 100, offset: 0, order: 'popularity_total', tags: [], concurrency: 4, dryRun: false })
+        expect(parseImportArgs([])).toEqual({
+            limit: 100, offset: 0, order: 'popularity_total', tags: [], concurrency: 4, dryRun: false, sync: false, purge: false, yes: false,
+        })
     })
 
     it('reads options', () => {
@@ -42,6 +46,7 @@ describe('parseImportArgs', () => {
         expect(() => parseImportArgs(['--limit', '0'])).toThrow(/--limit/)
         expect(() => parseImportArgs(['--order', 'random'])).toThrow(/--order/)
         expect(() => parseImportArgs(['--unknown'])).toThrow()
+        expect(() => parseImportArgs(['--sync', '--purge'])).toThrow(/together/)
     })
 })
 
@@ -53,6 +58,12 @@ describe('Jamendo URLs', () => {
             client_id: 'abc', limit: '50', offset: '200', order: 'popularity_total', include: 'licenses musicinfo', fuzzytags: 'rock pop',
         })
         expect(url.search).toContain('include=licenses+musicinfo')
+    })
+
+    it('asks for specific tracks by id', () => {
+        const url = new URL(tracksByIdUrl('abc', ['1', '2']))
+        expect(url.searchParams.get('id')).toBe('1 2')
+        expect(url.searchParams.get('include')).toBe('licenses musicinfo')
     })
 
     it('asks for several artists at once', () => {
@@ -95,10 +106,23 @@ describe('usernameCandidates', () => {
     })
 })
 
-describe('imageExtension', () => {
-    it('maps content types', () => {
-        expect(imageExtension('image/png')).toBe('png')
-        expect(imageExtension('image/jpeg; charset=binary')).toBe('jpg')
-        expect(imageExtension(null)).toBe('jpg')
+describe('trackPatch', () => {
+    const row = () => ({ ...trackFields(track()), metadata: { ...trackMetadata(track()), imported_at: 'x' } })
+
+    it('links the cover on Jamendo instead of copying it', () => {
+        expect(trackFields(track()).cover_url).toBe('https://usercontent.jamendo.com/?type=album&id=500&width=600')
+        expect(trackFields(track({ album_image: '', image: '' })).cover_url).toBeNull()
+    })
+
+    it('is null when nothing changed', () => {
+        expect(trackPatch(row(), track())).toBeNull()
+    })
+
+    it('updates changed columns and merges metadata', () => {
+        const patch = trackPatch(row(), track({ name: 'Renamed', license_ccurl: 'http://creativecommons.org/licenses/by/4.0/' }))
+        expect(patch).toEqual({
+            title: 'Renamed',
+            metadata: { ...trackMetadata(track()), imported_at: 'x', license_url: 'http://creativecommons.org/licenses/by/4.0/' },
+        })
     })
 })

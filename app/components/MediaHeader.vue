@@ -25,7 +25,8 @@ const props = withDefaults(defineProps<{
   details: () => [],
 })
 
-const slots = defineSlots<{ lead?: () => unknown }>()
+// `default`: an extra line under the details (e.g. a license credit).
+const slots = defineSlots<{ lead?: () => unknown; default?: () => unknown }>()
 const items = computed(() => props.details.filter((d): d is MediaHeaderDetail => !!d))
 </script>
 
@@ -54,6 +55,7 @@ const items = computed(() => props.details.filter((d): d is MediaHeaderDetail =>
           <NuxtLink v-else :to="item.to" class="hover:underline">{{ item.text }}</NuxtLink>
         </template>
       </div>
+      <slot />
     </div>
   </header>
 </template>

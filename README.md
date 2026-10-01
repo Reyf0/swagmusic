@@ -36,6 +36,25 @@ In the Supabase dashboard (Authentication → URL Configuration) add `http://loc
 | `npm run lint` | ESLint |
 | `npm run typecheck` | `vue-tsc` type check |
 | `npm run gen:types` | regenerate `shared/types/generated/database.types.ts` (needs `npx supabase login`) |
+| `npm run import:jamendo -- --limit 500` | import the most popular Creative Commons tracks from Jamendo (see below) |
+
+### Importing music from Jamendo
+
+`scripts/import-jamendo.ts` takes the top of the [Jamendo](https://www.jamendo.com) chart: every track there is under a Creative Commons license.
+Each artist gets a profile (an auth user with a placeholder `.invalid` email, so nobody can sign in to it; its page says it is imported),
+albums and genres are created as needed, and `audio_url` / `cover_url` point at Jamendo. `tracks.metadata` keeps the Jamendo id, license URL
+and a link to the original; the track page shows them as attribution. Re-running skips tracks already imported.
+
+The [Jamendo API terms](https://devportal.jamendo.com/api_terms_of_use) allow non-commercial use only (ads or affiliate links need a license
+from Jamendo), forbid caching their content and ask to reflect their changes, so:
+- `npm run import:jamendo -- --sync` removes tracks gone from Jamendo (and artists and albums left empty) and updates the rest; run it at least weekly;
+- `npm run import:jamendo -- --purge --yes` deletes everything imported from Jamendo, e.g. if API access ends.
+
+1. Get a client id at [devportal.jamendo.com](https://devportal.jamendo.com) (free for non-commercial use) and set `JAMENDO_CLIENT_ID` in `.env`,
+   along with `NUXT_PUBLIC_SUPABASE_URL` and `SUPABASE_SECRET_KEY`.
+2. Apply the migrations `20261001020000_jamendo_import.sql` and `20261001030000_profiles_imported_from.sql` before deploying: the artist page reads `profiles.imported_from`.
+3. `npm run import:jamendo -- --limit 20 --dry-run` to preview, then drop `--dry-run`. Other options: `--offset`, `--order popularity_month`,
+   `--tags rock,electronic`, `--concurrency`.
 
 ## Project layout
 

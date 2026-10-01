@@ -13,12 +13,12 @@ const reportSubject = useReportSubject()
 
 const artistId = computed(() => String(route.params.id))
 
-type ArtistRow = Pick<Profile, 'id' | 'username' | 'full_name' | 'avatar_url' | 'website'>
+type ArtistRow = Pick<Profile, 'id' | 'username' | 'full_name' | 'avatar_url' | 'website' | 'imported_from'>
 
 // Loaded during the server render (the page is in the HTML for visitors and search engines).
 const pageData = useAsyncData(`artist-page-${artistId.value}`, async () => {
   const [{ data: profile, error: profileError }, { data: credits, error: creditsError }, { data: albumRows, error: albumsError }] = await Promise.all([
-    supabase.from('profiles').select('id, username, full_name, avatar_url, website').eq('id', artistId.value).maybeSingle(),
+    supabase.from('profiles').select('id, username, full_name, avatar_url, website, imported_from').eq('id', artistId.value).maybeSingle(),
     supabase.from('track_authors').select(`track:tracks(${TRACK_SELECT})`).eq('profile_id', artistId.value).in('status', CREDITED_STATUSES),
     supabase.from('albums').select('*').eq('user_id', artistId.value).order('created_at', { ascending: false }),
   ])
@@ -72,9 +72,15 @@ onMounted(() => watch(() => tracks.value.map(t => t.id), ids => likesStore.fetch
         :details="[
           plural(tracks.length, 'track'),
           albums.length && plural(albums.length, 'album'),
-          website && { text: website.replace(/^https?:\/\//, ''), to: website, external: true },
+          website && !artist.imported_from && { text: website.replace(/^https?:\/\//, ''), to: website, external: true },
         ]"
-      />
+      >
+        <!-- Profiles made by scripts/import-jamendo.ts: say the artist did not sign up here. -->
+        <p v-if="artist.imported_from === 'jamendo'" class="mt-2 text-xs text-old-neutral-500">
+          Imported from <a v-if="website" :href="website" target="_blank" rel="noopener" class="underline hover:text-old-neutral-800 dark:hover:text-old-neutral-200">Jamendo</a><template v-else>Jamendo</template>
+          · this artist hasn't joined SwagMusic
+        </p>
+      </MediaHeader>
 
       <div class="flex items-center gap-2 mb-6">
         <PlayAllButton :tracks="tracks" label="Play all tracks" />

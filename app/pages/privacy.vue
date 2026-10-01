@@ -28,6 +28,7 @@ useSeoMeta({
     <h3>What you publish</h3>
     <ul>
       <li>Tracks you upload (audio, cover, title, lyrics, description), albums and playlists. These are public and anyone can see and play them.</li>
+      <li>Some artist pages are not accounts: they show public details of artists on <a href="https://www.jamendo.com" target="_blank" rel="noopener">Jamendo</a> (name, avatar, a link to their Jamendo page) taken from the Jamendo API together with their Creative Commons tracks. We keep them only while the tracks are on Jamendo and remove them when they are gone.</li>
       <li>Co-author credits you accept, which show your name on a track.</li>
     </ul>
     <h3>How you use the site (signed-in users)</h3>

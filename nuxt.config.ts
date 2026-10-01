@@ -89,7 +89,8 @@ export default defineNuxtConfig({
     // Covers and avatars are resized / re-encoded by the host's image optimizer (Vercel in production,
     // IPX locally). Vercel only serves widths listed in `screens`: <CoverImage> sizes plus their 2x.
     image: {
-        domains: supabaseHost ? [supabaseHost] : [],
+        // Jamendo covers are linked, not copied (scripts/import-jamendo.ts).
+        domains: [...(supabaseHost ? [supabaseHost] : []), 'usercontent.jamendo.com'],
         screens: {
             thumb: 48, thumb2x: 96, card: 160,
             xs: 320, sm: 640, md: 768, lg: 1024, xl: 1280, xxl: 1536,

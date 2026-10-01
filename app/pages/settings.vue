@@ -61,7 +61,11 @@ useSeoMeta({ title: 'Settings' })
     <section class="space-y-3">
       <h2 class="text-lg font-semibold">Appearance</h2>
       <UFormField label="Theme" help="Saved to your account and applied on all your devices.">
-        <URadioGroup v-model="theme" :items="themeItems" orientation="horizontal" variant="card" />
+        <!-- The chosen theme is only known in the browser (colour mode), so render the choice there. -->
+        <ClientOnly>
+          <URadioGroup v-model="theme" :items="themeItems" orientation="horizontal" variant="card" />
+          <template #fallback><div class="h-12" /></template>
+        </ClientOnly>
       </UFormField>
     </section>
 

@@ -192,18 +192,13 @@ useSeoMeta({ title: 'Users · Admin' })
       </template>
     </UModal>
 
-    <UModal
+    <ConfirmDialog
       :open="!!deleting"
       title="Delete user?"
       :description="`${deleting?.username || deleting?.email} will be removed permanently together with their tracks, albums, playlists, likes, listening history and uploaded files. Their tracks also disappear from other people's playlists.`"
+      :loading="deletingBusy"
       @update:open="(v: boolean) => { if (!v) deleting = null }"
-    >
-      <template #footer>
-        <div class="flex w-full justify-end gap-2">
-          <UButton variant="ghost" color="neutral" @click="deleting = null">Cancel</UButton>
-          <UButton color="error" :loading="deletingBusy" @click="confirmDelete">Delete</UButton>
-        </div>
-      </template>
-    </UModal>
+      @confirm="confirmDelete"
+    />
   </div>
 </template>

@@ -71,20 +71,17 @@ onMounted(() => playlistsStore.load())
               class="flex items-center p-3 hover:bg-old-neutral-800 rounded-lg transition-colors group"
               :class="{ 'bg-old-neutral-800': route.path === `/playlist/${playlist.id}` }"
             >
-              <div class="size-12 bg-old-neutral-700 rounded-lg flex items-center justify-center mr-3 flex-shrink-0">
-                <CoverImage
-                  v-if="playlist.cover_url"
-                  :src="playlist.cover_url"
-                  :size="48"
-                  :alt="playlist.name"
-                  class="w-full h-full object-cover rounded-lg"
-                />
-                <UIcon v-else name="i-heroicons-musical-note" class="w-6 h-6 text-gray-400" />
-              </div>
+              <CoverImage
+                :src="playlist.cover_url"
+                :size="48"
+                icon-class="size-6"
+                placeholder-class="bg-old-neutral-700"
+                class="size-12 rounded-lg object-cover mr-3 shrink-0"
+              />
               <div class="flex-1 min-w-0">
                 <p class="font-medium truncate group-hover:text-white">{{ playlist.name }}</p>
                 <p class="text-sm text-gray-400 truncate">
-                  Playlist • {{ playlist.track_count }} {{ playlist.track_count === 1 ? 'track' : 'tracks' }}
+                  Playlist • {{ plural(playlist.track_count, 'track') }}
                 </p>
               </div>
             </NuxtLink>
@@ -110,16 +107,13 @@ onMounted(() => playlistsStore.load())
             class="flex justify-center items-center w-full p-3 hover:bg-old-neutral-800 rounded-lg transition-colors"
             :title="playlist.name"
           >
-            <div class="w-6 h-6 bg-old-neutral-700 rounded flex items-center justify-center mx-auto">
-              <CoverImage
-                v-if="playlist?.cover_url"
-                :src="playlist.cover_url"
-                :size="48"
-                :alt="playlist.name"
-                class="w-full h-full object-cover rounded"
-              />
-              <UIcon v-else name="i-heroicons-musical-note" class="w-4 h-4 text-old-neutral-400" />
-            </div>
+            <CoverImage
+              :src="playlist?.cover_url"
+              :size="48"
+              icon-class="size-4"
+              placeholder-class="bg-old-neutral-700"
+              class="size-6 rounded object-cover mx-auto"
+            />
           </NuxtLink>
         </div>
       </template>

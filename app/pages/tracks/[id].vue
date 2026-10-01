@@ -73,26 +73,20 @@ function play() {
     <UAlert v-else-if="error" color="error" variant="soft" :title="error" :actions="[{ label: 'All tracks', to: '/tracks' }]" />
 
     <template v-else-if="track">
-      <header class="flex flex-col md:flex-row md:items-end gap-6 mb-6">
-        <div class="size-48 md:size-56 shrink-0 mx-auto md:mx-0 rounded-md shadow-lg overflow-hidden bg-old-neutral-200 dark:bg-old-neutral-800 flex items-center justify-center">
-          <CoverImage v-if="track.cover_url" :src="track.cover_url" :size="320" priority class="size-full object-cover" :alt="`Cover for ${track.title}`" />
-          <UIcon v-else name="i-heroicons-musical-note" class="size-16 text-old-neutral-400" />
-        </div>
-
-        <div class="min-w-0">
-          <div class="text-xs uppercase font-semibold text-old-neutral-500 mb-1">Track</div>
-          <h1 class="text-3xl md:text-5xl font-bold mb-3 break-words">{{ track.title }}</h1>
-          <div class="text-sm text-old-neutral-500 flex flex-wrap items-center gap-x-1">
-            <span class="font-semibold text-old-neutral-800 dark:text-old-neutral-200"><TrackArtists :authors="track.authors" /></span>
-            <template v-if="track.album">
-              · <NuxtLink :to="`/albums/${track.album.id}`" class="hover:underline">{{ track.album.title }}</NuxtLink>
-            </template>
-            <template v-if="year"> · {{ year }}</template>
-            <template v-if="track.duration_seconds"> · {{ formatDuration(track.duration_seconds) }}</template>
-            <template v-if="track.likes_count"> · {{ track.likes_count }} {{ track.likes_count === 1 ? 'like' : 'likes' }}</template>
-          </div>
-        </div>
-      </header>
+      <MediaHeader
+        label="Track"
+        :title="track.title"
+        :cover="track.cover_url"
+        :cover-alt="`Cover for ${track.title}`"
+        :details="[
+          track.album && { text: track.album.title, to: `/albums/${track.album.id}` },
+          year && String(year),
+          track.duration_seconds && formatDuration(track.duration_seconds),
+          track.likes_count && plural(track.likes_count, 'like'),
+        ]"
+      >
+        <template #lead><TrackArtists :authors="track.authors" /></template>
+      </MediaHeader>
 
       <div class="flex items-center gap-2 mb-8">
         <UButton

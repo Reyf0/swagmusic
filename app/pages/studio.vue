@@ -86,17 +86,14 @@ useSeoMeta({ title: 'Studio' })
       </p>
       <ul v-else class="divide-y divide-old-neutral-200 dark:divide-old-neutral-800">
         <li v-for="track in tracks" :key="track.id" class="flex items-center gap-3 py-3">
-          <CoverImage v-if="track.cover_url" :src="track.cover_url" :size="48" class="size-12 rounded object-cover shrink-0" />
-          <div v-else class="size-12 rounded bg-old-neutral-200 dark:bg-old-neutral-800 flex items-center justify-center shrink-0">
-            <UIcon name="i-heroicons-musical-note" class="size-5 text-old-neutral-400" />
-          </div>
+          <CoverImage :src="track.cover_url" :size="48" class="size-12 rounded object-cover shrink-0" />
           <div class="min-w-0 flex-1">
             <div class="font-medium truncate">{{ track.title }}</div>
             <div class="text-sm text-old-neutral-500 truncate">
               <TrackArtists :authors="track.authors" />
               <template v-if="albumTitle(track.album_id)"> · {{ albumTitle(track.album_id) }}</template>
               · {{ formatDuration(track.duration_seconds) }}
-              · {{ track.likes_count }} {{ track.likes_count === 1 ? 'like' : 'likes' }}
+              · {{ plural(track.likes_count ?? 0, 'like') }}
               <template v-if="track.lyrics"> · lyrics</template>
             </div>
           </div>
@@ -118,13 +115,12 @@ useSeoMeta({ title: 'Studio' })
         </button>
         <div v-for="album in albums" :key="album.id" class="rounded-lg p-3 bg-old-neutral-100 dark:bg-old-neutral-900">
           <NuxtLink :to="`/albums/${album.id}`" class="block aspect-square rounded-md overflow-hidden bg-old-neutral-200 dark:bg-old-neutral-800 mb-2">
-            <CoverImage v-if="album.cover_url" :src="album.cover_url" :size="320" class="size-full object-cover" />
-            <div v-else class="size-full flex items-center justify-center"><UIcon name="i-lucide-disc-3" class="size-10 text-old-neutral-400" /></div>
+            <CoverImage :src="album.cover_url" :size="320" icon="i-lucide-disc-3" class="size-full object-cover" />
           </NuxtLink>
           <div class="flex items-center gap-1">
             <div class="min-w-0 flex-1">
               <div class="font-semibold truncate">{{ album.title }}</div>
-              <div class="text-sm text-old-neutral-500">{{ trackCount(album.id) }} {{ trackCount(album.id) === 1 ? 'track' : 'tracks' }}</div>
+              <div class="text-sm text-old-neutral-500">{{ plural(trackCount(album.id), 'track') }}</div>
             </div>
             <UButton icon="i-lucide-pencil" variant="ghost" color="neutral" size="sm" :aria-label="`Edit ${album.title}`" @click="editingAlbum = album" />
           </div>
@@ -138,10 +134,7 @@ useSeoMeta({ title: 'Studio' })
       <p v-if="!invites.length" class="text-center py-10 text-old-neutral-500">No pending invites. When someone credits you as a co-author, it shows up here.</p>
       <ul v-else class="divide-y divide-old-neutral-200 dark:divide-old-neutral-800">
         <li v-for="invite in invites" :key="invite.id" class="flex items-center gap-3 py-3">
-          <CoverImage v-if="invite.track?.cover_url" :src="invite.track.cover_url" :size="48" class="size-12 rounded object-cover shrink-0" />
-          <div v-else class="size-12 rounded bg-old-neutral-200 dark:bg-old-neutral-800 flex items-center justify-center shrink-0">
-            <UIcon name="i-heroicons-musical-note" class="size-5 text-old-neutral-400" />
-          </div>
+          <CoverImage :src="invite.track?.cover_url" :size="48" class="size-12 rounded object-cover shrink-0" />
           <div class="min-w-0 flex-1">
             <div class="font-medium truncate">{{ invite.track?.title ?? 'Untitled track' }}</div>
             <div class="text-sm text-old-neutral-500 truncate">

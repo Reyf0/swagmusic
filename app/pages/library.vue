@@ -98,11 +98,10 @@ useSeoMeta({ title: 'Your library' })
           class="group rounded-lg p-3 bg-old-neutral-100 hover:bg-old-neutral-200 dark:bg-old-neutral-900 dark:hover:bg-old-neutral-800 transition"
         >
           <div class="aspect-square rounded-md overflow-hidden bg-old-neutral-200 dark:bg-old-neutral-800 flex items-center justify-center mb-2">
-            <CoverImage v-if="playlist.cover_url" :src="playlist.cover_url" :size="320" class="size-full object-cover" />
-            <UIcon v-else name="i-heroicons-musical-note" class="size-10 text-old-neutral-400" />
+            <CoverImage :src="playlist.cover_url" :size="320" class="size-full object-cover" />
           </div>
           <div class="font-semibold truncate">{{ playlist.name }}</div>
-          <div class="text-sm text-old-neutral-500">{{ playlist.track_count }} {{ playlist.track_count === 1 ? 'track' : 'tracks' }}</div>
+          <div class="text-sm text-old-neutral-500">{{ plural(playlist.track_count, 'track') }}</div>
         </NuxtLink>
       </div>
       <div v-if="playlistsLoading && !playlists.length" class="flex justify-center py-6">

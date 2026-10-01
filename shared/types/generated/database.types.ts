@@ -739,6 +739,7 @@ export type Database = {
           email: string | null
           full_name: string | null
           id: string
+          imported_from: string | null
           is_admin: boolean | null
           settings: Json | null
           slug: string | null

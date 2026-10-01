@@ -48,19 +48,16 @@ const formOpen = ref(false)
 const editing = ref<AdminUser | null>(null)
 const form = reactive({ email: '', password: '', username: '', full_name: '', is_admin: false })
 const saving = ref(false)
-const showPassword = ref(false)
 
 function openCreate() {
   editing.value = null
   Object.assign(form, { email: '', password: '', username: '', full_name: '', is_admin: false })
-  showPassword.value = false
   formOpen.value = true
 }
 
 function openEdit(u: AdminUser) {
   editing.value = u
   Object.assign(form, { email: u.email ?? '', password: '', username: u.username ?? '', full_name: u.full_name ?? '', is_admin: !!u.is_admin })
-  showPassword.value = false
   formOpen.value = true
 }
 
@@ -176,27 +173,7 @@ useSeoMeta({ title: 'Users · Admin' })
             <UInput v-model="form.email" type="email" class="w-full" :required="!editing" />
           </UFormField>
           <UFormField :label="editing ? 'New password (optional)' : 'Password'" :required="!editing">
-            <UInput
-              v-model="form.password"
-              :type="showPassword ? 'text' : 'password'"
-              class="w-full"
-              autocomplete="new-password"
-              :required="!editing"
-              minlength="6"
-              :ui="{ trailing: 'pe-1' }"
-            >
-              <template #trailing>
-                <UButton
-                  color="neutral"
-                  variant="link"
-                  size="sm"
-                  :icon="showPassword ? 'i-lucide-eye-off' : 'i-lucide-eye'"
-                  :aria-label="showPassword ? 'Hide password' : 'Show password'"
-                  :aria-pressed="showPassword"
-                  @click="showPassword = !showPassword"
-                />
-              </template>
-            </UInput>
+            <PasswordInput v-model="form.password" class="w-full" autocomplete="new-password" :required="!editing" minlength="6" />
           </UFormField>
           <UFormField label="Username" :required="!editing">
             <UInput v-model="form.username" class="w-full" :required="!editing" minlength="3" maxlength="30" />

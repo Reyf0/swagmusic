@@ -5,6 +5,7 @@ definePageMeta({
 
 useSeoMeta({ title: 'Sign in' })
 
+const showPassword = ref(false)
 const supabase = useSupabase()
 const user = useSupabaseUser()
 const route = useRoute()
@@ -113,15 +114,26 @@ async function sendPasswordReset() {
             Forgot password?
           </button>
         </div>
-        <input
-          id="password"
-          v-model="password"
-          placeholder="Enter your password"
-          type="password"
-          autocomplete="current-password"
-          required
-          class="mt-1 block w-full px-3 py-2 dark:text-old-neutral-200 border border-old-neutral-200 dark:border-old-neutral-700 bg-white dark:bg-old-neutral-800 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500"
-        >
+        <div class="relative mt-1">
+          <input
+            id="password"
+            v-model="password"
+            placeholder="Enter your password"
+            :type="showPassword ? 'text' : 'password'"
+            autocomplete="current-password"
+            required
+            class="block w-full pl-3 pr-11 py-2 dark:text-old-neutral-200 border border-old-neutral-200 dark:border-old-neutral-700 bg-white dark:bg-old-neutral-800 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+          >
+          <button
+            type="button"
+            class="absolute inset-y-0 right-0 flex items-center px-3 text-old-neutral-400 hover:text-old-neutral-700 dark:hover:text-white"
+            :aria-label="showPassword ? 'Hide password' : 'Show password'"
+            :aria-pressed="showPassword"
+            @click="showPassword = !showPassword"
+          >
+            <UIcon :name="showPassword ? 'i-lucide-eye-off' : 'i-lucide-eye'" class="size-5" />
+          </button>
+        </div>
       </div>
 
       <div v-if="errorMessage" class="text-red-500 text-sm" role="alert">

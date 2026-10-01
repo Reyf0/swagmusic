@@ -52,10 +52,10 @@ async function updatePassword() {
 
     <form v-if="user" class="space-y-4" @submit.prevent="updatePassword">
       <UFormField label="New password">
-        <UInput v-model="password" type="password" autocomplete="new-password" class="w-full" required />
+        <PasswordInput v-model="password" autocomplete="new-password" class="w-full" required />
       </UFormField>
       <UFormField label="Repeat new password">
-        <UInput v-model="confirmPassword" type="password" autocomplete="new-password" class="w-full" required />
+        <PasswordInput v-model="confirmPassword" autocomplete="new-password" class="w-full" required />
       </UFormField>
 
       <p v-if="errorMessage" class="text-red-500 text-sm" role="alert">{{ errorMessage }}</p>

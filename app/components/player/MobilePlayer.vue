@@ -72,10 +72,7 @@ const sheetStyle = computed(() => dragY.value
       <div class="absolute top-0 left-0 h-0.5 bg-green-500" :style="{ width: `${progress}%` }" />
       <div class="flex items-center gap-3 px-3 py-2">
         <button type="button" class="flex items-center gap-3 min-w-0 flex-1 text-left" aria-label="Open player" @click="open">
-          <CoverImage v-if="currentTrack.cover_url" :src="currentTrack.cover_url" :size="48" priority class="size-11 rounded-md object-cover shrink-0" />
-          <div v-else class="size-11 rounded-md bg-old-neutral-300 dark:bg-old-neutral-800 flex items-center justify-center shrink-0">
-            <UIcon name="i-heroicons-musical-note" class="size-5 text-old-neutral-500" />
-          </div>
+          <CoverImage :src="currentTrack.cover_url" :size="48" priority class="size-11 rounded-md object-cover shrink-0" />
           <div class="min-w-0">
             <div class="text-sm font-medium truncate">{{ currentTrack.title }}</div>
             <div class="text-xs text-old-neutral-500 truncate">{{ artistNames(currentTrack) }}</div>
@@ -129,15 +126,12 @@ const sheetStyle = computed(() => dragY.value
             <div v-if="tab === 'player'" class="flex flex-col h-full px-6 pb-8 pt-4">
               <div class="flex-1 flex items-center justify-center min-h-0">
                 <CoverImage
-                  v-if="currentTrack.cover_url"
                   :src="currentTrack.cover_url"
                   :size="640"
                   priority
+                  icon-class="size-20"
                   class="w-full max-w-sm aspect-square object-cover rounded-xl shadow-2xl"
                 />
-                <div v-else class="w-full max-w-sm aspect-square rounded-xl bg-old-neutral-200 dark:bg-old-neutral-800 flex items-center justify-center">
-                  <UIcon name="i-heroicons-musical-note" class="size-20 text-old-neutral-400" />
-                </div>
               </div>
 
               <div class="mt-6 flex items-center gap-3">

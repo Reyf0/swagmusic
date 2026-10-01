@@ -173,7 +173,7 @@ useSeoMeta({ title: 'Users · Admin' })
             <UInput v-model="form.email" type="email" class="w-full" :required="!editing" />
           </UFormField>
           <UFormField :label="editing ? 'New password (optional)' : 'Password'" :required="!editing">
-            <UInput v-model="form.password" type="password" class="w-full" autocomplete="new-password" :required="!editing" minlength="6" />
+            <PasswordInput v-model="form.password" class="w-full" autocomplete="new-password" :required="!editing" minlength="6" />
           </UFormField>
           <UFormField label="Username" :required="!editing">
             <UInput v-model="form.username" class="w-full" :required="!editing" minlength="3" maxlength="30" />
@@ -192,18 +192,13 @@ useSeoMeta({ title: 'Users · Admin' })
       </template>
     </UModal>
 
-    <UModal
+    <ConfirmDialog
       :open="!!deleting"
       title="Delete user?"
-      :description="`${deleting?.username || deleting?.email} and their sign-in will be removed permanently.`"
+      :description="`${deleting?.username || deleting?.email} will be removed permanently together with their tracks, albums, playlists, likes, listening history and uploaded files. Their tracks also disappear from other people's playlists.`"
+      :loading="deletingBusy"
       @update:open="(v: boolean) => { if (!v) deleting = null }"
-    >
-      <template #footer>
-        <div class="flex w-full justify-end gap-2">
-          <UButton variant="ghost" color="neutral" @click="deleting = null">Cancel</UButton>
-          <UButton color="error" :loading="deletingBusy" @click="confirmDelete">Delete</UButton>
-        </div>
-      </template>
-    </UModal>
+      @confirm="confirmDelete"
+    />
   </div>
 </template>

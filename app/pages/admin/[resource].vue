@@ -173,18 +173,13 @@ useSeoMeta({ title: () => `${meta.value.title} · Admin` })
       </template>
     </UModal>
 
-    <UModal
+    <ConfirmDialog
       :open="!!deleting"
       :title="`Delete ${meta.one}?`"
       :description="`“${deleting ? nameOf(deleting) : ''}” will be deleted permanently${resource === 'tracks' ? ' together with its audio file' : ''}.`"
+      :loading="deletingBusy"
       @update:open="(v: boolean) => { if (!v) deleting = null }"
-    >
-      <template #footer>
-        <div class="flex w-full justify-end gap-2">
-          <UButton variant="ghost" color="neutral" @click="deleting = null">Cancel</UButton>
-          <UButton color="error" :loading="deletingBusy" @click="confirmDelete">Delete</UButton>
-        </div>
-      </template>
-    </UModal>
+      @confirm="confirmDelete"
+    />
   </div>
 </template>

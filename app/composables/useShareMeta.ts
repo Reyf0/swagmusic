@@ -9,7 +9,6 @@ export type ShareInfo = {
     schema?: Record<string, unknown>
 }
 
-const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`
 const LABEL: Record<ShareKind, string> = { track: 'Track', album: 'Album', playlist: 'Playlist', artist: 'Artist' }
 const OG_TYPE = { track: 'music.song', album: 'music.album', playlist: 'music.playlist', artist: 'profile' } as const
 

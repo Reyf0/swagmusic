@@ -33,14 +33,12 @@ function handlePlay() {
   >
     <div class="relative aspect-square overflow-hidden rounded-md shadow-md mb-3 bg-old-neutral-200 dark:bg-old-neutral-800 flex items-center justify-center">
       <CoverImage
-        v-if="track.cover_url"
         :src="track.cover_url"
         :size="variant === 'carousel' ? 160 : 320"
         :alt="`Cover for ${track.title}`"
         :priority="priority"
         class="size-full object-cover"
       />
-      <UIcon v-else name="i-heroicons-musical-note" class="size-10 text-old-neutral-400" />
 
       <button
         type="button"

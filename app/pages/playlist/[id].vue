@@ -174,24 +174,15 @@ async function copyLink() {
     />
 
     <div v-else-if="playlist">
-      <header class="flex flex-col md:flex-row md:items-end gap-6 mb-6">
-        <div class="size-48 shrink-0 mx-auto md:mx-0 rounded-md shadow-lg overflow-hidden bg-old-neutral-200 dark:bg-old-neutral-800 flex items-center justify-center">
-          <CoverImage v-if="playlist.cover_url" :src="playlist.cover_url" :size="320" priority class="size-full object-cover" />
-          <CoverImage v-else-if="tracks[0]?.cover_url" :src="tracks[0].cover_url" :size="320" priority class="size-full object-cover" />
-          <UIcon v-else name="i-heroicons-musical-note" class="size-16 text-old-neutral-400" />
-        </div>
-
-        <div class="min-w-0">
-          <div class="text-xs uppercase font-semibold text-old-neutral-500 mb-1">Playlist</div>
-          <h1 class="text-3xl md:text-5xl font-bold mb-2 break-words">{{ playlist.name }}</h1>
-          <p v-if="playlist.description" class="text-old-neutral-500 mb-2">{{ playlist.description }}</p>
-          <div class="text-sm text-old-neutral-500">
-            <span class="font-semibold text-old-neutral-800 dark:text-old-neutral-200">{{ playlist.owner?.username || 'Unknown' }}</span>
-            · {{ tracks.length }} {{ tracks.length === 1 ? 'track' : 'tracks' }}
-            <template v-if="totalDuration"> · {{ formatDuration(totalDuration) }}</template>
-          </div>
-        </div>
-      </header>
+      <MediaHeader
+        label="Playlist"
+        :title="playlist.name"
+        :description="playlist.description"
+        :cover="playlist.cover_url ?? tracks[0]?.cover_url"
+        :details="[plural(tracks.length, 'track'), totalDuration && formatDuration(totalDuration)]"
+      >
+        <template #lead>{{ playlist.owner?.username || 'Unknown' }}</template>
+      </MediaHeader>
 
       <div class="flex items-center gap-2 mb-4">
         <PlayAllButton :tracks="displayed" label="Play playlist" />
@@ -240,13 +231,11 @@ async function copyLink() {
       </template>
     </UModal>
 
-    <UModal v-model:open="deleteOpen" title="Delete playlist?" :description="`“${playlist?.name}” will be deleted. This cannot be undone.`">
-      <template #footer>
-        <div class="flex w-full justify-end gap-2">
-          <UButton variant="ghost" color="neutral" @click="deleteOpen = false">Cancel</UButton>
-          <UButton color="error" @click="deletePlaylist">Delete</UButton>
-        </div>
-      </template>
-    </UModal>
+    <ConfirmDialog
+      v-model:open="deleteOpen"
+      title="Delete playlist?"
+      :description="`“${playlist?.name}” will be deleted. This cannot be undone.`"
+      @confirm="deletePlaylist"
+    />
   </div>
 </template>

@@ -173,13 +173,12 @@ useSeoMeta({ title: 'Feedback · Admin' })
       <UIcon name="i-lucide-loader-circle" class="size-8 animate-spin text-old-neutral-400" />
     </div>
 
-    <UModal :open="!!deleting" title="Delete this message?" description="It will be removed permanently." @update:open="(v: boolean) => { if (!v) deleting = null }">
-      <template #footer>
-        <div class="flex w-full justify-end gap-2">
-          <UButton variant="ghost" color="neutral" @click="deleting = null">Cancel</UButton>
-          <UButton color="error" @click="confirmDelete">Delete</UButton>
-        </div>
-      </template>
-    </UModal>
+    <ConfirmDialog
+      :open="!!deleting"
+      title="Delete this message?"
+      description="It will be removed permanently."
+      @update:open="(v: boolean) => { if (!v) deleting = null }"
+      @confirm="confirmDelete"
+    />
   </div>
 </template>

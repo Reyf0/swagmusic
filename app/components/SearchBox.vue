@@ -217,10 +217,7 @@ const artistName = (a: { username: string | null; full_name: string | null }) =>
             @mouseenter="active = indexOf(`rt-${track.id}`)"
             @click="select(items[indexOf(`rt-${track.id}`)])"
           >
-            <div class="size-10 shrink-0 rounded bg-old-neutral-200 dark:bg-old-neutral-700 overflow-hidden flex items-center justify-center">
-              <CoverImage v-if="track.cover_url" :src="track.cover_url" :size="48" class="size-full object-cover" />
-              <UIcon v-else name="i-heroicons-musical-note" class="size-5 text-old-neutral-400" />
-            </div>
+            <CoverImage :src="track.cover_url" :size="48" class="size-10 shrink-0 rounded object-cover" />
             <div class="min-w-0 flex-1">
               <div class="truncate font-medium">{{ track.title }}</div>
               <div class="truncate text-sm text-old-neutral-500"><TrackArtists :authors="track.authors" :linked="false" /></div>
@@ -248,10 +245,7 @@ const artistName = (a: { username: string | null; full_name: string | null }) =>
             @mouseenter="active = indexOf(`t-${track.id}`)"
             @click="select(items[indexOf(`t-${track.id}`)])"
           >
-            <div class="size-10 shrink-0 rounded bg-old-neutral-200 dark:bg-old-neutral-700 overflow-hidden flex items-center justify-center">
-              <CoverImage v-if="track.cover_url" :src="track.cover_url" :size="48" class="size-full object-cover" />
-              <UIcon v-else name="i-heroicons-musical-note" class="size-5 text-old-neutral-400" />
-            </div>
+            <CoverImage :src="track.cover_url" :size="48" class="size-10 shrink-0 rounded object-cover" />
             <div class="min-w-0 flex-1">
               <div class="truncate font-medium">{{ track.title }}</div>
               <div class="truncate text-sm text-old-neutral-500"><TrackArtists :authors="track.authors" :linked="false" /></div>
@@ -292,10 +286,7 @@ const artistName = (a: { username: string | null; full_name: string | null }) =>
             @mouseenter="active = indexOf(`al-${a.id}`)"
             @click="select(items[indexOf(`al-${a.id}`)])"
           >
-            <div class="size-10 shrink-0 rounded bg-old-neutral-200 dark:bg-old-neutral-700 overflow-hidden flex items-center justify-center">
-              <CoverImage v-if="a.cover_url" :src="a.cover_url" :size="48" class="size-full object-cover" />
-              <UIcon v-else name="i-lucide-disc-3" class="size-5 text-old-neutral-400" />
-            </div>
+            <CoverImage :src="a.cover_url" :size="48" icon="i-lucide-disc-3" class="size-10 shrink-0 rounded object-cover" />
             <div class="min-w-0 flex-1">
               <div class="truncate font-medium">{{ a.title }}</div>
               <div v-if="a.owner?.username" class="truncate text-sm text-old-neutral-500">Album · {{ a.owner.username }}</div>
@@ -316,10 +307,7 @@ const artistName = (a: { username: string | null; full_name: string | null }) =>
             @mouseenter="active = indexOf(`p-${p.id}`)"
             @click="select(items[indexOf(`p-${p.id}`)])"
           >
-            <div class="size-10 shrink-0 rounded bg-old-neutral-200 dark:bg-old-neutral-700 overflow-hidden flex items-center justify-center">
-              <CoverImage v-if="p.cover_url" :src="p.cover_url" :size="48" class="size-full object-cover" />
-              <UIcon v-else name="i-lucide-list-music" class="size-5 text-old-neutral-400" />
-            </div>
+            <CoverImage :src="p.cover_url" :size="48" icon="i-lucide-list-music" class="size-10 shrink-0 rounded object-cover" />
             <div class="min-w-0 flex-1">
               <div class="truncate font-medium">{{ p.name }}</div>
               <div v-if="p.owner?.username" class="truncate text-sm text-old-neutral-500">Playlist · {{ p.owner.username }}</div>

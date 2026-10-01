@@ -45,8 +45,7 @@ const repeatLabel = computed(() => ({ off: 'Repeat: off', all: 'Repeat: all', on
         aria-label="Show now playing"
         @click="player.toggleView('now')"
       >
-        <CoverImage v-if="currentTrack.cover_url" :src="currentTrack.cover_url" :size="48" priority class="size-12 object-cover" />
-        <UIcon v-else name="i-heroicons-musical-note" class="text-old-neutral-400" />
+        <CoverImage :src="currentTrack.cover_url" :size="48" priority placeholder-class="bg-old-neutral-800" class="size-12 object-cover" />
       </button>
       <div class="flex flex-col min-w-0">
         <NuxtLink :to="`/tracks/${currentTrack.id}`" class="block font-semibold truncate hover:underline">{{ currentTrack.title }}</NuxtLink>

@@ -101,7 +101,7 @@ useSeoMeta({ title: 'Admin' })
                   class="absolute bottom-full mb-2 z-10 pointer-events-none whitespace-nowrap rounded-md bg-old-neutral-900 dark:bg-old-neutral-800 text-white text-xs px-2 py-1 shadow-lg"
                   :class="i < days.length / 2 ? 'left-0' : 'right-0'"
                 >
-                  <div class="font-semibold tabular-nums">{{ d.total_listens }} {{ d.total_listens === 1 ? 'play' : 'plays' }}</div>
+                  <div class="font-semibold tabular-nums">{{ plural(d.total_listens, 'play') }}</div>
                   <div class="text-old-neutral-300">{{ fmtDay(d.day, { weekday: 'short', day: 'numeric', month: 'short' }) }}</div>
                 </div>
               </div>

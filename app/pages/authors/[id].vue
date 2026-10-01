@@ -62,25 +62,25 @@ onMounted(() => watch(() => tracks.value.map(t => t.id), ids => likesStore.fetch
     <UAlert v-else-if="error" color="error" variant="soft" :title="error" :actions="[{ label: 'Go home', to: '/' }]" />
 
     <template v-else-if="artist">
-      <header class="flex flex-col md:flex-row items-center md:items-end gap-6 mb-6">
-        <UAvatar :src="artist.avatar_url ?? undefined" :alt="displayName" class="size-40 text-5xl shadow-lg" />
-        <div class="text-center md:text-left min-w-0">
-          <div class="text-xs uppercase font-semibold text-old-neutral-500 mb-1">Artist</div>
-          <h1 class="text-4xl md:text-6xl font-bold break-words">{{ displayName }}</h1>
-          <p class="text-sm text-old-neutral-500 mt-2">
-            {{ tracks.length }} {{ tracks.length === 1 ? 'track' : 'tracks' }}
-            <template v-if="albums.length"> · {{ albums.length }} {{ albums.length === 1 ? 'album' : 'albums' }}</template>
-            <template v-if="website && !artist.imported_from">
-              · <a :href="website" target="_blank" rel="noopener noreferrer nofollow" class="hover:underline">{{ website.replace(/^https?:\/\//, '') }}</a>
-            </template>
-          </p>
-          <!-- Profiles made by scripts/import-jamendo.ts: say the artist did not sign up here. -->
-          <p v-if="artist.imported_from === 'jamendo'" class="text-xs text-old-neutral-500 mt-1">
-            Imported from <a v-if="website" :href="website" target="_blank" rel="noopener" class="underline hover:text-old-neutral-800 dark:hover:text-old-neutral-200">Jamendo</a><template v-else>Jamendo</template>
-            · this artist hasn't joined SwagMusic
-          </p>
-        </div>
-      </header>
+      <MediaHeader
+        label="Artist"
+        :title="displayName"
+        :cover="artist.avatar_url"
+        :cover-alt="displayName"
+        icon="i-lucide-user-round"
+        round
+        :details="[
+          plural(tracks.length, 'track'),
+          albums.length && plural(albums.length, 'album'),
+          website && !artist.imported_from && { text: website.replace(/^https?:\/\//, ''), to: website, external: true },
+        ]"
+      >
+        <!-- Profiles made by scripts/import-jamendo.ts: say the artist did not sign up here. -->
+        <p v-if="artist.imported_from === 'jamendo'" class="mt-2 text-xs text-old-neutral-500">
+          Imported from <a v-if="website" :href="website" target="_blank" rel="noopener" class="underline hover:text-old-neutral-800 dark:hover:text-old-neutral-200">Jamendo</a><template v-else>Jamendo</template>
+          · this artist hasn't joined SwagMusic
+        </p>
+      </MediaHeader>
 
       <div class="flex items-center gap-2 mb-6">
         <PlayAllButton :tracks="tracks" label="Play all tracks" />

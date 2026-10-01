@@ -42,7 +42,7 @@ import {
 
 type Db = SupabaseClient<Database>
 
-/** Unique index from supabase/migrations/20261001000000_jamendo_import.sql. */
+/** Unique index from supabase/migrations/20261001020000_jamendo_import.sql. */
 const JAMENDO_ID_INDEX = 'tracks_jamendo_id_key'
 
 async function jamendoGet<T>(url: string): Promise<T[]> {

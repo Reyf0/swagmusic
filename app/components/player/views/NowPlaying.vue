@@ -139,10 +139,7 @@ const uploadedAt = computed(() => track.value?.created_at
             class="flex items-center gap-3 w-full text-left rounded p-1 hover:bg-old-neutral-700"
             @click="player.playAt(nextIndex)"
           >
-            <CoverImage v-if="nextTrack.cover_url" :src="nextTrack.cover_url" :size="48" class="size-12 rounded object-cover" />
-            <div v-else class="size-12 rounded bg-old-neutral-700 flex items-center justify-center">
-              <UIcon name="i-heroicons-musical-note" class="size-5 text-old-neutral-400" />
-            </div>
+            <CoverImage :src="nextTrack.cover_url" :size="48" placeholder-class="bg-old-neutral-700" class="size-12 rounded object-cover" />
             <div class="min-w-0">
               <p class="font-semibold truncate">{{ nextTrack.title }}</p>
               <p class="text-sm text-old-neutral-400 truncate">{{ artistNames(nextTrack) }}</p>

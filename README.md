@@ -52,7 +52,7 @@ from Jamendo), forbid caching their content and ask to reflect their changes, so
 
 1. Get a client id at [devportal.jamendo.com](https://devportal.jamendo.com) (free for non-commercial use) and set `JAMENDO_CLIENT_ID` in `.env`,
    along with `NUXT_PUBLIC_SUPABASE_URL` and `SUPABASE_SECRET_KEY`.
-2. Apply the migrations `20261001000000_jamendo_import.sql` and `20261001010000_profiles_imported_from.sql` before deploying: the artist page reads `profiles.imported_from`.
+2. Apply the migrations `20261001020000_jamendo_import.sql` and `20261001030000_profiles_imported_from.sql` before deploying: the artist page reads `profiles.imported_from`.
 3. `npm run import:jamendo -- --limit 20 --dry-run` to preview, then drop `--dry-run`. Other options: `--offset`, `--order popularity_month`,
    `--tags rock,electronic`, `--concurrency`.
 

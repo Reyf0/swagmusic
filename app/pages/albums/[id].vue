@@ -53,26 +53,25 @@ onMounted(() => watch(() => tracks.value.map(t => t.id), ids => likesStore.fetch
     <UAlert v-else-if="error" color="error" variant="soft" :title="error" :actions="[{ label: 'All albums', to: '/albums' }]" />
 
     <template v-else-if="album">
-      <header class="flex flex-col md:flex-row md:items-end gap-6 mb-6">
-        <div class="size-48 shrink-0 mx-auto md:mx-0 rounded-md shadow-lg overflow-hidden bg-old-neutral-200 dark:bg-old-neutral-800 flex items-center justify-center">
-          <CoverImage v-if="album.cover_url" :src="album.cover_url" :size="320" priority class="size-full object-cover" />
-          <UIcon v-else name="i-lucide-disc-3" class="size-16 text-old-neutral-400" />
-        </div>
-        <div class="min-w-0">
-          <div class="text-xs uppercase font-semibold text-old-neutral-500 mb-1">Album</div>
-          <h1 class="text-3xl md:text-5xl font-bold mb-2 break-words">{{ album.title }}</h1>
-          <p v-if="album.description" class="text-old-neutral-500 mb-2">{{ album.description }}</p>
-          <div class="text-sm text-old-neutral-500 flex items-center gap-2 flex-wrap">
-            <NuxtLink v-if="album.author" :to="`/authors/${album.author.id}`" class="flex items-center gap-2 font-semibold text-old-neutral-800 dark:text-old-neutral-200 hover:underline">
-              <UAvatar :src="album.author.avatar_url ?? undefined" :alt="album.author.username ?? undefined" size="xs" />
-              {{ album.author.username || 'Unknown artist' }}
-            </NuxtLink>
-            <span v-if="album.created_at">· {{ new Date(album.created_at).getFullYear() }}</span>
-            <span>· {{ tracks.length }} {{ tracks.length === 1 ? 'track' : 'tracks' }}</span>
-            <span v-if="totalDuration">· {{ formatDuration(totalDuration) }}</span>
-          </div>
-        </div>
-      </header>
+      <MediaHeader
+        label="Album"
+        :title="album.title"
+        :description="album.description"
+        :cover="album.cover_url"
+        icon="i-lucide-disc-3"
+        :details="[
+          album.created_at && String(new Date(album.created_at).getFullYear()),
+          plural(tracks.length, 'track'),
+          totalDuration && formatDuration(totalDuration),
+        ]"
+      >
+        <template v-if="album.author" #lead>
+          <NuxtLink :to="`/authors/${album.author.id}`" class="inline-flex items-center gap-2 hover:underline">
+            <UAvatar :src="album.author.avatar_url ?? undefined" :alt="album.author.username ?? undefined" size="xs" />
+            {{ album.author.username || 'Unknown artist' }}
+          </NuxtLink>
+        </template>
+      </MediaHeader>
 
       <div class="flex items-center gap-2 mb-4">
         <PlayAllButton :tracks="tracks" label="Play album" />

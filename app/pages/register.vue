@@ -7,6 +7,8 @@ definePageMeta({
 
 useSeoMeta({ title: 'Create account' })
 
+// One switch shows / hides both password fields.
+const showPassword = ref(false)
 const supabase = useSupabase()
 
 const email = ref<string>('')
@@ -241,17 +243,30 @@ onUnmounted(() => {
           <!-- STEP 3: password -->
           <div v-else key="step-3" class="space-y-4">
             <label class="block text-sm font-medium text-old-neutral-700 dark:text-white">Password</label>
+            <div class="relative">
             <input
                 v-model="password"
-                type="password"
+                :type="showPassword ? 'text' : 'password'"
+                autocomplete="new-password"
                 placeholder="Enter a password"
-                class="w-full px-3 py-2 rounded-md dark:text-old-neutral-400 border border-old-neutral-200 dark:border-old-neutral-700 bg-white dark:bg-old-neutral-800 focus:outline-none focus:ring-2 focus:ring-green-500"
+                class="w-full pl-3 pr-11 py-2 rounded-md dark:text-old-neutral-400 border border-old-neutral-200 dark:border-old-neutral-700 bg-white dark:bg-old-neutral-800 focus:outline-none focus:ring-2 focus:ring-green-500"
                 @keyup.enter="canNextStep ? signUpNewUser() : nextStep()"
             >
+            <button
+            type="button"
+            class="absolute inset-y-0 right-0 flex items-center px-3 text-old-neutral-400 hover:text-old-neutral-700 dark:hover:text-white"
+            :aria-label="showPassword ? 'Hide password' : 'Show password'"
+            :aria-pressed="showPassword"
+            @click="showPassword = !showPassword"
+          >
+            <UIcon :name="showPassword ? 'i-lucide-eye-off' : 'i-lucide-eye'" class="size-5" />
+          </button>
+            </div>
             <label class="block text-sm font-medium text-old-neutral-700 dark:text-white">Confirm password</label>
             <input
                 v-model="confirmPassword"
-                type="password"
+                :type="showPassword ? 'text' : 'password'"
+                autocomplete="new-password"
                 placeholder="Repeat the password"
                 class="w-full px-3 py-2 rounded-md dark:text-old-neutral-400 border border-old-neutral-200 dark:border-old-neutral-700 bg-white dark:bg-old-neutral-800 focus:outline-none focus:ring-2 focus:ring-green-500"
                 @keyup.enter="canNextStep ? signUpNewUser() : nextStep()"

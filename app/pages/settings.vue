@@ -61,7 +61,11 @@ useSeoMeta({ title: 'Settings' })
     <section class="space-y-3">
       <h2 class="text-lg font-semibold">Appearance</h2>
       <UFormField label="Theme" help="Saved to your account and applied on all your devices.">
-        <URadioGroup v-model="theme" :items="themeItems" orientation="horizontal" variant="card" />
+        <!-- The chosen theme is only known in the browser (colour mode), so render the choice there. -->
+        <ClientOnly>
+          <URadioGroup v-model="theme" :items="themeItems" orientation="horizontal" variant="card" />
+          <template #fallback><div class="h-12" /></template>
+        </ClientOnly>
       </UFormField>
     </section>
 
@@ -84,10 +88,10 @@ useSeoMeta({ title: 'Settings' })
 
       <form class="space-y-3 max-w-sm" @submit.prevent="changePassword">
         <UFormField label="New password">
-          <UInput v-model="newPassword" type="password" autocomplete="new-password" class="w-full" />
+          <PasswordInput v-model="newPassword" autocomplete="new-password" class="w-full" />
         </UFormField>
         <UFormField label="Repeat new password">
-          <UInput v-model="confirmPassword" type="password" autocomplete="new-password" class="w-full" />
+          <PasswordInput v-model="confirmPassword" autocomplete="new-password" class="w-full" />
         </UFormField>
         <p v-if="passwordError" class="text-sm text-red-500" role="alert">{{ passwordError }}</p>
         <UButton type="submit" :loading="savingPassword" :disabled="!newPassword">Change password</UButton>
